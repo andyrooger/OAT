@@ -1,0 +1,19 @@
+Project Info Sources
+====================
+
+Here I aim to maintain a list of used sources along with a summary of
+information I've taken from it.
+
+Papers
+------
+
+1)  A Taxonomy of Obfuscating Transformations  
+    Christian Collberg, Clark Thomborson, Douglas Low
+
+    Took a list of obfuscating methods (listed in methods file)
+
+Internet
+--------
+
+2)  Obfuscated Python  
+    http://c2.com/cgi/wiki?ObfuscatedPython

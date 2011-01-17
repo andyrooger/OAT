@@ -1,0 +1,131 @@
+Current Tools
+=============
+
+Obfuscators
+-----------
+
+1)  http://pawsense.com/python..obfuscator/
+    
+    * Online obfuscator demo.
+    * Python 2.3 (possibly up to 2.5)
+    * Based on (2)
+    * Closed source
+
+2)  Python obfuscator and code size reducer
+    
+    * http://bitboost.com/#Python_obfuscator
+    * Python 2.3 to 2.5 (mostly)
+    * Closed source ($200 for a license)
+
+3)  py2exe
+
+    * http://py2exe.org/
+    * Adds pyc files into a zip file and includes runtime in exe file (http://stackoverflow.com/questions/261638/how-do-i-protect-python-code)
+    * Hence this does not help any more than distributing pyc files
+    * exe so no longer portable
+
+12)  pyobfuscate
+
+    * http://www.lysator.liu.se/~astrand/projects/pyobfuscate/
+    * Limited in its power
+    * No mention of versions
+    * A little bit about why it's handy to obfuscate python
+    * Open source
+
+13) decompyle
+
+    * http://www.crazy-compilers.com/decompyle/
+    * Paid service (10 EUR per 5kb)
+    * Decompiles bytecode
+
+Other Ideas
+-----------
+
+4)  Distribute compiled bytecode files
+    
+    * Slightly harder to decompile
+    * Slightly more options for obfuscating
+    * Cannot assume VMs are same across platforms (http://docs.python.org/py3k/library/dis.html)
+    * Hence no longer portable
+
+5)  C extensions
+
+    * Can obfuscate really important parts of the program
+    * Will mean we need a compiled version for each platform the app is designed to run on
+    * Can use existing C or C++ obfuscators
+
+6)  Get bytecode with disco, obfuscate and write to file to run later
+
+    * Involves distributing pyc files, see (4)
+
+7)  Obfuscate with the AST
+
+    * Easy to get to with AST module
+    * Need to write source back out (or can use (4) again)
+
+8)  Mark code block to obfuscate with decorators
+
+    * Can only do classes, methods, modules
+    * Easier to automate
+
+9)  Interactive obfuscator
+
+    * Easy to test
+    * Easy to see whats happening
+    * Could be slow to have to keep rewriting source to display
+
+10) Mark things to obfuscate in pydocs
+
+11) Use doctest to make sure that we haven't broken anything during obfuscation
+
+Deobfuscators
+-------------
+
+14) Pygments
+
+    * http://pygments.org/
+    * Syntax highlighter (outputs some form of markup)
+    * Works with python 3.x
+
+15) Lodge It
+
+    * http://paste.pocoo.org/
+    * Paste bin that does syntax highlighting
+
+16) pprint module
+
+    * http://docs.python.org/library/pprint.html#module-pprint
+    * Pretty printer in standard library
+
+17) PyDev
+
+    * http://www.pydev.org/
+    * Plugin for eclipse
+    * Analyses file for unused imports etc
+    * Syntax highlighting
+    * Formatting (apparently)
+    * Presumably does eclipsy things like simple refactoring and renaming of variables
+    * Mentions 3.x in the changelog
+
+18) PythonTidy
+
+    * http://pypi.python.org/pypi/PythonTidy
+    * Takes source and outputs formatted source
+    * Aims for Python 2.5
+
+19) PolyFormatter
+
+    * http://www.polystyle.com/index.jsp
+    * $14.97
+    * Multipurpose formatter
+
+20) pylint
+
+    * http://freshmeat.net/projects/pylint/
+    * Just checks and marks for good style
+
+21) pychecker
+
+    * http://pychecker.sourceforge.net/
+    * Looks for common bugs
+    * May be wrong occasionally because of nature of Python
