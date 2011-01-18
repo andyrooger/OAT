@@ -92,7 +92,15 @@ Sources are indices into the sources file
 
 32) Reordering loop transformations and computations
 
+33) Mix tab and spaces for indents - from 2
+
+34) Rebinding methods - from 2
+
+35) Write code as list comprehension - from 2
+
+    Difficult to automate?
+
 New Ideas
 ---------
 
-Some but I forgot them before I wrote them down.
+36) Override __builtinstuff__ with something subtly different

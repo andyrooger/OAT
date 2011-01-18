@@ -1,0 +1,63 @@
+Current Obfuscators
+===================
+
+1)  http://pawsense.com/python..obfuscator/
+    
+    * Online obfuscator demo.
+    * Python 2.3 (possibly up to 2.5)
+    * Based on (2)
+    * Closed source
+
+2)  Python obfuscator and code size reducer
+    
+    * http://bitboost.com/#Python_obfuscator
+    * Python 2.3 to 2.5 (mostly)
+    * Closed source ($200 for a license)
+
+3)  py2exe
+
+    * http://py2exe.org/
+    * Adds pyc files into a zip file and includes runtime in exe file (http://stackoverflow.com/questions/261638/how-do-i-protect-python-code)
+    * Hence this does not help any more than distributing pyc files
+    * exe so no longer portable
+
+
+Other Ideas
+-----------
+
+4)  Distribute compiled bytecode files
+    
+    * Slightly harder to decompile
+    * Slightly more options for obfuscating
+    * Cannot assume VMs are same across platforms (http://docs.python.org/py3k/library/dis.html)
+    * Hence no longer portable
+
+5)  C extensions
+
+    * Can obfuscate really important parts of the program
+    * Will mean we need a compiled version for each platform the app is designed to run on
+    * Can use existing C or C++ obfuscators
+
+6)  Get bytecode with disco, obfuscate and write to file to run later
+
+    * Involves distributing pyc files, see (4)
+
+7)  Obfuscate with the AST
+
+    * Easy to get to with AST module
+    * Need to write source back out (or can use (4) again)
+
+8)  Mark code block to obfuscate with decorators
+
+    * Can only do classes, methods, modules
+    * Easier to automate
+
+9)  Interactive obfuscator
+
+    * Easy to test
+    * Easy to see whats happening
+    * Could be slow to have to keep rewriting source to display
+
+10) Mark things to obfuscate in pydocs
+
+11) Use doctest to make sure that we haven't broken anything during obfuscation
