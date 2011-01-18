@@ -1,0 +1,98 @@
+Obfuscation Methods
+===================
+
+Here I aim to keep a list of obfuscation methods.
+
+From elsewhere
+--------------
+
+Sources are indices into the sources file
+
+1)  Remove formatting - from 1
+
+    Hard to do in python as formatting contains semantic information.
+
+2)  Remove code comments - implied from 1
+
+3)  Change identifiers - from 1
+
+4)  True opaque predicates to add uncertainty - from 1
+
+5)  Unknown opaque predicate, insert 2 different obfuscated versions of the original code - from 1
+
+6)  True opaque predicate to insert 2 versions of the code, one with subtle bug  - from 1
+
+7)  Extend loop conditions with opaque loop predicate - from 1
+
+8)  Add language-breaking features in the bytecode - from 1
+
+    Doubt it will work as python bytecode is not distributed.
+    Instead it is compiled when the program is run.
+
+9)  Replace standard libraries with our own version. - from 1
+
+10) Replace common idioms using automatic program recognition - from 1
+
+11) Table interpretation - from 1
+
+    This means converting the code into a different bytecode and running with
+    our own virtual machine.
+
+12) Add redundant operations - from 1
+
+    e.g. we know the value of $a$ so we multiply our expression by $a/val(a)$.
+
+13) Add dummy process - from 1
+
+14) Split sequential sections of the program into parallel operations
+
+15) inline: take methods and scatter the contents EVERYWHERE! - from 1
+
+16) outline: take code from everywhere and put it in a method - from 1
+
+17) interleaving code from different methods into one - from 1
+
+18) Split loops into separate chunks of loop (numerous loops) - from 1
+
+19) Unroll loops - from 1
+
+20) Loop blocking - from 1
+
+    Involves increasing the depth of nested loops.
+
+21) Loop reversal - from 1
+
+22) Change of encoding (i=i+2?) - from 1
+
+23) Promote from specialised storage to general (e.g. int to Integer) - from 1
+
+    Does python have primitives?
+
+24) Promote Integer scope/lifetime - from 1
+
+    Nice in python as variables are untyped so we can represent huge numbers
+    of independent variables with a single one. 
+
+25) Split variables into many others (real val using func, and replace
+    operators) - from 1
+
+26) Transform static data (like strings) into programs - from 1
+
+27) Merge multiple variable into a single one - from 1
+
+28) Split or merge arrays - from 1
+
+29) Fold or flatten arrays - from 1
+
+30) Merge or flatten inheritence chains, create instances of all new objects
+    to increase resilience - from 1
+
+31) Refactor two separate classes into a base class with buggy versions of
+    the methods from both - from 1
+
+32) Reordering loop transformations and computations
+
+New Ideas
+---------
+
+Some but I forgot them before I wrote them down.
