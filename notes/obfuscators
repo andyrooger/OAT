@@ -1,5 +1,8 @@
-Current Obfuscators
-===================
+Current Tools
+=============
+
+Obfuscators
+-----------
 
 1)  http://pawsense.com/python..obfuscator/
     
@@ -74,3 +77,55 @@ Other Ideas
 10) Mark things to obfuscate in pydocs
 
 11) Use doctest to make sure that we haven't broken anything during obfuscation
+
+Deobfuscators
+-------------
+
+14) Pygments
+
+    * http://pygments.org/
+    * Syntax highlighter (outputs some form of markup)
+    * Works with python 3.x
+
+15) Lodge It
+
+    * http://paste.pocoo.org/
+    * Paste bin that does syntax highlighting
+
+16) pprint module
+
+    * http://docs.python.org/library/pprint.html#module-pprint
+    * Pretty printer in standard library
+
+17) PyDev
+
+    * http://www.pydev.org/
+    * Plugin for eclipse
+    * Analyses file for unused imports etc
+    * Syntax highlighting
+    * Formatting (apparently)
+    * Presumably does eclipsy things like simple refactoring and renaming of variables
+    * Mentions 3.x in the changelog
+
+18) PythonTidy
+
+    * http://pypi.python.org/pypi/PythonTidy
+    * Takes source and outputs formatted source
+    * Aims for Python 2.5
+
+19) PolyFormatter
+
+    * http://www.polystyle.com/index.jsp
+    * $14.97
+    * Multipurpose formatter
+
+20) pylint
+
+    * http://freshmeat.net/projects/pylint/
+    * Just checks and marks for good style
+
+21) pychecker
+
+    * http://pychecker.sourceforge.net/
+    * Looks for common bugs
+    * May be wrong occasionally because of nature of Python
