@@ -21,6 +21,19 @@ Current Obfuscators
     * Hence this does not help any more than distributing pyc files
     * exe so no longer portable
 
+12)  pyobfuscate
+
+    * http://www.lysator.liu.se/~astrand/projects/pyobfuscate/
+    * Limited in its power
+    * No mention of versions
+    * A little bit about why it's handy to obfuscate python
+    * Open source
+
+13) decompyle
+
+    * http://www.crazy-compilers.com/decompyle/
+    * Paid service (10 EUR per 5kb)
+    * Decompiles bytecode
 
 Other Ideas
 -----------
