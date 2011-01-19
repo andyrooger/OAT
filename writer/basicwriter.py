@@ -24,9 +24,8 @@ class BasicWriter():
     ...     theast = ast.parse(file.read(), "startup.py", "exec")
     >>> type(theast)
     <class '_ast.Module'>
-    >>> import tempfile
     >>> with open("../example/startup.py.basicformat") as file:
-    ...         file.read() == srcToStr(t)
+    ...         file.read() == srcToStr(theast)
     True
 
     """
