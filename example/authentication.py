@@ -39,7 +39,7 @@ def addUser(name, password):
     users = config.getSettings("auth")["users"]
 
     if name in users:
-        raise KeyError, str(name)+" already exists"
+        raise KeyError(str(name)+" already exists")
 
     users[name] = password
     # Don't need a complete refresh to add one user
@@ -57,7 +57,7 @@ def refresh():
     global authModel
 
     users = config.getSettings("auth")["users"]
-    if not users.keys():
+    if not list(users.keys()):
         authModel = None
     else:
         authModel = restlite.AuthModel()

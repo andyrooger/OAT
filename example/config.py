@@ -54,7 +54,7 @@ def getSections():
     """
 
     global settings
-    return settings.keys()
+    return list(settings.keys())
 
 def setConfig(cfgpath):
     """
@@ -74,7 +74,7 @@ def setConfig(cfgpath):
             import pickle
             settings = pickle.load(cfg)
     except IOError:
-        print "Creating new config"
+        print("Creating new config")
         settings = {}
 
 def saveConfig():
@@ -90,7 +90,7 @@ def saveConfig():
                 import pickle
                 pickle.dump(settings, cfg)
         except IOError:
-            print "Couldn't save config...whoopsy"
+            print("Couldn't save config...whoopsy")
 
 def onDisk():
     """

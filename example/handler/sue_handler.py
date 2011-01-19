@@ -31,7 +31,7 @@ def SUE_handler():
         #        component_info[component_name] = assigned_groups
     
         #return request.response(component_info)
-        return request.response(config.getSettings("SUE")["defs"].keys(), 'text/html')
+        return request.response(list(config.getSettings("SUE")["defs"].keys()), 'text/html')
       
     def POST(request,entity):
         authentication.login(request)
@@ -40,24 +40,24 @@ def SUE_handler():
     
         fields = parseMultipart(request, entity)
         if fields is None:
-            raise restlite.Status, "400 Invalid SUE POST request - need parameters"
+            raise restlite.Status("400 Invalid SUE POST request - need parameters")
     
         # Try to find what we should label the component
         component_name = fields.getfirst("component_name")
         if not component_name:
-            raise restlite.Status, "400 Must give the SUE component a name"
+            raise restlite.Status("400 Must give the SUE component a name")
     
         # Try to get the SUE component
         try:
             component_f = fields['component_file']
         except KeyError:
-            raise restlite.Status, "400 Must provide a file when specifying a SUE component"
+            raise restlite.Status("400 Must provide a file when specifying a SUE component")
     
         if component_f.file:
             component = component_f.file.read()
             saveSueComponent(component_name, component)
         else:
-            raise restlite.Status, "400 The supplied \"component_file\" was not a file"
+            raise restlite.Status("400 The supplied \"component_file\" was not a file")
     
     
         return request.response("", "text/plain")
@@ -68,7 +68,7 @@ def SUE_handler():
   
 def parseMultipart(request, entity):
     import cgi
-    import StringIO
+    import io
     # Dicts for the entity parser to work
     head = {
         'content-type' : request['CONTENT_TYPE'],
@@ -78,7 +78,7 @@ def parseMultipart(request, entity):
     env = {'REQUEST_METHOD' : 'POST'}
 
     return cgi.FieldStorage(
-        fp=StringIO.StringIO(entity),
+        fp=io.StringIO(entity),
         headers=head,
         environ=env
     )
@@ -115,7 +115,7 @@ def saveSueComponent(component_name, component_file):
         os.remove(config.getSettings("SUE")["defs"][component_name]["file"])
     config.getSettings("SUE")["defs"][component_name] = newSueComponent
 
-    print config.getSettings("SUE")
+    print(config.getSettings("SUE"))
     config.saveConfig()
 
 def ensureDir(dir):

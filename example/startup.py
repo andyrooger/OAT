@@ -20,9 +20,9 @@ import permanent_bits as pb
 def show_break():
     """Display a break in the text output."""
 
-    print ""
-    print "------------------"
-    print ""
+    print("")
+    print("------------------")
+    print("")
 
 
 def windowsWarning():
@@ -44,10 +44,10 @@ def windowsWarning():
 def showWelcome():
     """Show a welcome message for the reef server."""
 
-    print ""
-    print "Welcome to " + pb.appname_long + "! The web GUI for Vazels."
-    print ""
-    print pb.app_desc
+    print("")
+    print(("Welcome to " + pb.appname_long + "! The web GUI for Vazels."))
+    print("")
+    print((pb.app_desc))
 
 
 def getBaseDir():
@@ -90,17 +90,17 @@ def offerDirOrQuit(dir):
 
     """
 
-    print "Using project directory: " + dir
-    print "If you're not happy with this then press CTRL+C to kill me and run me from somewhere better"
-    print "Otherwise you can hit return to carry on..."
+    print(("Using project directory: " + dir))
+    print("If you're not happy with this then press CTRL+C to kill me and run me from somewhere better")
+    print("Otherwise you can hit return to carry on...")
 
     try:
-        raw_input()
+        eval(input())
     except KeyboardInterrupt:
-        print "\nBye Bye..."
+        print("\nBye Bye...")
         sys.exit()
 
-    print "Oh good, let's continue then"
+    print("Oh good, let's continue then")
 
 
 def setupConfig(proj_dir, base_dir):
@@ -122,17 +122,17 @@ def setupConfig(proj_dir, base_dir):
     """
 
     config_file = os.path.join(proj_dir, pb.appname_file+".config")
-    print "Using " + config_file + " as the config file."
+    print(("Using " + config_file + " as the config file."))
     config.setConfig(config_file)
 
     new_config = not config.onDisk()
 
     if new_config:
-        print "Storing essential directories."
+        print("Storing essential directories.")
         config.getSettings("global")["basedir"] = base_dir
         config.getSettings("global")["projdir"] = proj_dir
     else:
-        print "Config Loaded."
+        print("Config Loaded.")
 
     return new_config
 
@@ -150,14 +150,14 @@ def setupSecurity():
     import security
 
     if not config.getSettings("security")["customkey"]:
-        print "Creating new SSH key..."
+        print("Creating new SSH key...")
         security.makeKey()
 
-    print "Backing up and authorising custom key..."
+    print("Backing up and authorising custom key...")
     security.backup()
     security.authoriseKey()
     atexit.register(security.restore)
-    print "Done."
+    print("Done.")
 
 
 def setupAuthentication():
@@ -193,23 +193,23 @@ def setupServer():
 
     myserver.getServer().setup()
 
-    print "Now you can log on to the server with the following credentials:"
-    print ""
-    print "Location: http://localhost:" + str(config.getSettings("server")["port"])
+    print("Now you can log on to the server with the following credentials:")
+    print("")
+    print(("Location: http://localhost:" + str(config.getSettings("server")["port"])))
 
     if authentication.active():
-        print "User: " + pb.app_user
-        print "Password: <You should know>"
-        print ""
-        print "If I displayed the password back to you then the small amount of security during the input would be wasted."
-        print "(You can just read it in the config file though, that's a problem.)"
+        print(("User: " + pb.app_user))
+        print("Password: <You should know>")
+        print("")
+        print("If I displayed the password back to you then the small amount of security during the input would be wasted.")
+        print("(You can just read it in the config file though, that's a problem.)")
 
 
 def finaliseConfig():
     """Save config and ask it to save on any normal exit."""
 
     config.saveConfig()
-    print "Config written to disk"
+    print("Config written to disk")
 
     # Set automatic save on close
     atexit.register(config.saveConfig)
@@ -220,8 +220,8 @@ def startServer():
 
     import myserver
 
-    print "Starting server...press CTRL+C to stop."
-    print ""
+    print("Starting server...press CTRL+C to stop.")
+    print("")
 
     # This lets the server be stopped with CTRL+C
     # As it runs to finish, exit handlers are called
@@ -262,4 +262,4 @@ if __name__ == "__main__":
     startServer()
     show_break()
 
-    print "All done, see you next time!"
+    print("All done, see you next time!")

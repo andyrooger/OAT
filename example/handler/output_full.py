@@ -33,6 +33,6 @@ class OutputFullHandler(DocHandler):
         parsed = pbparser.scan_output(path)
         # If the parsing broke in any way we get back None
         if parsed is None:
-            raise restlite.Status, "500 Could Not Read Output Data"
+            raise restlite.Status("500 Could Not Read Output Data")
         return request.response(parsed)
 

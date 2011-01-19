@@ -45,7 +45,7 @@ class SettingsEditor(DocHandler):
         if section:
             settings = config.getSettings(section, False)
             if settings is None:
-                raise restlite.Status, "404 Not Found"
+                raise restlite.Status("404 Not Found")
             else:
                 return request.response(settings)
         else:
@@ -96,8 +96,8 @@ class SettingsEditor(DocHandler):
         #    raise restlite.Status, '403 New Section Forbidden'
 
         # Grab arguments
-        import urlparse
-        parsed = urlparse.parse_qs(entity, True) # Null value is kept as ''
+        import urllib.parse
+        parsed = urllib.parse.parse_qs(entity, True) # Null value is kept as ''
         used_names = [] # Names used
         new_qs = {} # Values to add
         rem_qs = [] # Values to delete
@@ -127,11 +127,11 @@ class SettingsEditor(DocHandler):
                 # Try to convert to the correct format
                 func = funcFor(ext)
                 if func is None:
-                    raise restlite.Status, "400 Invalid Action"
+                    raise restlite.Status("400 Invalid Action")
                 try:
                     q = func(q)
                 except:
-                    raise restlite.Status, "400 Invalid Format"
+                    raise restlite.Status("400 Invalid Format")
                 new_qs[name] = q
                 used_names += [name]
 

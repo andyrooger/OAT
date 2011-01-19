@@ -166,7 +166,7 @@ def __readStatusReturnValue(iofile):
             status, host_name = (lambda l: (l[0], l[-1]))(status_text.split(' '))
       
             if not __updateHostStatus(current_group, status, host_name):
-                raise restlite.Status, "500 Something went seriously wrong trying to find status of hosts!"
+                raise restlite.Status("500 Something went seriously wrong trying to find status of hosts!")
       
             lastLine = vazels_command_stdout_READ.readline()
     

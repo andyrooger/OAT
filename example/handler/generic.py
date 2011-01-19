@@ -25,4 +25,4 @@ class GenericPageHandler(DocHandler):
         """
 
         #return request.response(('path', request['PATH_INFO'], request['SCRIPT_NAME']))
-        raise restlite.Status, "404 Not Found"
+        raise restlite.Status("404 Not Found")

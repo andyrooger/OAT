@@ -57,7 +57,7 @@ class WorkloadHandler(DocHandler):
 
         # Asking for names of workloads
         if not wkld:
-            return request.response(namemap.keys())
+            return request.response(list(namemap.keys()))
 
         # Asking for workload file
         if wkld.endswith(".wkld"):
@@ -65,24 +65,24 @@ class WorkloadHandler(DocHandler):
 
             # Asking for a non existent workload
             if wkldname not in namemap:
-                raise restlite.Status, "404 Not Found"
+                raise restlite.Status("404 Not Found")
 
             # Asking for an existing workload
             filename = namemap[wkldname]["file"]
 
             # File gone?
             if not os.path.isfile(filename):
-                raise restlite.Status, "410 Resource Missing"
+                raise restlite.Status("410 Resource Missing")
 
             with open(filename, 'rb') as file:
                 return request.response(file.read(), 'text/plain')
 
             # Something went wrong
-            raise restlite.Status, "500 Resource Unreadable"
+            raise restlite.Status("500 Resource Unreadable")
 
         # Otherwise get wkld info
         if wkld not in namemap:
-            raise restlite.Status, "404 Not Found"
+            raise restlite.Status("404 Not Found")
 
         wkld = namemap[wkld].copy()
         del wkld["file"]
@@ -122,12 +122,12 @@ class WorkloadHandler(DocHandler):
 
         fields = parseMultipart(request, entity)
         if fields is None:
-            raise restlite.Status, "400 Invalid Request"
+            raise restlite.Status("400 Invalid Request")
 
         # Try to pull a name
         wkldname = fields.getfirst("wkld_name")
         if not wkldname:
-            raise restlite.Status, "400 No Workload Name"
+            raise restlite.Status("400 No Workload Name")
         # Uncomment below to ban editing old workloads
         #elif wkldname in config.getSettings("workloads")["defs"]:
         #    raise restlite.Status, "403 Name Reuse Forbidden"
@@ -144,7 +144,7 @@ class WorkloadHandler(DocHandler):
 
         # Still couldn't get text
         if wkld is None:
-            raise restlite.Status, "400 No Workload Supplied"
+            raise restlite.Status("400 No Workload Supplied")
 
         saveWorkload(wkldname, wkld)
         return request.response(wkldname, "text/html")
@@ -165,7 +165,7 @@ def parseMultipart(request, entity):
     """
 
     import cgi
-    import StringIO
+    import io
     # Dicts for the entity parser to work
     head = {
         'content-type' : request['CONTENT_TYPE'],
@@ -175,7 +175,7 @@ def parseMultipart(request, entity):
     env = {'REQUEST_METHOD' : 'POST'}
 
     return cgi.FieldStorage(
-        fp=StringIO.StringIO(entity),
+        fp=io.StringIO(entity),
         headers=head,
         environ=env
     )

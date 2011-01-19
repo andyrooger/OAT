@@ -120,9 +120,9 @@ def _extractSueComponents(group_number, sueComps):
         try:
             sueCompFile = config.getSettings('SUE')['defs'][sueComp_name]['file']
         except KeyError:
-            print sueComp_name
-            print config.getSettings('SUE')['defs']
-            raise restlite.Status, "500, Failed to extract Sue component"
+            print(sueComp_name)
+            print(config.getSettings('SUE')['defs'])
+            raise restlite.Status("500, Failed to extract Sue component")
     
         extractpath = os.path.join(
             controlcentre.getExperimentPath(),

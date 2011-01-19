@@ -5,7 +5,7 @@
 
 import config
 import restlite
-import urlparse
+import urllib.parse
 import authentication
 
 from handler.dochandler import DocHandler
@@ -60,7 +60,7 @@ class GroupBatchHandler(DocHandler):
         """
 
         authentication.login(request)
-        group_data = config.getSettings("groups").keys()
+        group_data = list(config.getSettings("groups").keys())
 
         return request.response(group_data)
 
@@ -90,7 +90,7 @@ class GroupHandler(DocHandler):
             group_settings = config.getSettings("groups",True)[group_name]
             return request.response(group_settings)
         except KeyError:
-            raise restlite.Status, "404 Group Not Found"
+            raise restlite.Status("404 Group Not Found")
 
     def POST(self, request, entity):
         """
@@ -123,7 +123,7 @@ class GroupHandler(DocHandler):
         existing_groups = config.getSettings("groups")
         group_name = request['PATH_INFO']
 
-        args = urlparse.parse_qs(entity)
+        args = urllib.parse.parse_qs(entity)
         g_data = _getGroupDataFromArgs(args)
 
         if group_name in existing_groups:
@@ -174,7 +174,7 @@ def _getGroupDataFromArgs(args):
         try:
             group["size"] = int(args["size"][0])
         except ValueError:
-            raise restlite.Status, "400 Size must be integer"
+            raise restlite.Status("400 Size must be integer")
         n_args = n_args - 1
 
     # Add workload list
@@ -192,7 +192,7 @@ def _getGroupDataFromArgs(args):
         n_args = n_args - 1
 
     if n_args > 0:
-        raise restlite.Status, "400 Unrecognised Arguments"
+        raise restlite.Status("400 Unrecognised Arguments")
 
     return group
 
@@ -217,4 +217,4 @@ def getGroupFromRank(rank):
 	    if group_data[group_name]['group_number'] == int(rank):
 	        return group_data[group_name]
     except:
-       raise restlite.Status, "404 Tried to find physical group number which doesn't exist"
+       raise restlite.Status("404 Tried to find physical group number which doesn't exist")

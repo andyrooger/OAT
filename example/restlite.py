@@ -23,9 +23,10 @@ Dependencies: Python 2.6.
 
 from wsgiref.util import setup_testing_defaults
 from xml.dom import minidom
-import os, re, sys, sqlite3, Cookie, base64, hashlib, time, traceback
+import os, re, sys, sqlite3, http.cookies, base64, hashlib, time, traceback
+import collections
 try: import json
-except: print 'Cannot import json. Please use Python 2.6.'; raise
+except: print('Cannot import json. Please use Python 2.6.'); raise
 
 _debug = False
 
@@ -57,12 +58,12 @@ def router(routes):
     >>> print r(env, start_response)
     <files><type>text/xml</type><file>somefile.txt</file></files>
     '''
-    if isinstance(routes, dict) or hasattr(routes, 'items'): routes = routes.iteritems()
+    if isinstance(routes, dict) or hasattr(routes, 'items'): routes = iter(list(routes.items()))
     
     def handler(env, start_response):
         setup_testing_defaults(env)
         if 'wsgiorg.routing_args' not in env: env['wsgiorg.routing_args'] = dict()
-        env['COOKIE'] = Cookie.SimpleCookie()
+        env['COOKIE'] = http.cookies.SimpleCookie()
         if 'HTTP_COOKIE' in env: env['COOKIE'].load(env['HTTP_COOKIE'])
         
         for route in routes:
@@ -73,7 +74,7 @@ def router(routes):
             match = re.match(pattern, path)
             if match:
                 app = None
-                if callable(route[-1]): 
+                if isinstance(route[-1], collections.Callable): 
                     route, app = route[:-1], route[-1] # found the app
                 if len(route) > 1:
                     new_methods, path = route[1].split(' ', 1)
@@ -91,17 +92,17 @@ def router(routes):
                     try: response = app(env, my_response)
                     except Status: response, env['RESPONSE_STATUS'] = None, str(sys.exc_info()[1])
                     except: 
-                        if _debug: print traceback.format_exc() 
+                        if _debug: print(traceback.format_exc()) 
                         response, env['RESPONSE_STATUS'] = [traceback.format_exc()], '500 Internal Server Error'
                     if response is None: response = []
                     headers = env.get('RESPONSE_HEADERS', [('Content-Type', 'text/plain')])
-                    orig = Cookie.SimpleCookie(); cookie = env['COOKIE']
+                    orig = http.cookies.SimpleCookie(); cookie = env['COOKIE']
                     if 'HTTP_COOKIE' in env: orig.load(env['HTTP_COOKIE'])
-                    map(lambda x: cookie.__delitem__(x), [x for x in orig if x in cookie and str(orig[x]) == str(cookie[x])])
-                    if len(cookie): headers.extend([(x[0], x[1].strip()) for x in [str(y).split(':', 1) for y in cookie.itervalues()]])
+                    list([cookie.__delitem__(x) for x in [x for x in orig if x in cookie and str(orig[x]) == str(cookie[x])]])
+                    if len(cookie): headers.extend([(x[0], x[1].strip()) for x in [str(y).split(':', 1) for y in list(cookie.values())]])
                     start_response(env.get('RESPONSE_STATUS', '200 OK'), headers)
                     if _debug: 
-                        if response: print headers, '\n'+str(response)[:256]
+                        if response: print(headers, '\n'+str(response)[:256])
                     return response
 
         start_response('404 Not Found', [('Content-Type', 'text/plain')])
@@ -126,16 +127,16 @@ def tojson(value):
     '{"file": {"name": "myfile.txt", "acl": [{"allow": "kundan"}, {"allow": "admin"}]}}'
     '''
     def list2dict(value):
-        if hasattr(value, '_json_') and callable(value._json_): return value._json_()
-        if hasattr(value, '_list_') and callable(value._list_): value = value._list_()
-        if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], basestring):
+        if hasattr(value, '_json_') and isinstance(value._json_, collections.Callable): return value._json_()
+        if hasattr(value, '_list_') and isinstance(value._list_, collections.Callable): value = value._list_()
+        if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
             if isinstance(value[1], list):
                 return {value[0]: [list2dict(x) for x in value[1]]}
-            elif isinstance(value[1], tuple) and not [x for x in value[1] if not isinstance(x, tuple) or len(x) != 2 or not isinstance(x[0], basestring)]:
+            elif isinstance(value[1], tuple) and not [x for x in value[1] if not isinstance(x, tuple) or len(x) != 2 or not isinstance(x[0], str)]:
                 return {value[0]: dict([(x[0], list2dict(x[1])) for x in value[1]])}
             else:
                 return {value[0]: list2dict(value[1])}
-        elif isinstance(value, tuple) and  not [x for x in value if not isinstance(x, tuple) or len(x) != 2 or not isinstance(x[0], basestring)]:
+        elif isinstance(value, tuple) and  not [x for x in value if not isinstance(x, tuple) or len(x) != 2 or not isinstance(x[0], str)]:
             return dict([(x[0], list2dict(x[1])) for x in value])
         elif isinstance(value, list):
             return [list2dict(x) for x in value]
@@ -155,9 +156,9 @@ def xml(value):
     >>> xml(value)
     '<file><name>myfile.txt</name><acl><allow>kundan</allow><allow>admin</allow></acl></file>'
     '''
-    if hasattr(value, '_xml_') and callable(value._xml_): return value._xml_()
-    if hasattr(value, '_list_') and callable(value._list_): value = value._list_()
-    if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], basestring):
+    if hasattr(value, '_xml_') and isinstance(value._xml_, collections.Callable): return value._xml_()
+    if hasattr(value, '_list_') and isinstance(value._list_, collections.Callable): value = value._list_()
+    if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], str):
         if value[1] is None: return '<%s />'%(value[0])
         else: return '<%s>%s</%s>'%(value[0], xml(value[1]), value[0])
     elif isinstance(value, list) or isinstance(value, tuple):
@@ -190,7 +191,7 @@ def represent(value, type='*/*'):
     >>> represent(value, type='text/xml')[1]
     '<file><name>myfile.txt</name><acl><allow>kundan</allow><allow>admin</allow></acl></file>'
     '''
-    types = map(lambda x: x.lower(), re.split(r'[, \t]+', type))
+    types = [x.lower() for x in re.split(r'[, \t]+', type)]
     if '*/*' in types: types.append(defaultType)
     for type, func in (('application/json', tojson), ('text/xml', xml), ('text/plain', str), ('application/x-gzip', lambda x : x)):
         if type in types: return (type, func(value))
@@ -205,7 +206,7 @@ class Request(dict):
     It is a dictionary containing env information. Additionally, all the matching attributes from the router are
     stored as properties of this object, extracted from env['wsgiorg.routing_args'].'''
     def __init__(self, env, start_response):
-        self.update(env.iteritems())
+        self.update(iter(env.items()))
         self.__dict__.update(env.get('wsgiorg.routing_args', {}))
         self.start_response = start_response
     def response(self, value, type=None):
@@ -240,10 +241,10 @@ def resource(func):
     ''' 
     method_funcs = func()
     if method_funcs is None:
-        raise Status, '500 No "return locals()" in the definition of resource "%r"'%(func.__name__)
+        raise Status('500 No "return locals()" in the definition of resource "%r"'%(func.__name__))
     def handler(env, start_response):
         if env['REQUEST_METHOD'] not in method_funcs:
-            raise Status, '405 Method Not Allowed'
+            raise Status('405 Method Not Allowed')
 
         req = Request(env, start_response)
         if env['REQUEST_METHOD'] in ('GET', 'HEAD', 'DELETE'):
@@ -251,10 +252,10 @@ def resource(func):
         elif env['REQUEST_METHOD'] in ('POST', 'PUT'):
             if 'BODY' not in env:
                 try: env['BODY'] = env['wsgi.input'].read(int(env['CONTENT_LENGTH']))
-                except (TypeError, ValueError): raise Status, '400 Invalid Content-Length'
+                except (TypeError, ValueError): raise Status('400 Invalid Content-Length')
             if env['CONTENT_TYPE'].lower() == 'application/json' and env['BODY']: 
                 try: env['BODY'] = json.loads(env['BODY'])
-                except: raise Status, '400 Invalid JSON content'
+                except: raise Status('400 Invalid JSON content')
             result = method_funcs[env['REQUEST_METHOD']](req, env['BODY'])
         return [result] if result is not None else []
     return handler
@@ -272,22 +273,22 @@ def bind(obj):
         current, result = obj, None
         if env['REQUEST_METHOD'] == 'GET':
             while env['PATH_INFO']:
-                print 'path=', env['PATH_INFO']
+                print('path=', env['PATH_INFO'])
                 part, index = None, env['PATH_INFO'].find('/', 1)
                 if index < 0: index = len(env['PATH_INFO'])
                 part, env['SCRIPT_NAME'], env['PATH_INFO'] = env['PATH_INFO'][1:index], env['SCRIPT_NAME'] + env['PATH_INFO'][:index], env['PATH_INFO'][index:]
                 if not part: break
-                if current is None: raise Status, '404 Object Not Found'
+                if current is None: raise Status('404 Object Not Found')
                 try: current = current[int(part)] if isinstance(current, list) else current[part] if isinstance(current, dict) else current.__dict__[part] if hasattr(current, part) else None
-                except: print sys.exc_info(); raise Status, '400 Invalid Scope %r'%(part,)
+                except: print(sys.exc_info()); raise Status('400 Invalid Scope %r'%(part,))
             if current is None: result = None 
-            elif isinstance(current, list): result = [('url', '%s/%d'%(env['SCRIPT_NAME'], i,)) for i in xrange(len(current))]
-            elif isinstance(current, dict): result = tuple([(k, v if isinstance(v, basestring) else '%s/%s'%(env['SCRIPT_NAME'], k)) for k, v in current.iteritems()])
+            elif isinstance(current, list): result = [('url', '%s/%d'%(env['SCRIPT_NAME'], i,)) for i in range(len(current))]
+            elif isinstance(current, dict): result = tuple([(k, v if isinstance(v, str) else '%s/%s'%(env['SCRIPT_NAME'], k)) for k, v in current.items()])
             else:result = current
             type, value = represent(('result', result), type=env.get('ACCEPT', 'application/json'))
             start_response('200 OK', [('Content-Type', type)])
             return [value]
-        else: raise Status, '405 Method Not Allowed'
+        else: raise Status('405 Method Not Allowed')
     return handler
     
 #------------------------------------------------------------------------------
@@ -342,7 +343,7 @@ class Model(dict):
     def sql(self, *args):
         '''Execute a single SQL command and return the cursor. For select commands application should use the 
         cursor as an iterator, or invoke fetchone or fetchall as applicable.'''
-        if _debug: print 'SQL: ' + ': '.join(map(str, args))
+        if _debug: print('SQL: ' + ': '.join(map(str, args)))
         return self.conn.execute(*args)
     
     def sql1(self, *args): 
@@ -357,7 +358,7 @@ class Model(dict):
         # list of tuples (table-name, [list of attributes])
         tables = [(x[0], [y.strip() for y in x[1:]]) for x in (z.split('\n') for z in re.split(r'\r?\n\r?\n', re.sub(r'[ \t]{2,}', ' ', '\n'.join(map(str.rstrip, data_model.strip().split('\n'))))))]
         if createTable:
-            map(lambda t: self.sql("CREATE TABLE %s (%s)"%(t[0], ', '.join(t[1]))), tables)
+            list(map(lambda t: self.sql("CREATE TABLE %s (%s)"%(t[0], ', '.join(t[1]))), tables))
         if createType:
             for name, attrs in tables:
                 class klass(object):
@@ -368,7 +369,7 @@ class Model(dict):
                         keys = self.__class__._attrs_
                         for x in keys: self.__dict__[x] = None
                         for x, y in zip(keys[:len(args)], args): self.__dict__[x] = y
-                        for k, v in kwargs.iteritems(): self.__dict__[k] = v
+                        for k, v in kwargs.items(): self.__dict__[k] = v
                     def __str__(self):
                         return ', '.join(['%r=%r'%(x, self.__dict__[x]) for x in self.__class__._attrs_ if x in self.__dict__])
                     def _list_(self):
@@ -417,19 +418,19 @@ class AuthModel(Model):
     def login(self, request):
         hdr = request.get('HTTP_AUTHORIZATION', None)
         if hdr:
-            method, value = map(str.strip, hdr.split(' ', 1))
+            method, value = list(map(str.strip, hdr.split(' ', 1)))
             if method == 'Basic':
                 email, password = base64.b64decode(value).split(':', 1)
                 found = self.sql1('SELECT id, hash FROM user_login WHERE email=?', (email,))
                 if not found: 
                     request.start_response('401 Unauthorized', [('WWW-Authenticate', 'Basic realm="%s"'%('localhost',))])
-                    raise Status, '401 Not Found'
+                    raise Status('401 Not Found')
                 user_id, hash = found; 
                 realm = "localhost" # TODO: implement this
                 hash_recv = self.hash(email, realm, password)
                 if hash != hash_recv: 
                     request.start_response('401 Unauthorized', [('WWW-Authenticate', 'Basic realm="%s"'%(realm,))])
-                    raise Status, '401 Unauthorized'
+                    raise Status('401 Unauthorized')
                 token = self.token(user_id)
                 self.sql('UPDATE user_login SET token=? WHERE id=?', (token, user_id))
                 request['COOKIE']['token'] = token; request['COOKIE']['token']['path'] = '/'
@@ -438,16 +439,16 @@ class AuthModel(Model):
         elif (hasattr(request, 'user_id') or hasattr(request, 'email')) and hasattr(request, 'token'):
             if request.email == 'admin':
                 adminhash = hashlib.md5('%s::%s'%(request.email, self.mypass)).hexdigest()
-                print request.token, adminhash
-                if adminhash != request.token: raise Status, '401 Not Authorized'
+                print(request.token, adminhash)
+                if adminhash != request.token: raise Status('401 Not Authorized')
                 user_id, email, token = 0, request.email, adminhash
             else:
                 found = self.sql1('SELECT id, email, token FROM user_login WHERE (id=? OR email=?) AND (token=? OR hash=?)', (request.user_id, request.email, request.token, request.token))
                 if not found:
                     if not self.sql1('SELECT id FROM user_login WHERE id=? OR email=?', (request.user_id, request.email)):
-                        raise Status, '404 Not Found'
+                        raise Status('404 Not Found')
                     else:
-                        raise Status, '401 Unauthorized'
+                        raise Status('401 Unauthorized')
                 user_id, email, token = int(found[0]), found[1], found[2]
             if token != request.token:
                 token = self.token(user_id)
@@ -460,7 +461,7 @@ class AuthModel(Model):
             if user_id == 0:
                 email = 'admin'; hash = hashlib.md5('%s::%s'%(email, self.mypass)).hexdigest()
                 if hash != token:
-                    raise Status, '401 Not Authorized as Admin'
+                    raise Status('401 Not Authorized as Admin')
             else:
                 found = self.sql1('SELECT email FROM user_login WHERE id=? AND token=?', (user_id, token))
                 if not found:
@@ -470,13 +471,13 @@ class AuthModel(Model):
                     request['COOKIE']['token']['path'] = '/'
                     realm = "localhost"
                     request.start_response('401 Unauthorized', [('WWW-Authenticate', 'Basic realm="%s"'%(realm,))])
-                    raise Status, '401 Unauthorized'
+                    raise Status('401 Unauthorized')
                 email = found[0]
             return (user_id, email, token)
         else: 
             realm = "localhost"
             request.start_response('401 Unauthorized', [('WWW-Authenticate', 'Basic realm="%s"'%(realm,))])
-            raise Status, '401 Unauthorized'
+            raise Status('401 Unauthorized')
 
     def logout(self, request):
         if 'COOKIE' in request and 'user_id' in request['COOKIE'] and 'token' in request['COOKIE']:

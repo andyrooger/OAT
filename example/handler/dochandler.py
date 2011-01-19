@@ -59,9 +59,9 @@ class DocHandler:
 
         funcs = {}
 
-        if self.GET.im_class != DocHandler:
+        if self.GET.__self__.__class__ != DocHandler:
             funcs["GET"] = self.GET
-        if self.POST.im_class != DocHandler:
+        if self.POST.__self__.__class__ != DocHandler:
             funcs["POST"] = self.POST
 
         return funcs

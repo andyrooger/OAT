@@ -32,7 +32,7 @@
 
 __author__ = 'kenton@google.com (Kenton Varda)'
 
-import cStringIO
+import io
 import re
 
 from collections import deque
@@ -54,7 +54,7 @@ class ParseError(Exception):
 
 
 def MessageToString(message):
-  out = cStringIO.StringIO()
+  out = io.StringIO()
   PrintMessage(message, out)
   result = out.getvalue()
   out.close()
@@ -418,7 +418,7 @@ class _Tokenizer(object):
     """
     try:
       result = self._ParseInteger(self.token, is_signed=True, is_long=False)
-    except ValueError, e:
+    except ValueError as e:
       raise self._IntegerParseError(e)
     self.NextToken()
     return result
@@ -434,7 +434,7 @@ class _Tokenizer(object):
     """
     try:
       result = self._ParseInteger(self.token, is_signed=False, is_long=False)
-    except ValueError, e:
+    except ValueError as e:
       raise self._IntegerParseError(e)
     self.NextToken()
     return result
@@ -450,7 +450,7 @@ class _Tokenizer(object):
     """
     try:
       result = self._ParseInteger(self.token, is_signed=True, is_long=True)
-    except ValueError, e:
+    except ValueError as e:
       raise self._IntegerParseError(e)
     self.NextToken()
     return result
@@ -466,7 +466,7 @@ class _Tokenizer(object):
     """
     try:
       result = self._ParseInteger(self.token, is_signed=False, is_long=True)
-    except ValueError, e:
+    except ValueError as e:
       raise self._IntegerParseError(e)
     self.NextToken()
     return result
@@ -493,7 +493,7 @@ class _Tokenizer(object):
 
     try:
       result = float(text)
-    except ValueError, e:
+    except ValueError as e:
       raise self._FloatParseError(e)
     self.NextToken()
     return result
@@ -525,7 +525,7 @@ class _Tokenizer(object):
     Raises:
       ParseError: If a string value couldn't be consumed.
     """
-    return unicode(self.ConsumeByteString(), 'utf-8')
+    return str(self.ConsumeByteString(), 'utf-8')
 
   def ConsumeByteString(self):
     """Consumes a byte array value.
@@ -557,7 +557,7 @@ class _Tokenizer(object):
 
     try:
       result = _CUnescape(text[1:-1])
-    except ValueError, e:
+    except ValueError as e:
       raise self._ParseError(str(e))
     self.NextToken()
     return result

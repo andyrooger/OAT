@@ -39,7 +39,7 @@ _VALUE = descriptor.Descriptor(
     descriptor.FieldDescriptor(
       name='stringValue', full_name='Value.stringValue', index=1,
       number=2, type=9, cpp_type=9, label=1,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      has_default_value=False, default_value=str("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -81,7 +81,7 @@ _SNAPSHOT = descriptor.Descriptor(
     descriptor.FieldDescriptor(
       name='actor', full_name='Snapshot.actor', index=1,
       number=2, type=9, cpp_type=9, label=2,
-      has_default_value=False, default_value=unicode("", "utf-8"),
+      has_default_value=False, default_value=str("", "utf-8"),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None),
@@ -137,20 +137,17 @@ _TIMESERIE = descriptor.Descriptor(
 _SNAPSHOT.fields_by_name['value'].message_type = _VALUE
 _TIMESERIE.fields_by_name['snapshot'].message_type = _SNAPSHOT
 
-class Value(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
+class Value(message.Message, metaclass=reflection.GeneratedProtocolMessageType):
   DESCRIPTOR = _VALUE
   
   # @@protoc_insertion_point(class_scope:Value)
 
-class Snapshot(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
+class Snapshot(message.Message, metaclass=reflection.GeneratedProtocolMessageType):
   DESCRIPTOR = _SNAPSHOT
   
   # @@protoc_insertion_point(class_scope:Snapshot)
 
-class TimeSerie(message.Message):
-  __metaclass__ = reflection.GeneratedProtocolMessageType
+class TimeSerie(message.Message, metaclass=reflection.GeneratedProtocolMessageType):
   DESCRIPTOR = _TIMESERIE
   
   # @@protoc_insertion_point(class_scope:TimeSerie)

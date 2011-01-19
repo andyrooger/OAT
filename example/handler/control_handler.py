@@ -105,7 +105,7 @@ class GetAllStatusHandler(DocHandler):
         if commandclient.updateStatuses():
             return request.response("")
         else:
-            raise restlite.Status, "400 Failed to send getallstatus request - don't call this before starting the Control Center"
+            raise restlite.Status("400 Failed to send getallstatus request - don't call this before starting the Control Center")
 
 
 class GetAllOutputHandler(DocHandler):
@@ -128,7 +128,7 @@ class GetAllOutputHandler(DocHandler):
         if commandclient.getalloutput():
             return request.response("")
         else:
-            raise restlite.Status, "400 Failed to get output from Vazels - don't call this before starting the Control Center"
+            raise restlite.Status("400 Failed to get output from Vazels - don't call this before starting the Control Center")
 
 
 class StartExperimentHandler(DocHandler):
@@ -151,6 +151,6 @@ class StartExperimentHandler(DocHandler):
         if commandclient.startexperiment():
             return request.response("")
         else:
-            raise restlite.Status, "400 Failed to start experiment - don't call this before starting the Control Center"
+            raise restlite.Status("400 Failed to start experiment - don't call this before starting the Control Center")
 
 

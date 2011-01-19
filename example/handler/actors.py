@@ -52,7 +52,7 @@ class ActorsHandler(DocHandler):
 
         # Asking for names of actors
         if not actor:
-            return request.response(namemap.keys())
+            return request.response(list(namemap.keys()))
 
         # Asking for the file
         if actor.endswith(".tar.gz"):
@@ -61,7 +61,7 @@ class ActorsHandler(DocHandler):
 
         # Asking for the actor info
         if actor not in namemap:
-            raise restlite.Status, "404 Not Found"
+            raise restlite.Status("404 Not Found")
 
         actordata = namemap[actor].copy()
         del actordata['file']
@@ -101,12 +101,12 @@ class ActorsHandler(DocHandler):
 
         fields = self.parseMultipart(request, entity)
         if fields is None:
-            raise restlite.Status, "400 Invalid Request"
+            raise restlite.Status("400 Invalid Request")
 
         # Try to pull a name
         actorname = fields.getfirst("actor_name")
         if not actorname:
-            raise restlite.Status, "400 No Actor Name"
+            raise restlite.Status("400 No Actor Name")
         # Uncomment below to ban editing old actors
         #elif actorname in config.getSettings("actors")["defs"]:
         #    raise restlite.Status, "403 Name Reuse Forbidden"
@@ -114,11 +114,11 @@ class ActorsHandler(DocHandler):
         # Try to pull type
         actortype = fields.getfirst("actor_type")
         if not actortype:
-            raise restlite.Status, "400 No Actor Type"
+            raise restlite.Status("400 No Actor Type")
 
         actortype = actortype.lower()
         if actortype not in ALLOWED_TYPES:
-            raise restlite.Status, "400 Invalid Actor Type"
+            raise restlite.Status("400 Invalid Actor Type")
 
         # Try to get file
         actor = None
@@ -130,7 +130,7 @@ class ActorsHandler(DocHandler):
 
         # Couldn't get actor
         if not actor:
-            raise restlite.Status, "400 No Actor Supplied"
+            raise restlite.Status("400 No Actor Supplied")
 
         self.saveActor(actorname, actortype, actor)
         return request.response(actorname, "text/html")
@@ -159,20 +159,20 @@ class ActorsHandler(DocHandler):
 
         # Asking for a non existent actor
         if actorname not in namemap:
-            raise restlite.Status, "404 Not Found"
+            raise restlite.Status("404 Not Found")
 
         filename = namemap[actorname]['file']
 
         # File gone?
         if not os.path.isfile(filename):
-            raise restlite.Status, "410 Resource Missing"
+            raise restlite.Status("410 Resource Missing")
 
         # Asking for an existing actor
         with open(filename, 'rb') as file:
             return request.response(file.read(), 'application/x-gzip')
 
         # Something went wrong
-        raise restlite.Status, "500 Resource Unreadable"
+        raise restlite.Status("500 Resource Unreadable")
 
 
     def parseMultipart(self, request, entity):
@@ -192,7 +192,7 @@ class ActorsHandler(DocHandler):
         """
 
         import cgi
-        import StringIO
+        import io
         # Dicts for the entity parser to work
         head = {
             'content-type' : request['CONTENT_TYPE'],
@@ -202,7 +202,7 @@ class ActorsHandler(DocHandler):
         env = {'REQUEST_METHOD' : 'POST'}
 
         return cgi.FieldStorage(
-            fp=StringIO.StringIO(entity),
+            fp=io.StringIO(entity),
             headers=head,
             environ=env
         )

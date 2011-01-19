@@ -37,7 +37,7 @@ class ProbeHandler(DocHandler):
 
         authentication.login(request)
         if commandclient.vazelsPhase() != commandclient.Statuses["STATUS_RUNNING"]:
-            raise restlite.Status, "400 Can't get the Probe until the experiment is set up"
+            raise restlite.Status("400 Can't get the Probe until the experiment is set up")
 
         probePath = os.path.join(controlcentre.getExperimentPath(), "Probe_Folder")
     
@@ -54,5 +54,5 @@ class ProbeHandler(DocHandler):
 
             return request.response(content, "application/x-gzip")
 
-        raise restlite.Status, "500 Could Not Serve Probe File"
+        raise restlite.Status("500 Could Not Serve Probe File")
 

@@ -63,7 +63,7 @@ def authoriseKey():
             with open(keyPath()+".pub", 'r') as src:
                 shutil.copyfileobj(src, dst)
     except:
-        print "Couldn't authorize new key, restoring backup..."
+        print("Couldn't authorize new key, restoring backup...")
         restore()
     
 

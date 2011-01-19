@@ -35,6 +35,6 @@ def download_data_handler():
 
 		return request.response(return_data, "application/x-gzip")
 
-	raise restlite.Status, "500 Could Not Serve Data File"
+	raise restlite.Status("500 Could Not Serve Data File")
     return locals()
 

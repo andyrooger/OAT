@@ -49,7 +49,7 @@ class AuthPageHandler(DocHandler):
         authentication.login(request)
 
         if '..' in request['PATH_INFO']:
-            raise restlite.Status, '400 Invalid Path'
+            raise restlite.Status('400 Invalid Path')
 
         page_file = os.path.join(
             config.getSettings("global")["basedir"],
@@ -79,7 +79,7 @@ class AuthPageHandler(DocHandler):
             with open(path, 'r') as page:
                 return page.read()
         except IOError:
-            raise restlite.Status, "404 Not Found"
+            raise restlite.Status("404 Not Found")
 
 
     def getType(self, path):
