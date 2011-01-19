@@ -116,8 +116,22 @@ class BasicWriter():
         self._write_Module(tree)
         self.is_interactive = old_interactive
 
-    def _write_Expression(self, tree): pass
-    def _write_Suite(self, tree): pass # For jython
+    def _write_Expression(self, tree):
+        """
+        Write out a solo expression.
+
+        >>> import ast
+        >>> myast = ast.Expression(ast.Expr(ast.Str("Hello")))
+        >>> srcToStr(myast) == repr("Hello")
+        True
+
+        """
+
+        self._write(tree.body)
+    
+
+    def _write_Suite(self, tree):
+        raise NotImplementedError("I have no idea what a suite is supposed to be")
 
     # stmt
     def _write_FunctionDef(self, tree): pass
