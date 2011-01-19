@@ -26,9 +26,7 @@ class BasicWriter():
     <class '_ast.Module'>
     >>> import tempfile
     >>> with open("../example/startup.py.basicformat") as file:
-    ...     with tempfile.SpooledTemporaryFile(256, mode="rw") as t:
-    ...         BasicWriter(theast, t).write()
-    ...         file.read() == t.read()
+    ...         file.read() == srcToStr(t)
     True
 
     """
