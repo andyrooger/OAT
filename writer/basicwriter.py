@@ -84,6 +84,30 @@ class BasicWriter():
 
         getattr(self, "_write_" + tree.__class__.__name__)(tree)
 
+    def _write_list(self, stmts):
+        """
+        Write a list of statements, each on a new line.
+
+        >>> import ast
+        >>> stmts = [
+        ...     ast.Str("hello"),
+        ...     ast.Str("is it me"),
+        ...     ast.Str("You're looking for?")
+        ... ]
+        >>> printSource(ast.Module(stmts))
+        'hello'
+        'is it me'
+        "You're looking for?"
+        <BLANKLINE>
+
+        """
+
+        for stmt in stmts:
+            self._indent()
+            self._write(stmt)
+            self._newline()
+            
+
     def _write_Module(self, tree):
         """
         Write out a Module object.
@@ -95,10 +119,7 @@ class BasicWriter():
 
         """
 
-        for stmt in tree.body:
-            self._indent()
-            self._write(stmt)
-            self._newline()
+        self._write(tree.body)
 
     def _write_Interactive(self, tree):
         """
@@ -113,7 +134,7 @@ class BasicWriter():
 
         old_interactive = self.is_interactive
         self.is_interactive = True
-        self._write_Module(tree)
+        self._write(tree.body)
         self.is_interactive = old_interactive
 
     def _write_Expression(self, tree):
@@ -134,7 +155,46 @@ class BasicWriter():
         raise NotImplementedError("I have no idea what a suite is supposed to be")
 
     # stmt
-    def _write_FunctionDef(self, tree): pass
+    def _write_FunctionDef(self, tree):
+        """
+        Write out a function.
+
+        >>> import ast
+        >>> c = '''
+        ... @afunction
+        ... def myfunction(arg1, arg2, arg3=None):
+        ...     print("hi")
+        ...     print("bye")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        True
+
+        """
+
+        # TODO: FINISH TESTS, AND DECORATORS, AND BODY
+
+        for decorator in tree.decorator_list:
+            self.out.write("@")
+            self._write(decorator)
+            self._newline()
+            self._indent()
+
+        self.out.write("def " + tree.name + "(")
+        self._write(tree.args)
+        self.out.write(")")
+        if tree.returns:
+            self.out.write(" -> ")
+            self._write(tree.returns)
+        self.out.write(":")
+        self._newline()
+
+        self.indent_level += 1
+        self._write(tree.body)
+        self.indent_level -= 1
+        self._newline()
+            
+
     def _write_ClassDef(self, tree): pass
     def _write_Return(self, tree): pass
 
@@ -265,8 +325,23 @@ class BasicWriter():
     def _write_In(self, tree): pass
     def _write_NotIn(self, tree): pass
 
+    # comprehension
+    def _write_comprehension(self, tree): pass
+
     # excepthandler
     def _write_ExceptHandler(self, tree): pass
+
+    # arguments
+    def _write_arguments(self, tree): pass
+
+    # arg
+    def _write_arg(self, tree): pass
+
+    # keyword
+    def _write_keyword(self, tree): pass
+
+    # alias
+    def _write_alias(self, tree): pass
 
 
 def printSource(tree : "Tree to print"):
