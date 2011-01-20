@@ -59,6 +59,16 @@ class BasicWriter():
 
         self.out.write("\n")
 
+    def _inc_indent(self):
+        """Increase indentation."""
+
+        self.indent_level += 1
+
+    def _dec_indent(self):
+        """Decrease indentation."""
+
+        self.indent_level -= 1
+
     def _indent(self):
         """Indent to the correct level."""
 
@@ -218,9 +228,9 @@ class BasicWriter():
         self.out.write(":")
         self._newline()
 
-        self.indent_level += 1
+        self._inc_indent()
         self._write(tree.body)
-        self.indent_level -= 1
+        self._dec_indent()
             
 
     def _write_ClassDef(self, tree):
@@ -258,9 +268,9 @@ class BasicWriter():
         self.out.write(":")
         self._newline()
 
-        self.indent_level += 1
+        self._inc_indent()
         self._write(tree.body)
-        self.indent_level -= 1
+        self._dec_indent()
         
 
     def _write_Return(self, tree): pass
