@@ -303,7 +303,21 @@ class BasicWriter():
             between=(lambda: self.out.write(", ")))
 
 
-    def _write_Assign(self, tree): pass
+    def _write_Assign(self, tree):
+        """
+        Write out an assignment statement.
+
+        >>> import ast
+        >>> myast = ast.parse("a=b=c=142")
+        >>> printSource(myast)
+        a = b = c = 142
+
+        """
+
+        self._separated_write(tree.targets + [tree.value],
+            between=(lambda: self.out.write(" = ")))
+
+
     def _write_AugAssign(self, tree): pass
 
     def _write_For(self, tree): pass
