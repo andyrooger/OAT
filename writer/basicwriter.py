@@ -481,7 +481,22 @@ class BasicWriter():
         self._write(tree.body)
         self._dec_indent()
 
-    def _write_Raise(self, tree): pass
+    def _write_Raise(self, tree):
+        """
+        Write out raise statement.
+
+        Ignores cause (I don't think it's used in 3k)
+
+        >>> import ast
+        >>> myast = ast.parse("raise Exception('Bad thing happened')")
+        >>> printSource(myast)
+        raise Exception('Bad thing happened')
+
+        """
+
+        self.out.write("raise ")
+        self._write(tree.exc)
+
     def _write_TryExcept(self, tree): pass
     def _write_TryFinally(self, tree): pass
     def _write_Assert(self, tree): pass
