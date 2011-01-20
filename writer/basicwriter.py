@@ -370,7 +370,18 @@ class BasicWriter():
     def _write_Yield(self, tree): pass
     def _write_Compare(self, tree): pass
     def _write_Call(self, tree): pass
-    def _write_Num(self, tree): pass
+
+    def _write_Num(self, tree):
+        """
+        Write out a numerical object.
+
+        >>> import ast
+        >>> printSource(ast.parse("1042"))
+        1042
+
+        """
+
+        self.out.write(repr(tree.n))
 
     def _write_Str(self, tree):
         """
