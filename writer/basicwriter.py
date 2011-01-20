@@ -686,9 +686,60 @@ class BasicWriter():
     def _write_Continue(self, tree): self.out.write("continue")
 
     # expr
-    def _write_BoolOp(self, tree): pass
-    def _write_BinOp(self, tree): pass
-    def _write_UnaryOp(self, tree): pass
+    def _write_BoolOp(self, tree):
+        """
+        Write out a boolean operation.
+
+        >>> import ast
+        >>> myast = ast.parse("a and b or c")
+        >>> printSource(myast)
+        ((a and b) or c)
+
+        """
+
+        def sep():
+            self._write(" ")
+            self._write(tree.op)
+            self._write(" ")
+
+        self._write("(")
+        self._separated_write(tree.values, between = sep)
+        self._write(")")
+
+    def _write_BinOp(self, tree):
+        """
+        Write out a binary operation.
+
+        >>> import ast
+        >>> myast = ast.parse("a / 2 * 3 + 10")
+        >>> printSource(myast)
+        (((a / 2) * 3) + 10)
+
+        """
+
+        self._write("(")
+        self._write(tree.left)
+        self._write(" ")
+        self._write(tree.op)
+        self._write(" ")
+        self._write(tree.right)
+        self._write(")")
+
+    def _write_UnaryOp(self, tree):
+        """
+        Write out a unary operation.
+
+        >>> import ast
+        >>> myast = ast.parse("not ~a")
+        >>> printSource(myast)
+        not ~ a
+
+        """
+
+        self._write(tree.op)
+        self._write(" ")
+        self._write(tree.operand)
+
     def _write_Lambda(self, tree): pass
     def _write_IfExp(self, tree): pass
     def _write_Dict(self, tree): pass
@@ -778,13 +829,13 @@ class BasicWriter():
     def _write_BitAnd(self, tree): self.out.write("&")
     def _write_FloorDiv(self, tree): self.out.write("//")
 
-    # unaryop
+    # unaryop - too simple
     def _write_Invert(self, tree): self.out.write("~")
     def _write_Not(self, tree): self.out.write("not")
     def _write_UAdd(self, tree): self.out.write("+")
     def _write_USub(self, tree): self.out.write("-")
 
-    # cmpop
+    # cmpop - too simple
     def _write_Eq(self, tree): self.out.write("==")
     def _write_NotEq(self, tree): self.out.write("!=")
     def _write_Lt(self, tree): self.out.write("<")
