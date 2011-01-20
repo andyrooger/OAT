@@ -273,9 +273,36 @@ class BasicWriter():
         self._dec_indent()
         
 
-    def _write_Return(self, tree): pass
+    def _write_Return(self, tree):
+        """
+        Write out a return statement.
 
-    def _write_Delete(self, tree): pass
+        >>> import ast
+        >>> myast = ast.parse("return 'Hello there'")
+        >>> printSource(myast)
+        return 'Hello there'
+
+        """
+
+        self.out.write("return ")
+        self._write(tree.value)
+
+    def _write_Delete(self, tree):
+        """
+        Write out a delete statement.
+
+        >>> import ast
+        >>> myast = ast.parse("del myvar, yourvar")
+        >>> printSource(myast)
+        del myvar, yourvar
+
+        """
+
+        self.out.write("del ")
+        self._separated_write(tree.targets,
+            between=(lambda: self.out.write(", ")))
+
+
     def _write_Assign(self, tree): pass
     def _write_AugAssign(self, tree): pass
 
