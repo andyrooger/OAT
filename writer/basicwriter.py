@@ -576,10 +576,59 @@ class BasicWriter():
         self._write(tree.finalbody)
         self._dec_indent()
 
-    def _write_Assert(self, tree): pass
+    def _write_Assert(self, tree):
+        """
+        Write out an assert statement.
 
-    def _write_Import(self, tree): pass
-    def _write_ImportFrom(self, tree): pass
+        >>> import ast
+        >>> myast = ast.parse("assert False, 'Oh dear'")
+        >>> printSource(myast)
+        assert False, 'Oh dear'
+
+        """
+
+        self.out.write("assert ")
+        self._write(tree.test)
+
+        if tree.msg:
+            self.out.write(", ")
+            self._write(tree.msg)
+
+
+    def _write_Import(self, tree):
+        """
+        Write out an import statement.
+
+        >>> import ast
+        >>> myast = ast.parse("import sys, os")
+        >>> printSource(myast)
+        import sys, os
+
+        """
+
+        self.out.write("import ")
+        self._separated_write(tree.names,
+            between = (lambda: self.out.write(", ")))
+
+    def _write_ImportFrom(self, tree):
+        """
+        Write out an import from statement.
+
+        >>> import ast
+        >>> myast = ast.parse("from .. sys import sys as sys2, os")
+        >>> printSource(myast)
+        from .. sys import sys as sys2, os
+
+        """
+
+        self.out.write("from ")
+        if tree.level:
+            self.out.write(("." * tree.level) + " ")
+        self.out.write(tree.module + " import ")
+
+        self._separated_write(tree.names,
+            between = (lambda: self.out.write(", ")))
+
 
     def _write_Global(self, tree): pass
     def _write_Nonlocal(self, tree): pass
@@ -764,7 +813,21 @@ class BasicWriter():
     def _write_keyword(self, tree): pass
 
     # alias
-    def _write_alias(self, tree): pass
+    def _write_alias(self, tree):
+        """
+        Write out an alias.
+
+        >>> import ast
+        >>> myast = ast.parse("import hello as world")
+        >>> printSource(myast)
+        import hello as world
+
+        """
+
+        self.out.write(tree.name)
+
+        if tree.asname:
+            self.out.write(" as " + tree.asname)
 
 
 def printSource(tree : "Tree to print"):
