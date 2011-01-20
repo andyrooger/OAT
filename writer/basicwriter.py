@@ -145,7 +145,10 @@ class BasicWriter():
         self._separated_write(stmts,
             before=self._indent,
             between=self._newline)
-            
+
+    def _write_str(self, s): self.out.write(s)
+    def _write_int(self, i): self.out.write(str(i))
+    def _write_float(self, f): self.out.write(str(f))
 
     def _write_Module(self, tree):
         """
@@ -630,8 +633,37 @@ class BasicWriter():
             between = (lambda: self.out.write(", ")))
 
 
-    def _write_Global(self, tree): pass
-    def _write_Nonlocal(self, tree): pass
+    def _write_Global(self, tree):
+        """
+        Write out a global variable.
+
+        >>> import ast
+        >>> myast = ast.parse("global g1, g2")
+        >>> printSource(myast)
+        global g1, g2
+
+        """
+
+        self.out.write("global ")
+        self._separated_write(tree.names,
+            between = (lambda: self.out.write(", ")))
+
+
+    def _write_Nonlocal(self, tree):
+        """
+        Write out a nonlocal variable.
+
+        >>> import ast
+        >>> myast = ast.parse("nonlocal n1, n2")
+        >>> printSource(myast)
+        nonlocal n1, n2
+
+        """
+
+        self.out.write("nonlocal ")
+        self._separated_write(tree.names,
+            between = (lambda: self.out.write(", ")))
+
 
     def _write_Expr(self, tree):
         """
