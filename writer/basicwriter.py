@@ -335,8 +335,84 @@ class BasicWriter():
         self.out.write("= ")
         self._write(tree.value)
 
-    def _write_For(self, tree): pass
-    def _write_While(self, tree): pass
+    def _write_For(self, tree):
+        """
+        Write out a for loop.
+
+        >>> import ast
+        >>> c = '''
+        ... for i in range(3):
+        ...     print(str(i))
+        ... else:
+        ...     print("I wonder how this happened...")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        for i in range(3):
+            print(str(i))
+        else:
+            print('I wonder how this happened...')
+
+        """
+
+        self.out.write("for ")
+        self._write(tree.target)
+        self.out.write(" in ")
+        self._write(tree.iter)
+        self.out.write(":")
+        self._newline()
+
+        self._inc_indent()
+        self._write(tree.body)
+        self._dec_indent()
+
+        if tree.orelse:
+            self._indent_nl()
+            self.out.write("else:")
+            self._newline()
+
+            self._inc_indent()
+            self._write(tree.orelse)
+            self._dec_indent()
+
+    def _write_While(self, tree):
+        """
+        Write out a while loop.
+
+        >>> import ast
+        >>> c = '''
+        ... while True:
+        ...     pass
+        ... else:
+        ...     print("Never get here.")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        while True:
+            pass
+        else:
+            print('Never get here.')
+
+        """
+
+        self.out.write("while ")
+        self._write(tree.test)
+        self.out.write(":")
+        self._newline()
+
+        self._inc_indent()
+        self._write(tree.body)
+        self._dec_indent()
+
+        if tree.orelse:
+            self._indent_nl()
+            self.out.write("else:")
+            self._newline()
+
+            self._inc_indent()
+            self._write(tree.orelse)
+            self._dec_indent()
+
     def _write_If(self, tree): pass
     def _write_With(self, tree): pass
 
@@ -366,9 +442,10 @@ class BasicWriter():
         self._write(tree.value)
 
 
-    def _write_Pass(self, tree): pass
-    def _write_Break(self, tree): pass
-    def _write_Continue(self, tree): pass
+    # not worth testing
+    def _write_Pass(self, tree): self.out.write("pass")
+    def _write_Break(self, tree): self.out.write("break")
+    def _write_Continue(self, tree): self.out.write("continue")
 
     # expr
     def _write_BoolOp(self, tree): pass
