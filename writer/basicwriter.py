@@ -69,6 +69,12 @@ class BasicWriter():
                 self.out.write("... ")
         self.out.write("    " * self.indent_level)
 
+    def _indent_nl(self):
+        """Just a shortcut for an indented newline."""
+
+        self._newline()
+        self._indent()
+
     def write(self):
         """Dump out the entire source tree."""
 
@@ -83,6 +89,30 @@ class BasicWriter():
         """
 
         getattr(self, "_write_" + tree.__class__.__name__)(tree)
+
+    def _separated_write(self,
+                         exprs : "List of expressions to write",
+                         before : "Write before each expr" = (lambda: None),
+                         between : "Write between each expr" = (lambda: None),
+                         after : "Write after each expr" = (lambda: None)):
+        """
+        Write a list of expressions.
+        Separate them by calling the given functions with no arguments.
+
+        """
+
+        if not exprs:
+            return
+        i = iter(exprs)
+        before()
+        self._write(next(i))
+        after()
+        for expr in i:
+            between()
+            before()
+            self._write(expr)
+            after()
+
 
     def _write_list(self, stmts):
         """
@@ -102,13 +132,9 @@ class BasicWriter():
         """
 
         # Don't start with a new line
-        i = iter(stmts)
-        self._indent()
-        self._write(next(i))
-        for stmt in i:
-            self._newline()
-            self._indent()
-            self._write(stmt)
+        self._separated_write(stmts,
+            before=self._indent,
+            between=self._newline)
             
 
     def _write_Module(self, tree):
@@ -178,11 +204,10 @@ class BasicWriter():
 
         """
 
-        for decorator in tree.decorator_list:
-            self.out.write("@")
-            self._write(decorator)
-            self._newline()
-            self._indent()
+        self._separated_write(
+            tree.decorator_list,
+            before=(lambda: self.out.write("@")),
+            after=(self._indent_nl))
 
         self.out.write("def " + tree.name + "(")
         self._write(tree.args)
@@ -198,7 +223,46 @@ class BasicWriter():
         self.indent_level -= 1
             
 
-    def _write_ClassDef(self, tree): pass
+    def _write_ClassDef(self, tree):
+        """
+        Write out a class definition.
+
+        This ignores the parameters as I cannot see where they would be used.
+
+        >>> import ast
+        >>> c = '''
+        ... @aclassdecorator
+        ... def myclass(base1, base2):
+        ...     print("hi")
+        ...     print("bye")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        @aclassdecorator
+        def myclass(base1, base2):
+            print('hi')
+            print('bye')
+
+        """
+
+        self._separated_write(tree.decorator_list,
+            before=(lambda: self.out.write("@")),
+            after=self._indent_nl)
+
+        self.out.write("class " + tree.name)
+        if tree.bases:
+            self.out.write("(")
+            self._separated(tree.bases,
+                between=(lambda: self.out.write(", ")))
+            self.out.write(")")
+        self.out.write(":")
+        self._newline()
+
+        self.indent_level += 1
+        self._write(tree.body)
+        self.indent_level -= 1
+        
+
     def _write_Return(self, tree): pass
 
     def _write_Delete(self, tree): pass
