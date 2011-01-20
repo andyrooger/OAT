@@ -98,14 +98,17 @@ class BasicWriter():
         'hello'
         'is it me'
         "You're looking for?"
-        <BLANKLINE>
 
         """
 
-        for stmt in stmts:
+        # Don't start with a new line
+        i = iter(stmts)
+        self._indent()
+        self._write(next(i))
+        for stmt in i:
+            self._newline()
             self._indent()
             self._write(stmt)
-            self._newline()
             
 
     def _write_Module(self, tree):
@@ -114,8 +117,8 @@ class BasicWriter():
 
         >>> import ast
         >>> myast = ast.Module([ast.Expr(ast.Str("Hello"))])
-        >>> srcToStr(myast) == repr("Hello") + "\\n"
-        True
+        >>> printSource(myast)
+        'Hello'
 
         """
 
@@ -127,7 +130,7 @@ class BasicWriter():
 
         >>> import ast
         >>> myast = ast.Interactive([ast.Expr(ast.Str("Hello"))])
-        >>> srcToStr(myast) == (">>> " + repr("Hello") + "\\n")
+        >>> srcToStr(myast) == (">>> " + repr("Hello"))
         True
 
         """
@@ -143,8 +146,8 @@ class BasicWriter():
 
         >>> import ast
         >>> myast = ast.Expression(ast.Expr(ast.Str("Hello")))
-        >>> srcToStr(myast) == repr("Hello")
-        True
+        >>> printSource(myast)
+        'Hello'
 
         """
 
@@ -168,11 +171,12 @@ class BasicWriter():
         ... '''
         >>> myast = ast.parse(c)
         >>> printSource(myast)
-        True
+        @afunction
+        def myfunction(arg1, arg2, arg3=None):
+            print('hi')
+            print('bye')
 
         """
-
-        # TODO: FINISH TESTS, AND DECORATORS, AND BODY
 
         for decorator in tree.decorator_list:
             self.out.write("@")
@@ -192,7 +196,6 @@ class BasicWriter():
         self.indent_level += 1
         self._write(tree.body)
         self.indent_level -= 1
-        self._newline()
             
 
     def _write_ClassDef(self, tree): pass
@@ -259,8 +262,8 @@ class BasicWriter():
         Write out a String object.
 
         >>> import ast
-        >>> srcToStr(ast.Str("Hello")) == repr("Hello")
-        True
+        >>> printSource(ast.Str("Hello"))
+        'Hello'
 
         """
 
