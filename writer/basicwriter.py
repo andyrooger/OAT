@@ -390,17 +390,29 @@ class BasicWriter():
     def _write_Attribute(self, tree): pass
     def _write_Subscript(self, tree): pass
     def _write_Starred(self, tree): pass
-    def _write_Name(self, tree): pass
+
+    def _write_Name(self, tree):
+        """
+        Write out a name object. We ignore context...
+
+        >>> import ast
+        >>> printSource(ast.parse("a_var_name"))
+        a_var_name
+
+        """
+
+        self.out.write(tree.id)
+
     def _write_List(self, tree): pass
     def _write_Tuple(self, tree): pass
 
-    # expr_context
-    def _write_Load(self, tree): pass
-    def _write_Store(self, tree): pass
-    def _write_Del(self, tree): pass
-    def _write_AugLoad(self, tree): pass
-    def _write_AugStore(self, tree): pass
-    def _write_Param(self, tree): pass
+    # expr_context - these should not be drawn
+    def _write_Load(self, tree): raise NotImplementedError("Should not be used")
+    def _write_Store(self, tree): raise NotImplementedError("Should not be used")
+    def _write_Del(self, tree): raise NotImplementedError("Should not be used")
+    def _write_AugLoad(self, tree): raise NotImplementedError("Should not be used")
+    def _write_AugStore(self, tree): raise NotImplementedError("Should not be used")
+    def _write_Param(self, tree): raise NotImplementedError("Should not be used")
 
     # slice
     def _write_Slice(self, tree): pass
