@@ -413,8 +413,73 @@ class BasicWriter():
             self._write(tree.orelse)
             self._dec_indent()
 
-    def _write_If(self, tree): pass
-    def _write_With(self, tree): pass
+    def _write_If(self, tree):
+        """
+        Write out an if statement.
+
+        >>> import ast
+        >>> c = '''
+        ... if "linux" in sys.platform:
+        ...     print(":)")
+        ... else:
+        ...     print(":(")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        if 'linux' in sys.platform:
+            print(':)')
+        else:
+            print(':(')
+
+        """
+
+        self.out.write("if ")
+        self._write(tree.test)
+        self.out.write(":")
+        self._newline()
+
+        self._inc_indent()
+        self._write(tree.body)
+        self._dec_indent()
+
+        if tree.orelse:
+            self._indent_nl()
+            self.out.write("else:")
+            self._newline()
+
+            self._inc_indent()
+            self._write(tree.orelse)
+            self._dec_indent()
+
+
+    def _write_With(self, tree):
+        """
+        Write out with statement.
+
+        >>> import ast
+        >>> c = '''
+        ... with open("/dev/null") as nothing:
+        ...     nothing.write("hello")
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        with open('/dev/null') as nothing:
+            nothing.write('hello')
+
+        """
+
+        self.out.write("with ")
+        self._write(tree.context_expr)
+
+        if tree.optional_vars:
+            self.out.write(" as ")
+            self._write(tree.optional_vars)
+        self.out.write(":")
+        self._newline()
+
+        self._inc_indent()
+        self._write(tree.body)
+        self._dec_indent()
 
     def _write_Raise(self, tree): pass
     def _write_TryExcept(self, tree): pass
