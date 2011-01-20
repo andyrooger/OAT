@@ -760,9 +760,9 @@ class BasicWriter():
     def _write_ExtSlice(self, tree): pass
     def _write_Index(self, tree): pass
 
-    # boolop
-    def _write_And(self, tree): pass
-    def _write_Or(self, tree): pass
+    # boolop - too simple to test
+    def _write_And(self, tree): self.out.write("and")
+    def _write_Or(self, tree): self.out.write("or")
 
     # operator - too simple to bother testing
     def _write_Add(self, tree): self.out.write("+")
@@ -779,22 +779,22 @@ class BasicWriter():
     def _write_FloorDiv(self, tree): self.out.write("//")
 
     # unaryop
-    def _write_Invert(self, tree): pass
-    def _write_Not(self, tree): pass
-    def _write_UAdd(self, tree): pass
-    def _write_USub(self, tree): pass
+    def _write_Invert(self, tree): self.out.write("~")
+    def _write_Not(self, tree): self.out.write("not")
+    def _write_UAdd(self, tree): self.out.write("+")
+    def _write_USub(self, tree): self.out.write("-")
 
     # cmpop
-    def _write_Eq(self, tree): pass
-    def _write_NotEq(self, tree): pass
-    def _write_Lt(self, tree): pass
-    def _write_LtE(self, tree): pass
-    def _write_Gt(self, tree): pass
-    def _write_GtE(self, tree): pass
-    def _write_Is(self, tree): pass
-    def _write_IsNot(self, tree): pass
-    def _write_In(self, tree): pass
-    def _write_NotIn(self, tree): pass
+    def _write_Eq(self, tree): self.out.write("==")
+    def _write_NotEq(self, tree): self.out.write("!=")
+    def _write_Lt(self, tree): self.out.write("<")
+    def _write_LtE(self, tree): self.out.write("<=")
+    def _write_Gt(self, tree): self.out.write(">")
+    def _write_GtE(self, tree): self.out.write(">=")
+    def _write_Is(self, tree): self.out.write("is")
+    def _write_IsNot(self, tree): self.out.write("is not")
+    def _write_In(self, tree): self.out.write("in")
+    def _write_NotIn(self, tree): self.out.write("not in")
 
     # comprehension
     def _write_comprehension(self, tree): pass
