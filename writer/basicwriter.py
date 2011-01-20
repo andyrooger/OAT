@@ -318,7 +318,22 @@ class BasicWriter():
             between=(lambda: self.out.write(" = ")))
 
 
-    def _write_AugAssign(self, tree): pass
+    def _write_AugAssign(self, tree):
+        """
+        Write out an assignment augmentation statement.
+
+        >>> import ast
+        >>> myast = ast.parse("a+=2")
+        >>> printSource(myast)
+        a += 2
+
+        """
+
+        self._write(tree.target)
+        self.out.write(" ")
+        self._write(tree.op)
+        self.out.write("= ")
+        self._write(tree.value)
 
     def _write_For(self, tree): pass
     def _write_While(self, tree): pass
@@ -434,19 +449,19 @@ class BasicWriter():
     def _write_And(self, tree): pass
     def _write_Or(self, tree): pass
 
-    # operator
-    def _write_Add(self, tree): pass
-    def _write_Sub(self, tree): pass
-    def _write_Mult(self, tree): pass
-    def _write_Div(self, tree): pass
-    def _write_Mod(self, tree): pass
-    def _write_Pow(self, tree): pass
-    def _write_LShift(self, tree): pass
-    def _write_RShift(self, tree): pass
-    def _write_BitOr(self, tree): pass
-    def _write_BitXor(self, tree): pass
-    def _write_BitAnd(self, tree): pass
-    def _write_FloorDiv(self, tree): pass
+    # operator - too simple to bother testing
+    def _write_Add(self, tree): self.out.write("+")
+    def _write_Sub(self, tree): self.out.write("-")
+    def _write_Mult(self, tree): self.out.write("*")
+    def _write_Div(self, tree): self.out.write("/")
+    def _write_Mod(self, tree): self.out.write("%")
+    def _write_Pow(self, tree): self.out.write("**")
+    def _write_LShift(self, tree): self.out.write("<<")
+    def _write_RShift(self, tree): self.out.write(">>")
+    def _write_BitOr(self, tree): self.out.write("|")
+    def _write_BitXor(self, tree): self.out.write("^")
+    def _write_BitAnd(self, tree): self.out.write("&")
+    def _write_FloorDiv(self, tree): self.out.write("//")
 
     # unaryop
     def _write_Invert(self, tree): pass
