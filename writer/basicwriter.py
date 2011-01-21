@@ -1122,9 +1122,50 @@ class BasicWriter():
     def _write_Param(self, tree): raise NotImplementedError("Should not be used")
 
     # slice
-    def _write_Slice(self, tree): pass
-    def _write_ExtSlice(self, tree): pass
-    def _write_Index(self, tree): pass
+    def _write_Slice(self, tree):
+        """
+        Write out a slice.
+
+        >>> import ast
+        >>> printSource(ast.parse("mylist[1:10:2]"))
+        mylist[1:10:2]
+
+        """
+
+        if tree.lower != None:
+            self._write(tree.lower)
+        self._write(":")
+        if tree.upper != None:
+            self._write(tree.upper)
+        if tree.step != None:
+            self._write(":")
+            self._write(tree.step)
+
+    def _write_ExtSlice(self, tree):
+        """
+        Write out an extended slice.
+
+        >>> import ast
+        >>> printSource(ast.parse("mylist[:2,4:]"))
+        mylist[:2,4:]
+
+        """
+
+        self._separated_write(tree.dims,
+            between = (lambda: self._write(",")))
+
+    def _write_Index(self, tree):
+        """
+        Write out an index.
+
+        >>> import ast
+        >>> printSource(ast.parse("mylist[1]"))
+        mylist[1]
+
+        """
+
+        self._write(tree.value)
+
 
     # boolop - too simple to test
     def _write_And(self, tree): self.out.write("and")
@@ -1237,8 +1278,7 @@ class BasicWriter():
 
         had_arg = False # Cannot use _separated_write here
 
-        n_kwargs = len(tree.defaults)
-        n_posargs = len(tree.args) - n_kwargs
+        n_posargs = len(tree.args) - len(tree.defaults)
 
         # positional args
         for arg in tree.args[:n_posargs]:
