@@ -240,19 +240,17 @@ class BasicWriter():
         """
         Write out a class definition.
 
-        This ignores the parameters as I cannot see where they would be used.
-
         >>> import ast
         >>> c = '''
         ... @aclassdecorator
-        ... def myclass(base1, base2):
+        ... class myclass(base1, base2, metaclass=m, *varpos, **varkey):
         ...     print("hi")
         ...     print("bye")
         ... '''
         >>> myast = ast.parse(c)
         >>> printSource(myast)
         @aclassdecorator
-        def myclass(base1, base2):
+        class myclass(base1, base2, metaclass = m, *varpos, **varkey):
             print('hi')
             print('bye')
 
@@ -263,10 +261,28 @@ class BasicWriter():
             after=self._indent_nl)
 
         self.out.write("class " + tree.name)
-        if tree.bases:
+        if tree.bases or tree.keywords or tree.starargs or tree.kwargs:
             self.out.write("(")
-            self._separated(tree.bases,
+
+            self._separated_write(tree.bases + tree.keywords,
                 between=(lambda: self.out.write(", ")))
+
+            had_arg = tree.bases or tree.keywords
+
+            if tree.starargs:
+                if had_arg:
+                    self._write(", ")
+                had_arg = True
+                self._write("*")
+                self._write(tree.starargs)
+
+            if tree.kwargs:
+                if had_arg:
+                    self._write(", ")
+                had_arg = True
+                self._write("**")
+                self._write(tree.kwargs)
+
             self.out.write(")")
         self.out.write(":")
         self._newline()
@@ -489,17 +505,19 @@ class BasicWriter():
         """
         Write out raise statement.
 
-        Ignores cause (I don't think it's used in 3k)
-
         >>> import ast
-        >>> myast = ast.parse("raise Exception('Bad thing happened')")
+        >>> myast = ast.parse("raise Exception('Bad thing happened') from Exception()")
         >>> printSource(myast)
-        raise Exception('Bad thing happened')
+        raise Exception('Bad thing happened') from Exception()
 
         """
 
         self.out.write("raise ")
         self._write(tree.exc)
+
+        if tree.cause:
+            self._write(" from ")
+            self._write(tree.cause)
 
 
     def _write_TryExcept(self, tree):
@@ -999,7 +1017,22 @@ class BasicWriter():
 
 
     # keyword
-    def _write_keyword(self, tree): pass
+    def _write_keyword(self, tree):
+        """
+        Write out a keyword from an argument list.
+
+        >>> import ast
+        >>> myast = ast.parse("class c(a = b): pass")
+        >>> printSource(myast)
+        class c(a = b):
+            pass
+
+        """
+
+        self._write(tree.arg)
+        self._write(" = ")
+        self._write(tree.value)
+
 
     # alias
     def _write_alias(self, tree):
