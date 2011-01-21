@@ -839,10 +839,76 @@ class BasicWriter():
         self._write("}")
 
 
-    def _write_ListComp(self, tree): pass
-    def _write_SetComp(self, tree): pass
-    def _write_DictComp(self, tree): pass
-    def _write_GeneratorExp(self, tree): pass
+    def _write_ListComp(self, tree):
+        """
+        Write out a list comprehension.
+
+        >>> import ast
+        >>> myast = ast.parse("[x*y for x in range(10) if x != 5 for y in range(10) if y != 5]")
+        >>> printSource(myast)
+        [(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5]
+
+        """
+
+        self._write("[")
+        self._write(tree.elt)
+        self._separated_write(tree.generators,
+            before = (lambda: self._write(" ")))
+        self._write("]")
+
+    def _write_SetComp(self, tree):
+        """
+        Write out a set comprehension.
+
+        >>> import ast
+        >>> myast = ast.parse("{x*y for x in range(10) if x != 5 for y in range(10) if y != 5}")
+        >>> printSource(myast)
+        {(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5}
+
+        """
+
+        self._write("{")
+        self._write(tree.elt)
+        self._separated_write(tree.generators,
+            before = (lambda: self._write(" ")))
+        self._write("}")
+
+    def _write_DictComp(self, tree):
+        """
+        Write out a dictionary comprehension.
+
+        >>> import ast
+        >>> myast = ast.parse("{x: y for x in range(10) if x != 5 for y in range(10) if y != 5}")
+        >>> printSource(myast)
+        {x: y for x in range(10) if x != 5 for y in range(10) if y != 5}
+
+        """
+
+        self._write("{")
+        self._write(tree.key)
+        self._write(": ")
+        self._write(tree.value)
+        self._separated_write(tree.generators,
+            before = (lambda: self._write(" ")))
+        self._write("}")
+
+    def _write_GeneratorExp(self, tree):
+        """
+        Write out a generator expression.
+
+        >>> import ast
+        >>> myast = ast.parse("(x*y for x in range(10) if x != 5 for y in range(10) if y != 5)")
+        >>> printSource(myast)
+        ((x * y) for x in range(10) if x != 5 for y in range(10) if y != 5)
+
+        """
+
+        self._write("(")
+        self._write(tree.elt)
+        self._separated_write(tree.generators,
+            before = (lambda: self._write(" ")))
+        self._write(")")
+
     def _write_Yield(self, tree): pass
     def _write_Compare(self, tree): pass
     def _write_Call(self, tree): pass
@@ -943,7 +1009,25 @@ class BasicWriter():
     def _write_NotIn(self, tree): self.out.write("not in")
 
     # comprehension
-    def _write_comprehension(self, tree): pass
+    def _write_comprehension(self, tree):
+        """
+        Write out one piece of a comprehension.
+
+        >>> import ast
+        >>> myast = ast.parse("[x for x in range(10) if x != 5]")
+        >>> printSource(myast)
+        [x for x in range(10) if x != 5]
+
+        """
+
+        self._write("for ")
+        self._write(tree.target)
+        self._write(" in ")
+        self._write(tree.iter)
+
+        self._separated_write(tree.ifs,
+            before = (lambda: self._write(" if ")))
+
 
     # excepthandler
     def _write_ExceptHandler(self, tree):
