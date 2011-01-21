@@ -9,23 +9,24 @@ This should be extended for obfuscated syntax or really pretty output etc.
 """
 
 import ast
+import sourcewriter
 import sys
 
-class BasicWriter():
+class BasicWriter(sourcewriter.SourceWriter):
     """
     Writes source from an AST. Should be very simple and abide to the style guide.
 
     One option would have been to build an ast walker from the given walker
     classes, but I want a definite order. (None specified in the docs).
 
-    >>> import ast
+    >>> import ast, sourcewriter
     >>> theast = None
     >>> with open("../example/startup.py") as file:
     ...     theast = ast.parse(file.read(), "startup.py", "exec")
     >>> type(theast)
     <class '_ast.Module'>
     >>> with open("../example/startup.py.basicformat") as file:
-    ...         file.read() == srcToStr(theast)
+    ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
     True
 
     """
@@ -34,167 +35,61 @@ class BasicWriter():
                  top_ast : "The AST to be printed" = None,
                  out : "Output file" = sys.stdout):
         """
-        Stores the top level ast ready to proceed with writing source file.
+        Create the writer.
 
-        >>> BasicWriter("hello world").top_ast == None
-        True
+        >>> BasicWriter("hello world")
+        Traceback (most recent call last):
+            ...
+        TypeError: The tree needs to begin with an AST node.
         >>> import ast
         >>> myast = ast.AST()
-        >>> BasicWriter(myast).top_ast is myast
-        True
+        >>> myast = BasicWriter(myast)
 
         """
 
-        self.out = out
-
-        self.top_ast = top_ast
-        if not isinstance(self.top_ast, ast.AST):
-            self.top_ast = None
-
-        self.indent_level = 0
-        self.is_interactive = False
-
-    def _newline(self):
-        """Write out a new line."""
-
-        self.out.write("\n")
-
-    def _inc_indent(self):
-        """Increase indentation."""
-
-        self.indent_level += 1
-
-    def _dec_indent(self):
-        """Decrease indentation."""
-
-        self.indent_level -= 1
-
-    def _indent(self):
-        """Indent to the correct level."""
-
-        if self.is_interactive:
-            if self.indent_level == 0:
-                self.out.write(">>> ")
-            else:
-                self.out.write("... ")
-        self.out.write("    " * self.indent_level)
-
-    def _indent_nl(self):
-        """Just a shortcut for an indented newline."""
-
-        self._newline()
-        self._indent()
-
-    def write(self):
-        """Dump out the entire source tree."""
-
-        self._write(self.top_ast)
-
-    def _write(self, tree : "The tree to write"):
-        """
-        Write out the given tree.
-
-        This actually just dishes out work to the correct method.
-
-        """
-
-        getattr(self, "_write_" + tree.__class__.__name__)(tree)
-
-    def _separated_write(self,
-                         exprs : "List of expressions to write",
-                         before : "Write before each expr" = (lambda: None),
-                         between : "Write between each expr" = (lambda: None),
-                         after : "Write after each expr" = (lambda: None),
-                         writer : "Optional function to write the exprs" = None):
-        """
-        Write a list of expressions.
-        Separate them by calling the given functions with no arguments.
-
-        """
-
-        if not exprs:
-            return
-        if not writer:
-            writer = self._write
-
-        i = iter(exprs)
-        before()
-        writer(next(i))
-        after()
-        for expr in i:
-            between()
-            before()
-            writer(expr)
-            after()
-
-
-    def _write_list(self, stmts):
-        """
-        Write a list of statements, each on a new line.
-
-        >>> import ast
-        >>> stmts = [
-        ...     ast.Str("hello"),
-        ...     ast.Str("is it me"),
-        ...     ast.Str("You're looking for?")
-        ... ]
-        >>> printSource(ast.Module(stmts))
-        'hello'
-        'is it me'
-        "You're looking for?"
-
-        """
-
-        # Don't start with a new line
-        self._separated_write(stmts,
-            before=self._indent,
-            between=self._newline)
-
-    def _write_str(self, s): self.out.write(s)
-    def _write_int(self, i): self.out.write(str(i))
-    def _write_float(self, f): self.out.write(str(f))
+        super().__init__(top_ast, out)
 
     def _write_Module(self, tree):
         """
         Write out a Module object.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.Module([ast.Expr(ast.Str("Hello"))])
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
 
         """
 
-        self._write(tree.body)
+        self._enter_body(tree.body, indent = False)
 
     def _write_Interactive(self, tree):
         """
         Write out an interactive session.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.Interactive([ast.Expr(ast.Str("Hello"))])
-        >>> srcToStr(myast) == (">>> " + repr("Hello"))
+        >>> sourcewriter.srcToStr(myast, BasicWriter) == ">>> 'Hello'"
         True
 
         """
 
-        old_interactive = self.is_interactive
-        self.is_interactive = True
-        self._write(tree.body)
-        self.is_interactive = old_interactive
+        old_interactive = self._is_interactive
+        self._is_interactive = True
+        self._enter_body(tree.body, indent = False)
+        self._is_interactive = old_interactive
 
     def _write_Expression(self, tree):
         """
         Write out a solo expression.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.Expression(ast.Expr(ast.Str("Hello")))
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
 
         """
 
-        self._write(tree.body)
+        self._enter_body([tree.body], indent = False)
     
 
     def _write_Suite(self, tree):
@@ -205,7 +100,7 @@ class BasicWriter():
         """
         Write out a function.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... @afunction
         ... def myfunction(arg1, arg2, arg3=None):
@@ -213,7 +108,7 @@ class BasicWriter():
         ...     print("bye")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         @afunction
         def myfunction(arg1, arg2, arg3 = None):
             print('hi')
@@ -221,30 +116,27 @@ class BasicWriter():
 
         """
 
-        self._separated_write(
+        self._interleave_write(
             tree.decorator_list,
-            before=(lambda: self.out.write("@")),
-            after=(self._indent_nl))
+            before=(lambda: self._write("@")),
+            after=(lambda: self._start_line(nl = True)))
 
-        self.out.write("def " + tree.name + "(")
+        self._write("def " + tree.name + "(")
         self._write(tree.args)
-        self.out.write(")")
+        self._write(")")
         if tree.returns != None:
-            self.out.write(" -> ")
+            self._write(" -> ")
             self._write(tree.returns)
-        self.out.write(":")
-        self._newline()
+        self._write(":")
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
-            
+        self._newline()
+        self._enter_body(tree.body)            
 
     def _write_ClassDef(self, tree):
         """
         Write out a class definition.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... @aclassdecorator
         ... class myclass(base1, base2, metaclass=m, *varpos, **varkey):
@@ -252,7 +144,7 @@ class BasicWriter():
         ...     print("bye")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         @aclassdecorator
         class myclass(base1, base2, metaclass = m, *varpos, **varkey):
             print('hi')
@@ -260,16 +152,16 @@ class BasicWriter():
 
         """
 
-        self._separated_write(tree.decorator_list,
-            before=(lambda: self.out.write("@")),
-            after=self._indent_nl)
+        self._interleave_write(tree.decorator_list,
+            before=(lambda: self._write("@")),
+            after=(lambda: self._start_line(nl = True)))
 
-        self.out.write("class " + tree.name)
+        self._write("class " + tree.name)
         if tree.bases or tree.keywords or tree.starargs or tree.kwargs:
-            self.out.write("(")
+            self._write("(")
 
-            self._separated_write(tree.bases + tree.keywords,
-                between=(lambda: self.out.write(", ")))
+            self._interleave_write(tree.bases + tree.keywords,
+                between=(lambda: self._write(", ")))
 
             had_arg = tree.bases or tree.keywords
 
@@ -287,82 +179,80 @@ class BasicWriter():
                 self._write("**")
                 self._write(tree.kwargs)
 
-            self.out.write(")")
-        self.out.write(":")
-        self._newline()
+            self._write(")")
+        self._write(":")
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._newline()
+        self._enter_body(tree.body)
         
 
     def _write_Return(self, tree):
         """
         Write out a return statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("return 'Hello there'")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         return 'Hello there'
 
         """
 
-        self.out.write("return ")
+        self._write("return ")
         self._write(tree.value)
 
     def _write_Delete(self, tree):
         """
         Write out a delete statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("del myvar, yourvar")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         del myvar, yourvar
 
         """
 
-        self.out.write("del ")
-        self._separated_write(tree.targets,
-            between=(lambda: self.out.write(", ")))
+        self._write("del ")
+        self._interleave_write(tree.targets,
+            between=(lambda: self._write(", ")))
 
 
     def _write_Assign(self, tree):
         """
         Write out an assignment statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a=b=c=142")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         a = b = c = 142
 
         """
 
-        self._separated_write(tree.targets + [tree.value],
-            between=(lambda: self.out.write(" = ")))
+        self._interleave_write(tree.targets + [tree.value],
+            between=(lambda: self._write(" = ")))
 
 
     def _write_AugAssign(self, tree):
         """
         Write out an assignment augmentation statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a+=2")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         a += 2
 
         """
 
         self._write(tree.target)
-        self.out.write(" ")
+        self._write(" ")
         self._write(tree.op)
-        self.out.write("= ")
+        self._write("= ")
         self._write(tree.value)
 
     def _write_For(self, tree):
         """
         Write out a for loop.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... for i in range(3):
         ...     print(str(i))
@@ -370,7 +260,7 @@ class BasicWriter():
         ...     print("I wonder how this happened...")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         for i in range(3):
             print(str(i))
         else:
@@ -378,31 +268,26 @@ class BasicWriter():
 
         """
 
-        self.out.write("for ")
+        self._write("for ")
         self._write(tree.target)
-        self.out.write(" in ")
+        self._write(" in ")
         self._write(tree.iter)
-        self.out.write(":")
-        self._newline()
+        self._write(":")
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._newline()
+        self._enter_body(tree.body)
 
         if tree.orelse:
-            self._indent_nl()
-            self.out.write("else:")
+            self._start_line(nl = True)
+            self._write("else:")
             self._newline()
-
-            self._inc_indent()
-            self._write(tree.orelse)
-            self._dec_indent()
+            self._enter_body(tree.orelse)
 
     def _write_While(self, tree):
         """
         Write out a while loop.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... while True:
         ...     pass
@@ -410,7 +295,7 @@ class BasicWriter():
         ...     print("Never get here.")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         while True:
             pass
         else:
@@ -418,29 +303,24 @@ class BasicWriter():
 
         """
 
-        self.out.write("while ")
+        self._write("while ")
         self._write(tree.test)
-        self.out.write(":")
-        self._newline()
+        self._write(":")
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._newline()
+        self._enter_body(tree.body)
 
         if tree.orelse:
-            self._indent_nl()
-            self.out.write("else:")
+            self._start_line(nl = True)
+            self._write("else:")
             self._newline()
-
-            self._inc_indent()
-            self._write(tree.orelse)
-            self._dec_indent()
+            self._enter_body(tree.orelse)
 
     def _write_If(self, tree):
         """
         Write out an if statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... if "linux" in sys.platform:
         ...     print(":)")
@@ -448,7 +328,7 @@ class BasicWriter():
         ...     print(":(")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         if 'linux' in sys.platform:
             print(':)')
         else:
@@ -456,67 +336,59 @@ class BasicWriter():
 
         """
 
-        self.out.write("if ")
+        self._write("if ")
         self._write(tree.test)
-        self.out.write(":")
+        self._write(":")
         self._newline()
-
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._enter_body(tree.body)
 
         if tree.orelse:
-            self._indent_nl()
-            self.out.write("else:")
+            self._start_line(nl = True)
+            self._write("else:")
             self._newline()
-
-            self._inc_indent()
-            self._write(tree.orelse)
-            self._dec_indent()
+            self._enter_body(tree.orelse)
 
 
     def _write_With(self, tree):
         """
         Write out with statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... with open("/dev/null") as nothing:
         ...     nothing.write("hello")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         with open('/dev/null') as nothing:
             nothing.write('hello')
 
         """
 
-        self.out.write("with ")
+        self._write("with ")
         self._write(tree.context_expr)
 
         if tree.optional_vars:
-            self.out.write(" as ")
+            self._write(" as ")
             self._write(tree.optional_vars)
-        self.out.write(":")
-        self._newline()
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._write(":")
+        self._newline()
+        self._enter_body(tree.body)
 
 
     def _write_Raise(self, tree):
         """
         Write out raise statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("raise Exception('Bad thing happened') from Exception()")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         raise Exception('Bad thing happened') from Exception()
 
         """
 
-        self.out.write("raise ")
+        self._write("raise ")
         self._write(tree.exc)
 
         if tree.cause != None:
@@ -528,7 +400,7 @@ class BasicWriter():
         """
         Write out a try catch statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... try: raise Exception
         ... except Exception: pass
@@ -536,7 +408,7 @@ class BasicWriter():
         ... else: print("Oh...")
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             raise Exception
         except Exception:
@@ -548,37 +420,31 @@ class BasicWriter():
 
         """
 
-        self.out.write("try:")
+        self._write("try:")
         self._newline()
+        self._enter_body(tree.body)
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
-
-        self._separated_write(tree.handlers,
-            before = self._indent_nl)
+        self._interleave_write(tree.handlers,
+            before = (lambda: self._start_line(nl = True)))
 
         if tree.orelse:
-            self._indent_nl()
-            self.out.write("else:")
+            self._start_line(nl = True)
+            self._write("else:")
             self._newline()
-
-            self._inc_indent()
-            self._write(tree.orelse)
-            self._dec_indent()
+            self._enter_body(tree.orelse)
         
 
     def _write_TryFinally(self, tree):
         """
         Write out a try finally statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... try: raise Exception
         ... finally: pass
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             raise Exception
         finally:
@@ -586,37 +452,31 @@ class BasicWriter():
 
         """
 
-        self.out.write("try:")
+        self._write("try:")
         self._newline()
+        self._enter_body(tree.body)
 
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
-
-        self._indent_nl()
-        self.out.write("finally:")
+        self._start_line(nl = True)
+        self._write("finally:")
         self._newline()
-
-        self._inc_indent()
-        self._write(tree.finalbody)
-        self._dec_indent()
+        self._enter_body(tree.finalbody)
 
     def _write_Assert(self, tree):
         """
         Write out an assert statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("assert False, 'Oh dear'")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         assert False, 'Oh dear'
 
         """
 
-        self.out.write("assert ")
+        self._write("assert ")
         self._write(tree.test)
 
         if tree.msg != None:
-            self.out.write(", ")
+            self._write(", ")
             self._write(tree.msg)
 
 
@@ -624,77 +484,77 @@ class BasicWriter():
         """
         Write out an import statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("import sys, os")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         import sys, os
 
         """
 
-        self.out.write("import ")
-        self._separated_write(tree.names,
-            between = (lambda: self.out.write(", ")))
+        self._write("import ")
+        self._interleave_write(tree.names,
+            between = (lambda: self._write(", ")))
 
     def _write_ImportFrom(self, tree):
         """
         Write out an import from statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("from .. sys import sys as sys2, os")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         from ..sys import sys as sys2, os
 
         """
 
-        self.out.write("from ")
+        self._write("from ")
         if tree.level != None:
-            self.out.write("." * tree.level)
-        self.out.write(tree.module + " import ")
+            self._write("." * tree.level)
+        self._write(tree.module + " import ")
 
-        self._separated_write(tree.names,
-            between = (lambda: self.out.write(", ")))
+        self._interleave_write(tree.names,
+            between = (lambda: self._write(", ")))
 
 
     def _write_Global(self, tree):
         """
         Write out a global variable.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("global g1, g2")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         global g1, g2
 
         """
 
-        self.out.write("global ")
-        self._separated_write(tree.names,
-            between = (lambda: self.out.write(", ")))
+        self._write("global ")
+        self._interleave_write(tree.names,
+            between = (lambda: self._write(", ")))
 
 
     def _write_Nonlocal(self, tree):
         """
         Write out a nonlocal variable.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("nonlocal n1, n2")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         nonlocal n1, n2
 
         """
 
-        self.out.write("nonlocal ")
-        self._separated_write(tree.names,
-            between = (lambda: self.out.write(", ")))
+        self._write("nonlocal ")
+        self._interleave_write(tree.names,
+            between = (lambda: self._write(", ")))
 
 
     def _write_Expr(self, tree):
         """
         Write out an expression.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> innerast = ast.Str("Hello")
         >>> outerast = ast.Expr(innerast)
-        >>> srcToStr(innerast) == srcToStr(outerast)
+        >>> sourcewriter.srcToStr(innerast, BasicWriter) == sourcewriter.srcToStr(outerast, BasicWriter)
         True
 
         """
@@ -703,18 +563,18 @@ class BasicWriter():
 
 
     # not worth testing
-    def _write_Pass(self, tree): self.out.write("pass")
-    def _write_Break(self, tree): self.out.write("break")
-    def _write_Continue(self, tree): self.out.write("continue")
+    def _write_Pass(self, tree): self._write("pass")
+    def _write_Break(self, tree): self._write("break")
+    def _write_Continue(self, tree): self._write("continue")
 
     # expr
     def _write_BoolOp(self, tree):
         """
         Write out a boolean operation.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a and b or c")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         ((a and b) or c)
 
         """
@@ -725,16 +585,16 @@ class BasicWriter():
             self._write(" ")
 
         self._write("(")
-        self._separated_write(tree.values, between = sep)
+        self._interleave_write(tree.values, between = sep)
         self._write(")")
 
     def _write_BinOp(self, tree):
         """
         Write out a binary operation.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a / 2 * 3 + 10")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         (((a / 2) * 3) + 10)
 
         """
@@ -751,9 +611,9 @@ class BasicWriter():
         """
         Write out a unary operation.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("not ~a")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         not ~ a
 
         """
@@ -766,9 +626,9 @@ class BasicWriter():
         """
         Write out a lambda expression.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("lambda a,b,c: a + b + c")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         lambda a, b, c: ((a + b) + c)
 
         """
@@ -784,9 +644,9 @@ class BasicWriter():
         """
         Write out an inline if expression.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a if b else c")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         a if b else c
 
         """
@@ -802,9 +662,9 @@ class BasicWriter():
         """
         Write out a dictionary object.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("{1 : 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         {1: 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}
 
         """
@@ -816,7 +676,7 @@ class BasicWriter():
             self._write(val)
 
         self._write("{")
-        self._separated_write(zip(tree.keys, tree.values),
+        self._interleave_write(zip(tree.keys, tree.values),
             writer = item_writer,
             between = (lambda: self._write(", ")))
         self._write("}")
@@ -826,15 +686,15 @@ class BasicWriter():
         """
         Write out a set object.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("{2,3,5,7,13,17,19}")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         {2, 3, 5, 7, 13, 17, 19}
 
         """
 
         self._write("{")
-        self._separated_write(tree.elts,
+        self._interleave_write(tree.elts,
             between = (lambda: self._write(", ")))
         self._write("}")
 
@@ -843,16 +703,16 @@ class BasicWriter():
         """
         Write out a list comprehension.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("[x*y for x in range(10) if x != 5 for y in range(10) if y != 5]")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         [(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5]
 
         """
 
         self._write("[")
         self._write(tree.elt)
-        self._separated_write(tree.generators,
+        self._interleave_write(tree.generators,
             before = (lambda: self._write(" ")))
         self._write("]")
 
@@ -860,16 +720,16 @@ class BasicWriter():
         """
         Write out a set comprehension.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("{x*y for x in range(10) if x != 5 for y in range(10) if y != 5}")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         {(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5}
 
         """
 
         self._write("{")
         self._write(tree.elt)
-        self._separated_write(tree.generators,
+        self._interleave_write(tree.generators,
             before = (lambda: self._write(" ")))
         self._write("}")
 
@@ -877,9 +737,9 @@ class BasicWriter():
         """
         Write out a dictionary comprehension.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("{x: y for x in range(10) if x != 5 for y in range(10) if y != 5}")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         {x: y for x in range(10) if x != 5 for y in range(10) if y != 5}
 
         """
@@ -888,7 +748,7 @@ class BasicWriter():
         self._write(tree.key)
         self._write(": ")
         self._write(tree.value)
-        self._separated_write(tree.generators,
+        self._interleave_write(tree.generators,
             before = (lambda: self._write(" ")))
         self._write("}")
 
@@ -896,16 +756,16 @@ class BasicWriter():
         """
         Write out a generator expression.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("(x*y for x in range(10) if x != 5 for y in range(10) if y != 5)")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         ((x * y) for x in range(10) if x != 5 for y in range(10) if y != 5)
 
         """
 
         self._write("(")
         self._write(tree.elt)
-        self._separated_write(tree.generators,
+        self._interleave_write(tree.generators,
             before = (lambda: self._write(" ")))
         self._write(")")
 
@@ -913,9 +773,9 @@ class BasicWriter():
         """
         Write out a yield statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("yield x")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         yield x
 
         """
@@ -929,9 +789,9 @@ class BasicWriter():
         """
         Write out a compare statement.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("a != b < c > d")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         a != b < c > d
 
         """
@@ -948,9 +808,9 @@ class BasicWriter():
         """
         Write out a function call.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("print('Hello world')")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         print('Hello world')
 
         """
@@ -958,7 +818,7 @@ class BasicWriter():
         self._write(tree.func)
         self._write("(")
 
-        self._separated_write(tree.args + tree.keywords,
+        self._interleave_write(tree.args + tree.keywords,
             between = (lambda: self._write(", ")))
 
         has_arg = tree.args + tree.keywords
@@ -983,33 +843,33 @@ class BasicWriter():
         """
         Write out a numerical object.
 
-        >>> import ast
-        >>> printSource(ast.parse("1042"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("1042"), BasicWriter)
         1042
 
         """
 
-        self.out.write(repr(tree.n))
+        self._write(repr(tree.n))
 
     def _write_Str(self, tree):
         """
         Write out a String object.
 
-        >>> import ast
-        >>> printSource(ast.Str("Hello"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.Str("Hello"), BasicWriter)
         'Hello'
 
         """
 
-        self.out.write(repr(tree.s))
+        self._write(repr(tree.s))
 
     def _write_Bytes(self, tree):
         """
         Write out a Bytes object.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("b'hello world'")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         b'hello world'
 
         """
@@ -1024,9 +884,9 @@ class BasicWriter():
 
         Context is ignored.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("sys.path")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         sys.path
 
         """
@@ -1041,9 +901,9 @@ class BasicWriter():
 
         Context is ignored.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("mylist[2]")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         mylist[2]
 
         """
@@ -1059,9 +919,9 @@ class BasicWriter():
 
         Context is ignored.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("head, *tail = list(range(10))")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         (head, *tail) = list(range(10))
 
         """
@@ -1073,26 +933,26 @@ class BasicWriter():
         """
         Write out a name object. We ignore context...
 
-        >>> import ast
-        >>> printSource(ast.parse("a_var_name"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("a_var_name"), BasicWriter)
         a_var_name
 
         """
 
-        self.out.write(tree.id)
+        self._write(tree.id)
 
     def _write_List(self, tree):
         """
         Write out a list object.
 
-        >>> import ast
-        >>> printSource(ast.parse("[1,2,3,4]"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("[1,2,3,4]"), BasicWriter)
         [1, 2, 3, 4]
 
         """
 
         self._write("[")
-        self._separated_write(tree.elts,
+        self._interleave_write(tree.elts,
             between = (lambda: self._write(", ")))
         self._write("]")
 
@@ -1101,14 +961,14 @@ class BasicWriter():
         """
         Write out a tuple.
 
-        >>> import ast
-        >>> printSource(ast.parse("(a,b,c)"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("(a,b,c)"), BasicWriter)
         (a, b, c)
 
         """
 
         self._write("(")
-        self._separated_write(tree.elts,
+        self._interleave_write(tree.elts,
             between = (lambda: self._write(", ")))
         self._write(")")
 
@@ -1126,8 +986,8 @@ class BasicWriter():
         """
         Write out a slice.
 
-        >>> import ast
-        >>> printSource(ast.parse("mylist[1:10:2]"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("mylist[1:10:2]"), BasicWriter)
         mylist[1:10:2]
 
         """
@@ -1145,21 +1005,21 @@ class BasicWriter():
         """
         Write out an extended slice.
 
-        >>> import ast
-        >>> printSource(ast.parse("mylist[:2,4:]"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("mylist[:2,4:]"), BasicWriter)
         mylist[:2,4:]
 
         """
 
-        self._separated_write(tree.dims,
+        self._interleave_write(tree.dims,
             between = (lambda: self._write(",")))
 
     def _write_Index(self, tree):
         """
         Write out an index.
 
-        >>> import ast
-        >>> printSource(ast.parse("mylist[1]"))
+        >>> import ast, sourcewriter
+        >>> sourcewriter.printSource(ast.parse("mylist[1]"), BasicWriter)
         mylist[1]
 
         """
@@ -1168,49 +1028,49 @@ class BasicWriter():
 
 
     # boolop - too simple to test
-    def _write_And(self, tree): self.out.write("and")
-    def _write_Or(self, tree): self.out.write("or")
+    def _write_And(self, tree): self._write("and")
+    def _write_Or(self, tree): self._write("or")
 
     # operator - too simple to bother testing
-    def _write_Add(self, tree): self.out.write("+")
-    def _write_Sub(self, tree): self.out.write("-")
-    def _write_Mult(self, tree): self.out.write("*")
-    def _write_Div(self, tree): self.out.write("/")
-    def _write_Mod(self, tree): self.out.write("%")
-    def _write_Pow(self, tree): self.out.write("**")
-    def _write_LShift(self, tree): self.out.write("<<")
-    def _write_RShift(self, tree): self.out.write(">>")
-    def _write_BitOr(self, tree): self.out.write("|")
-    def _write_BitXor(self, tree): self.out.write("^")
-    def _write_BitAnd(self, tree): self.out.write("&")
-    def _write_FloorDiv(self, tree): self.out.write("//")
+    def _write_Add(self, tree): self._write("+")
+    def _write_Sub(self, tree): self._write("-")
+    def _write_Mult(self, tree): self._write("*")
+    def _write_Div(self, tree): self._write("/")
+    def _write_Mod(self, tree): self._write("%")
+    def _write_Pow(self, tree): self._write("**")
+    def _write_LShift(self, tree): self._write("<<")
+    def _write_RShift(self, tree): self._write(">>")
+    def _write_BitOr(self, tree): self._write("|")
+    def _write_BitXor(self, tree): self._write("^")
+    def _write_BitAnd(self, tree): self._write("&")
+    def _write_FloorDiv(self, tree): self._write("//")
 
     # unaryop - too simple
-    def _write_Invert(self, tree): self.out.write("~")
-    def _write_Not(self, tree): self.out.write("not")
-    def _write_UAdd(self, tree): self.out.write("+")
-    def _write_USub(self, tree): self.out.write("-")
+    def _write_Invert(self, tree): self._write("~")
+    def _write_Not(self, tree): self._write("not")
+    def _write_UAdd(self, tree): self._write("+")
+    def _write_USub(self, tree): self._write("-")
 
     # cmpop - too simple
-    def _write_Eq(self, tree): self.out.write("==")
-    def _write_NotEq(self, tree): self.out.write("!=")
-    def _write_Lt(self, tree): self.out.write("<")
-    def _write_LtE(self, tree): self.out.write("<=")
-    def _write_Gt(self, tree): self.out.write(">")
-    def _write_GtE(self, tree): self.out.write(">=")
-    def _write_Is(self, tree): self.out.write("is")
-    def _write_IsNot(self, tree): self.out.write("is not")
-    def _write_In(self, tree): self.out.write("in")
-    def _write_NotIn(self, tree): self.out.write("not in")
+    def _write_Eq(self, tree): self._write("==")
+    def _write_NotEq(self, tree): self._write("!=")
+    def _write_Lt(self, tree): self._write("<")
+    def _write_LtE(self, tree): self._write("<=")
+    def _write_Gt(self, tree): self._write(">")
+    def _write_GtE(self, tree): self._write(">=")
+    def _write_Is(self, tree): self._write("is")
+    def _write_IsNot(self, tree): self._write("is not")
+    def _write_In(self, tree): self._write("in")
+    def _write_NotIn(self, tree): self._write("not in")
 
     # comprehension
     def _write_comprehension(self, tree):
         """
         Write out one piece of a comprehension.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("[x for x in range(10) if x != 5]")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         [x for x in range(10) if x != 5]
 
         """
@@ -1220,7 +1080,7 @@ class BasicWriter():
         self._write(" in ")
         self._write(tree.iter)
 
-        self._separated_write(tree.ifs,
+        self._interleave_write(tree.ifs,
             before = (lambda: self._write(" if ")))
 
 
@@ -1229,13 +1089,13 @@ class BasicWriter():
         """
         Write out an exception handler.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... try: pass
         ... except Exception as exc: pass
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             pass
         except Exception as exc:
@@ -1243,21 +1103,18 @@ class BasicWriter():
 
         """
 
-        self.out.write("except")
+        self._write("except")
 
         if tree.type != None:
-            self.out.write(" ")
+            self._write(" ")
             self._write(tree.type)
 
             if tree.name != None:
-                self.out.write(" as " + tree.name)
+                self._write(" as " + tree.name)
 
-        self.out.write(":")
+        self._write(":")
         self._newline()
-
-        self._inc_indent()
-        self._write(tree.body)
-        self._dec_indent()
+        self._enter_body(tree.body)
 
 
     # arguments
@@ -1265,12 +1122,12 @@ class BasicWriter():
         """
         Write out a set of arguments.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... def f(a : "An argument", b = None, *args, kwo = True, **kwargs): pass
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         def f(a : 'An argument', b = None, *args, kwo = True, **kwargs):
             pass
 
@@ -1337,12 +1194,12 @@ class BasicWriter():
         """
         Write out a single argument.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> c = '''
         ... def f(a : "An argument"): pass
         ... '''
         >>> myast = ast.parse(c)
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         def f(a : 'An argument'):
             pass
 
@@ -1359,9 +1216,9 @@ class BasicWriter():
         """
         Write out a keyword from an argument list.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("class c(a = b): pass")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         class c(a = b):
             pass
 
@@ -1377,48 +1234,17 @@ class BasicWriter():
         """
         Write out an alias.
 
-        >>> import ast
+        >>> import ast, sourcewriter
         >>> myast = ast.parse("import hello as world")
-        >>> printSource(myast)
+        >>> sourcewriter.printSource(myast, BasicWriter)
         import hello as world
 
         """
 
-        self.out.write(tree.name)
+        self._write(tree.name)
 
         if tree.asname != None:
-            self.out.write(" as " + tree.asname)
-
-
-def printSource(tree : "Tree to print"):
-    """
-    Write an AST as source to stdout. Works with doctest.
-
-    >>> import ast
-    >>> myast = ast.Str("Hello there")
-    >>> printSource(myast)
-    'Hello there'
-
-    """
-
-    print(srcToStr(tree))
-
-
-def srcToStr(tree : "Tree to stringify"):
-    """
-    Write an AST as source to a string.
-
-    >>> import ast
-    >>> myast = ast.Str("Hello there")
-    >>> srcToStr(myast)
-    "'Hello there'"
-
-    """
-
-    import io
-    out = io.StringIO()
-    BasicWriter(tree, out).write()
-    return out.getvalue()
+            self._write(" as " + tree.asname)
 
 
 if __name__ == "__main__":
