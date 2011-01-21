@@ -23,19 +23,18 @@ class SourceWriter(metaclass = abc.ABCMeta):
     """
 
     def __init__(self,
-                 top_ast : "The AST to be printed" = None,
+                 top_ast : "The AST to be printed",
                  out : "Output file" = sys.stdout):
         """Stores the top level ast ready to proceed with writing source file."""
 
         self.__out = out
 
         self.__top_ast = top_ast
-        if not isinstance(self.top_ast, ast.AST):
-            raise TypeError
+        if not isinstance(self.__top_ast, ast.AST):
+            raise TypeError("The tree needs to begin with an AST node.")
 
         self.__indentation = []
         self._is_interactive = False
-        """Set or unset to say whether we are in interactive mode."""
 
     def write(self):
         """Dump out the entire source tree."""
@@ -51,9 +50,11 @@ class SourceWriter(metaclass = abc.ABCMeta):
         """
 
         try:
-            getattr(self, "_write_" + tree.__class__.__name__)(tree)
+            method = getattr(self, "_write_" + tree.__class__.__name__)
         except AttributeError as exc:
             raise TypeError("Unknown AST node") from exc
+        else:
+            method(tree)
 
     def _write_str(self, s):
         """Write a string, all writing should be done through here."""
@@ -126,17 +127,20 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _write_int(self, i): self._write(str(i))
     def _write_float(self, f): self._write(str(f))
 
-    def _enterBody(self, by = None):
-        """
-        Write a list of statements, each on a new line in a new indentation level.
-
-        """
+    def _enter_body(self, stmts, by = None, indent = True):
+        """Write a list of statements, each on a new line in a new indentation level."""
 
         # Don't start with a new line
+        if indent:
+            if by:
+                self._inc_indent(by)
+            else:
+                self._inc_indent()
         self._interleave_write(stmts,
             before=self._start_line,
             between=self._newline)
-        
+        if indent:
+            self._dec_indent()
 
     # Below are abstract methods to write all the tags listed in
     # the AST definition
