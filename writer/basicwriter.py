@@ -104,7 +104,8 @@ class BasicWriter():
                          exprs : "List of expressions to write",
                          before : "Write before each expr" = (lambda: None),
                          between : "Write between each expr" = (lambda: None),
-                         after : "Write after each expr" = (lambda: None)):
+                         after : "Write after each expr" = (lambda: None),
+                         writer : "Optional function to write the exprs" = None):
         """
         Write a list of expressions.
         Separate them by calling the given functions with no arguments.
@@ -113,14 +114,17 @@ class BasicWriter():
 
         if not exprs:
             return
+        if not writer:
+            writer = self._write
+
         i = iter(exprs)
         before()
-        self._write(next(i))
+        writer(next(i))
         after()
         for expr in i:
             between()
             before()
-            self._write(expr)
+            writer(expr)
             after()
 
 
@@ -794,7 +798,30 @@ class BasicWriter():
         self._write(tree.orelse)
 
 
-    def _write_Dict(self, tree): pass
+    def _write_Dict(self, tree):
+        """
+        Write out a dictionary object.
+
+        >>> import ast
+        >>> myast = ast.parse("{1 : 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}")
+        >>> printSource(myast)
+        {1: 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}
+
+        """
+
+        def item_writer(key_val):
+            key, val = key_val
+            self._write(key)
+            self._write(": ")
+            self._write(val)
+
+        self._write("{")
+        self._separated_write(zip(tree.keys, tree.values),
+            writer = item_writer,
+            between = (lambda: self._write(", ")))
+        self._write("}")
+
+
     def _write_Set(self, tree): pass
     def _write_ListComp(self, tree): pass
     def _write_SetComp(self, tree): pass
