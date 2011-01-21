@@ -776,7 +776,24 @@ class BasicWriter():
         self._write(": ")
         self._write(tree.body)
 
-    def _write_IfExp(self, tree): pass
+    def _write_IfExp(self, tree):
+        """
+        Write out an inline if expression.
+
+        >>> import ast
+        >>> myast = ast.parse("a if b else c")
+        >>> printSource(myast)
+        a if b else c
+
+        """
+
+        self._write(tree.body)
+        self._write(" if ")
+        self._write(tree.test)
+        self._write(" else ")
+        self._write(tree.orelse)
+
+
     def _write_Dict(self, tree): pass
     def _write_Set(self, tree): pass
     def _write_ListComp(self, tree): pass
