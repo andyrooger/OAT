@@ -944,7 +944,40 @@ class BasicWriter():
             self._write(" ")
             self._write(comp)
 
-    def _write_Call(self, tree): pass
+    def _write_Call(self, tree):
+        """
+        Write out a function call.
+
+        >>> import ast
+        >>> myast = ast.parse("print('Hello world')")
+        >>> printSource(myast)
+        print('Hello world')
+
+        """
+
+        self._write(tree.func)
+        self._write("(")
+
+        self._separated_write(tree.args + tree.keywords,
+            between = (lambda: self._write(", ")))
+
+        has_arg = tree.args + tree.keywords
+
+        if tree.starargs != None:
+            if has_arg:
+                self._write(", ")
+            has_arg = True
+            self._write("*")
+            self._write(starargs)
+
+        if tree.kwargs != None:
+            if has_arg:
+                self._write(", ")
+            has_arg = True
+            self._write("*")
+            self._write(kwargs)
+
+        self._write(")")
 
     def _write_Num(self, tree):
         """
