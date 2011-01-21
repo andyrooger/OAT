@@ -229,7 +229,7 @@ class BasicWriter():
         self.out.write("def " + tree.name + "(")
         self._write(tree.args)
         self.out.write(")")
-        if tree.returns:
+        if tree.returns != None:
             self.out.write(" -> ")
             self._write(tree.returns)
         self.out.write(":")
@@ -519,7 +519,7 @@ class BasicWriter():
         self.out.write("raise ")
         self._write(tree.exc)
 
-        if tree.cause:
+        if tree.cause != None:
             self._write(" from ")
             self._write(tree.cause)
 
@@ -615,7 +615,7 @@ class BasicWriter():
         self.out.write("assert ")
         self._write(tree.test)
 
-        if tree.msg:
+        if tree.msg != None:
             self.out.write(", ")
             self._write(tree.msg)
 
@@ -642,13 +642,13 @@ class BasicWriter():
         >>> import ast
         >>> myast = ast.parse("from .. sys import sys as sys2, os")
         >>> printSource(myast)
-        from .. sys import sys as sys2, os
+        from ..sys import sys as sys2, os
 
         """
 
         self.out.write("from ")
-        if tree.level:
-            self.out.write(("." * tree.level) + " ")
+        if tree.level != None:
+            self.out.write("." * tree.level)
         self.out.write(tree.module + " import ")
 
         self._separated_write(tree.names,
@@ -774,7 +774,7 @@ class BasicWriter():
         """
 
         self._write("lambda")
-        if tree.args:
+        if tree.args != None:
             self._write(" ")
             self._write(tree.args)
         self._write(": ")
@@ -909,8 +909,41 @@ class BasicWriter():
             before = (lambda: self._write(" ")))
         self._write(")")
 
-    def _write_Yield(self, tree): pass
-    def _write_Compare(self, tree): pass
+    def _write_Yield(self, tree):
+        """
+        Write out a yield statement.
+
+        >>> import ast
+        >>> myast = ast.parse("yield x")
+        >>> printSource(myast)
+        yield x
+
+        """
+
+        self._write("yield")
+        if tree.value != None:
+            self._write(" ")
+            self._write(tree.value)
+
+    def _write_Compare(self, tree):
+        """
+        Write out a compare statement.
+
+        >>> import ast
+        >>> myast = ast.parse("a != b < c > d")
+        >>> printSource(myast)
+        a != b < c > d
+
+        """
+
+        self._write(tree.left)
+
+        for op, comp in zip(tree.ops, tree.comparators):
+            self._write(" ")
+            self._write(op)
+            self._write(" ")
+            self._write(comp)
+
     def _write_Call(self, tree): pass
 
     def _write_Num(self, tree):
@@ -1050,11 +1083,11 @@ class BasicWriter():
 
         self.out.write("except")
 
-        if tree.type:
+        if tree.type != None:
             self.out.write(" ")
             self._write(tree.type)
 
-            if tree.name:
+            if tree.name != None:
                 self.out.write(" as " + tree.name)
 
         self.out.write(":")
@@ -1103,13 +1136,13 @@ class BasicWriter():
             self._write(default)
 
         # variable positional args
-        if tree.vararg:
+        if tree.vararg != None:
             if had_arg:
                 self._write(", ")
             had_arg = True
             self._write("*")
             self._write(tree.vararg)
-            if tree.varargannotation:
+            if tree.varargannotation != None:
                 self._write(" : ")
                 self._write(tree.varargannotation)
         elif tree.kwonlyargs:
@@ -1128,13 +1161,13 @@ class BasicWriter():
             self._write(default)
 
         # variable keyword args
-        if tree.kwarg:
+        if tree.kwarg != None:
             if had_arg:
                 self._write(", ")
             had_arg = False
             self._write("**")
             self._write(tree.kwarg)
-            if tree.kwargannotation:
+            if tree.kwargannotation != None:
                 self._write(" : ")
                 self._write(tree.kwargannotation)
 
@@ -1155,7 +1188,7 @@ class BasicWriter():
         """
 
         self._write(tree.arg)
-        if tree.annotation:
+        if tree.annotation != None:
             self._write(" : ")
             self._write(tree.annotation)
 
@@ -1192,7 +1225,7 @@ class BasicWriter():
 
         self.out.write(tree.name)
 
-        if tree.asname:
+        if tree.asname != None:
             self.out.write(" as " + tree.asname)
 
 
