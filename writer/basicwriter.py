@@ -822,7 +822,23 @@ class BasicWriter():
         self._write("}")
 
 
-    def _write_Set(self, tree): pass
+    def _write_Set(self, tree):
+        """
+        Write out a set object.
+
+        >>> import ast
+        >>> myast = ast.parse("{2,3,5,7,13,17,19}")
+        >>> printSource(myast)
+        {2, 3, 5, 7, 13, 17, 19}
+
+        """
+
+        self._write("{")
+        self._separated_write(tree.elts,
+            between = (lambda: self._write(", ")))
+        self._write("}")
+
+
     def _write_ListComp(self, tree): pass
     def _write_SetComp(self, tree): pass
     def _write_DictComp(self, tree): pass
