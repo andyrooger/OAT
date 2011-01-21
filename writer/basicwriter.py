@@ -1003,12 +1003,71 @@ class BasicWriter():
 
         self.out.write(repr(tree.s))
 
-    def _write_Bytes(self, tree): pass
-    def _write_Ellipsis(self, tree): pass
+    def _write_Bytes(self, tree):
+        """
+        Write out a Bytes object.
 
-    def _write_Attribute(self, tree): pass
-    def _write_Subscript(self, tree): pass
-    def _write_Starred(self, tree): pass
+        >>> import ast
+        >>> myast = ast.parse("b'hello world'")
+        >>> printSource(myast)
+        b'hello world'
+
+        """
+
+        self._write(repr(tree.s))
+
+    def _write_Ellipsis(self, tree): self._write("...")
+
+    def _write_Attribute(self, tree):
+        """
+        Write out an object attribute.
+
+        Context is ignored.
+
+        >>> import ast
+        >>> myast = ast.parse("sys.path")
+        >>> printSource(myast)
+        sys.path
+
+        """
+
+        self._write(tree.value)
+        self._write(".")
+        self._write(tree.attr)
+
+    def _write_Subscript(self, tree):
+        """
+        Write out an object subscript.
+
+        Context is ignored.
+
+        >>> import ast
+        >>> myast = ast.parse("mylist[2]")
+        >>> printSource(myast)
+        mylist[2]
+
+        """
+
+        self._write(tree.value)
+        self._write("[")
+        self._write(tree.slice)
+        self._write("]")
+
+    def _write_Starred(self, tree):
+        """
+        Write out a starred object.
+
+        Context is ignored.
+
+        >>> import ast
+        >>> myast = ast.parse("head, *tail = list(range(10))")
+        >>> printSource(myast)
+        (head, *tail) = list(range(10))
+
+        """
+
+        self._write("*")
+        self._write(tree.value)
 
     def _write_Name(self, tree):
         """
@@ -1022,8 +1081,37 @@ class BasicWriter():
 
         self.out.write(tree.id)
 
-    def _write_List(self, tree): pass
-    def _write_Tuple(self, tree): pass
+    def _write_List(self, tree):
+        """
+        Write out a list object.
+
+        >>> import ast
+        >>> printSource(ast.parse("[1,2,3,4]"))
+        [1, 2, 3, 4]
+
+        """
+
+        self._write("[")
+        self._separated_write(tree.elts,
+            between = (lambda: self._write(", ")))
+        self._write("]")
+
+
+    def _write_Tuple(self, tree):
+        """
+        Write out a tuple.
+
+        >>> import ast
+        >>> printSource(ast.parse("(a,b,c)"))
+        (a, b, c)
+
+        """
+
+        self._write("(")
+        self._separated_write(tree.elts,
+            between = (lambda: self._write(", ")))
+        self._write(")")
+
 
     # expr_context - these should not be drawn
     def _write_Load(self, tree): raise NotImplementedError("Should not be used")
