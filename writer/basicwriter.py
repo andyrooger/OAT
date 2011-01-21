@@ -211,7 +211,7 @@ class BasicWriter():
         >>> myast = ast.parse(c)
         >>> printSource(myast)
         @afunction
-        def myfunction(arg1, arg2, arg3=None):
+        def myfunction(arg1, arg2, arg3 = None):
             print('hi')
             print('bye')
 
@@ -740,7 +740,24 @@ class BasicWriter():
         self._write(" ")
         self._write(tree.operand)
 
-    def _write_Lambda(self, tree): pass
+    def _write_Lambda(self, tree):
+        """
+        Write out a lambda expression.
+
+        >>> import ast
+        >>> myast = ast.parse("lambda a,b,c: a + b + c")
+        >>> printSource(myast)
+        lambda a, b, c: ((a + b) + c)
+
+        """
+
+        self._write("lambda")
+        if tree.args:
+            self._write(" ")
+            self._write(tree.args)
+        self._write(": ")
+        self._write(tree.body)
+
     def _write_IfExp(self, tree): pass
     def _write_Dict(self, tree): pass
     def _write_Set(self, tree): pass
@@ -887,10 +904,99 @@ class BasicWriter():
 
 
     # arguments
-    def _write_arguments(self, tree): pass
+    def _write_arguments(self, tree):
+        """
+        Write out a set of arguments.
+
+        >>> import ast
+        >>> c = '''
+        ... def f(a : "An argument", b = None, *args, kwo = True, **kwargs): pass
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        def f(a : 'An argument', b = None, *args, kwo = True, **kwargs):
+            pass
+
+        """
+
+        had_arg = False # Cannot use _separated_write here
+
+        n_kwargs = len(tree.defaults)
+        n_posargs = len(tree.args) - n_kwargs
+
+        # positional args
+        for arg in tree.args[:n_posargs]:
+            if had_arg:
+                self._write(", ")
+            had_arg = True
+            self._write(arg)
+
+        # keyword args
+        for (arg, default) in zip(tree.args[n_posargs:], tree.defaults):
+            if had_arg:
+                self._write(", ")
+            had_arg = True
+            self._write(arg)
+            self._write(" = ")
+            self._write(default)
+
+        # variable positional args
+        if tree.vararg:
+            if had_arg:
+                self._write(", ")
+            had_arg = True
+            self._write("*")
+            self._write(tree.vararg)
+            if tree.varargannotation:
+                self._write(" : ")
+                self._write(tree.varargannotation)
+        elif tree.kwonlyargs:
+            if had_arg:
+                self._write(", ")
+            had_arg = True
+            self._write("*")
+
+        # keyword only args
+        for (arg, default) in zip(tree.kwonlyargs, tree.kw_defaults):
+            if had_arg:
+                self._write(", ")
+            had_arg = True
+            self._write(arg)
+            self._write(" = ")
+            self._write(default)
+
+        # variable keyword args
+        if tree.kwarg:
+            if had_arg:
+                self._write(", ")
+            had_arg = False
+            self._write("**")
+            self._write(tree.kwarg)
+            if tree.kwargannotation:
+                self._write(" : ")
+                self._write(tree.kwargannotation)
 
     # arg
-    def _write_arg(self, tree): pass
+    def _write_arg(self, tree):
+        """
+        Write out a single argument.
+
+        >>> import ast
+        >>> c = '''
+        ... def f(a : "An argument"): pass
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> printSource(myast)
+        def f(a : 'An argument'):
+            pass
+
+        """
+
+        self._write(tree.arg)
+        if tree.annotation:
+            self._write(" : ")
+            self._write(tree.annotation)
+
 
     # keyword
     def _write_keyword(self, tree): pass
