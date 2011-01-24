@@ -60,7 +60,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._enter_body(tree.body, indent = False)
+        self._write_body(tree.body, indent = False)
 
     def _write_Interactive(self, tree):
         """
@@ -75,7 +75,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         old_interactive = self._is_interactive
         self._is_interactive = True
-        self._enter_body(tree.body, indent = False)
+        self._write_body(tree.body, indent = False)
         self._is_interactive = old_interactive
 
     def _write_Expression(self, tree):
@@ -89,7 +89,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._enter_body([tree.body], indent = False)
+        self._write_body([tree.body], indent = False)
     
 
     def _write_Suite(self, tree):
@@ -130,7 +130,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(":")
 
         self._newline()
-        self._enter_body(tree.body)            
+        self._write_body(tree.body)            
 
     def _write_ClassDef(self, tree):
         """
@@ -183,7 +183,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(":")
 
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
         
 
     def _write_Return(self, tree):
@@ -275,13 +275,13 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(":")
 
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
         if tree.orelse:
             self._start_line(nl = True)
             self._write("else:")
             self._newline()
-            self._enter_body(tree.orelse)
+            self._write_body(tree.orelse)
 
     def _write_While(self, tree):
         """
@@ -308,13 +308,13 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(":")
 
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
         if tree.orelse:
             self._start_line(nl = True)
             self._write("else:")
             self._newline()
-            self._enter_body(tree.orelse)
+            self._write_body(tree.orelse)
 
     def _write_If(self, tree):
         """
@@ -340,13 +340,13 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(tree.test)
         self._write(":")
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
         if tree.orelse:
             self._start_line(nl = True)
             self._write("else:")
             self._newline()
-            self._enter_body(tree.orelse)
+            self._write_body(tree.orelse)
 
 
     def _write_With(self, tree):
@@ -374,7 +374,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write(":")
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
 
     def _write_Raise(self, tree):
@@ -422,7 +422,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write("try:")
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
         self._interleave_write(tree.handlers,
             before = (lambda: self._start_line(nl = True)))
@@ -431,7 +431,7 @@ class BasicWriter(sourcewriter.SourceWriter):
             self._start_line(nl = True)
             self._write("else:")
             self._newline()
-            self._enter_body(tree.orelse)
+            self._write_body(tree.orelse)
         
 
     def _write_TryFinally(self, tree):
@@ -454,12 +454,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write("try:")
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
         self._start_line(nl = True)
         self._write("finally:")
         self._newline()
-        self._enter_body(tree.finalbody)
+        self._write_body(tree.finalbody)
 
     def _write_Assert(self, tree):
         """
@@ -1114,7 +1114,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write(":")
         self._newline()
-        self._enter_body(tree.body)
+        self._write_body(tree.body)
 
 
     # arguments

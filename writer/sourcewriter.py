@@ -34,6 +34,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
             raise TypeError("The tree needs to begin with an AST node.")
 
         self.__indentation = []
+        self.__character_level = 0
         self._is_interactive = False
 
     def write(self):
@@ -59,16 +60,20 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _write_str(self, s):
         """Write a string, all writing should be done through here."""
 
+        self.__character_level += len(s)
         self.__out.write(s)
 
     def _newline(self):
         """Write out a new line."""
 
+        self.__character_level = 0
         self._write("\n")
 
-    def _inc_indent(self, by = "    "):
+    def _inc_indent(self, by : "How far to indent - '' to indent to character level" = "    "):
         """Increase indentation."""
 
+        if by == '':
+            by = " " * self.__character_level
         self.__indentation.append(by)
 
     def _dec_indent(self):
@@ -127,15 +132,14 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _write_int(self, i): self._write(str(i))
     def _write_float(self, f): self._write(str(f))
 
-    def _enter_body(self, stmts, by = None, indent = True):
+    def _write_body(self,
+                    stmts : "List of statements inside the block.",
+                    indent : "Whether or not to indent." = True):
         """Write a list of statements, each on a new line in a new indentation level."""
 
         # Don't start with a new line
         if indent:
-            if by:
-                self._inc_indent(by)
-            else:
-                self._inc_indent()
+            self._inc_indent()
         self._interleave_write(stmts,
             before=self._start_line,
             between=self._newline)
