@@ -9,8 +9,9 @@ This should be extended for obfuscated syntax or really pretty output etc.
 """
 
 import ast
-import sourcewriter
 import sys
+
+from . import sourcewriter
 
 class BasicWriter(sourcewriter.SourceWriter):
     """
@@ -21,11 +22,11 @@ class BasicWriter(sourcewriter.SourceWriter):
 
     >>> import ast, sourcewriter
     >>> theast = None
-    >>> with open("../example/startup.py") as file:
+    >>> with open("../../example/startup.py") as file:
     ...     theast = ast.parse(file.read(), "startup.py", "exec")
     >>> type(theast)
     <class '_ast.Module'>
-    >>> with open("../example/startup.py.basicformat") as file:
+    >>> with open("../../example/startup.py.basicformat") as file:
     ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
     True
 
