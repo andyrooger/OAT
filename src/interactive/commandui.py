@@ -7,6 +7,7 @@ Command based UI for the obfuscator.
 
 import cmd
 import os
+import ast
 
 class CommandUI(cmd.Cmd):
     """Command UI class, use self.cmdloop() to run."""
@@ -16,6 +17,8 @@ class CommandUI(cmd.Cmd):
         self.prompt = "--) "
         self.intro = ("Welcome to this little obfuscation tool.\n"
                       "If you're confused, type help!")
+
+        self._parsed_tree = None
 
 
     def do_quit(self, line):
@@ -30,6 +33,18 @@ class CommandUI(cmd.Cmd):
         print()
         return True
 
+    def postcmd(self, stop, line):
+        print()
+        return stop
+
+    def emptyline(self):
+        pass
+
+    def do_status(self, line):
+        """Show status for the current session."""
+
+        print("Parsed tree: ", end="")
+        print(self._parsed_tree)
 
     def path_completer(self,
                        path : "Full path",
@@ -59,7 +74,36 @@ class CommandUI(cmd.Cmd):
     def do_parse(self, line):
         """Parse a source file to an AST."""
 
-        pass
+        paths = line.split()
+        if not paths:
+            print("You need to specify a path to parse.")
+            return False
+        if len(paths) != 1:
+            print("Currently only one file may be parsed at a time.")
+            return False
+
+        path = paths[0]
+
+        source = None
+        try:
+            with open(path, "r") as file:
+                source = file.read()
+        except:
+            print("Could not read the specified file.")
+            return False
+
+        theast = None
+
+        try:
+            theast = ast.parse(source, filename=path)
+        except SyntaxError:
+            print("Could not parse the specified file. Are you sure it's Python?")
+            return False
+        except TypeError:
+            print("Could not use the data in the specified file.")
+            return False
+
+        self._parsed_tree = theast
 
     def complete_parse(self, text, line, begidx, endidx):
         return self.path_completer(line.rpartition(" ")[2], len(text))
