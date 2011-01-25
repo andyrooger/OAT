@@ -8,7 +8,13 @@ sensible place.
 
 from interactive.commandui import CommandUI
 
-try:
-    CommandUI().cmdloop()
-except KeyboardInterrupt:
-    print("Please close with EOF or the quit command next time.")
+def go(intro = None):
+    try:
+        CommandUI().cmdloop(intro)
+    except KeyboardInterrupt:
+        print()
+        go("")
+
+
+if __name__ == "__main__":
+    go()
