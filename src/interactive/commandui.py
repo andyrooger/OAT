@@ -8,6 +8,7 @@ Command based UI for the obfuscator.
 import cmd
 import os
 import ast
+import optparse
 
 from writer import sourcewriter
 from writer import basicwriter
@@ -21,9 +22,17 @@ class CommandUI(cmd.Cmd):
         self.intro = ("Welcome to this little obfuscation tool.\n"
                       "If you're confused, type help!")
 
+        opts = CommandOptions("format")
+        opts.add_option("-w", "--write", dest="filename",
+                        help="Filename to write to. If this is not specified we write to stdout.")
+        opts.add_option("-f", action="store_true", default=False, dest="force",
+                        help="Force - to overwrite files or do something we may want to check first.")
+        self._format_options = opts
+
         self._parsed_tree = None
         self._parsed_file = None
 
+        self._source_writer = basicwriter.BasicWriter
 
     def do_quit(self, line):
         """Exit the program."""
@@ -118,47 +127,63 @@ class CommandUI(cmd.Cmd):
         return self.path_completer(line.rpartition(" ")[2], len(text))
 
 
-    def format(self, line : "As given to do_*", force : "Do we perform sanity checks or forget them?"):
+    def do_format(self, line):
         """Output formatted source from the current AST."""
-
-        args = line.split()
 
         if not self._parsed_tree:
             print("You do not have an AST to format!")
             print("Use the parse command to create one.")
             return False
 
-        if len(args) > 1:
-            print("Too many arguments, I don't know what you mean!")
+        try:
+            (options, args) = self._format_options.parse_args(line.split())
+            return self._format(options, args)
+        except OptionError as exc:
+            print(str(exc))
             return False
 
-        if args:
-            path = args[0]
+    def help_format(self):
+        print(self.do_format.__doc__)
+        print()
+        self._format_options.print_help()
 
-            if not force and os.path.lexists(path):
-                print("The specified file already exists. Use fformat overwrite.")
+    def _format(self, options, args):
+        """Does the actual work for the format command."""
+
+        if args:
+            print("Unrecognised options: " + ",".join(args))
+            return False
+
+        if options.filename:
+            if not options.force and os.path.lexists(options.filename):
+                print("The specified file already exists. Use -f to overwrite.")
                 return False
 
             try:
-                with open(path, "w") as file:
-                    basicwriter.BasicWriter(self._parsed_tree, file).write()
-                print("Written.")
+                with open(options.filename, "w") as file:
+                    self._source_writer(self._parsed_tree, file).write()
+                print("Written to: " + options.filename)
             except IOError:
                 print("The file could not be written to.")
-        else:
-            if not force:
+        else: # no file, write to stdout
+            if not options.force:
                 print("Are you sure you wish to print to stout?..This could be big!")
-                print("Use fformat to confirm, otherwise add a filename argument.")
+                print("Use -f to confirm, otherwise add a filename argument.")
                 return False
-            sourcewriter.printSource(self._parsed_tree, basicwriter.BasicWriter)
+            sourcewriter.printSource(self._parsed_tree, self._source_writer)
 
 
-    def do_format(self, line):
-        """Output formatted source from the current AST without causing harm."""
+class CommandOptions(optparse.OptionParser):
+    """Child of OptionParser tailored to be used in the command interface."""
 
-        self.format(line, False)
+    def __init__(self, command):
+        optparse.OptionParser.__init__(self,
+                                       add_help_option = False,
+                                       prog = command)
 
-    def do_fformat(self, line):
-        """Like format but with force."""
+    def error(self, msg):
+        raise OptionError(msg)
 
-        self.format(line, True)
+
+class OptionError(ValueError):
+    pass
