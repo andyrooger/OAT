@@ -9,8 +9,9 @@ This should be extended for obfuscated syntax or really pretty output etc.
 """
 
 import ast
-import sourcewriter
 import sys
+
+from . import sourcewriter
 
 class BasicWriter(sourcewriter.SourceWriter):
     """
