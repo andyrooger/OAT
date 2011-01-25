@@ -60,7 +60,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write_body(tree.body, indent = False)
+        self._write_block(tree.body, indent = False)
 
     def _write_Interactive(self, tree):
         """
@@ -73,10 +73,10 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        old_interactive = self._is_interactive
-        self._is_interactive = True
-        self._write_body(tree.body, indent = False)
-        self._is_interactive = old_interactive
+        old_interactive = self._is_interactive()
+        self._is_interactive(True)
+        self._write_block(tree.body, indent = False)
+        self._is_interactive(old_interactive)
 
     def _write_Expression(self, tree):
         """
@@ -89,7 +89,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write_body([tree.body], indent = False)
+        self._write_block([tree.body], indent = False)
     
 
     def _write_Suite(self, tree):
@@ -118,8 +118,8 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._interleave_write(
             tree.decorator_list,
-            before=(lambda: self._write("@")),
-            after=(lambda: self._start_line(nl = True)))
+            before = (lambda: self._write("@")),
+            after = self._next_statement)
 
         self._write("def " + tree.name + "(")
         self._write(tree.args)
@@ -127,10 +127,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         if tree.returns != None:
             self._write(" -> ")
             self._write(tree.returns)
-        self._write(":")
-
-        self._newline()
-        self._write_body(tree.body)            
+        self._write_block(tree.body)          
 
     def _write_ClassDef(self, tree):
         """
@@ -154,7 +151,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._interleave_write(tree.decorator_list,
             before=(lambda: self._write("@")),
-            after=(lambda: self._start_line(nl = True)))
+            after=self._next_statement)
 
         self._write("class " + tree.name)
         if tree.bases or tree.keywords or tree.starargs or tree.kwargs:
@@ -180,10 +177,7 @@ class BasicWriter(sourcewriter.SourceWriter):
                 self._write(tree.kwargs)
 
             self._write(")")
-        self._write(":")
-
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
         
 
     def _write_Return(self, tree):
@@ -272,16 +266,12 @@ class BasicWriter(sourcewriter.SourceWriter):
         self._write(tree.target)
         self._write(" in ")
         self._write(tree.iter)
-        self._write(":")
-
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
 
         if tree.orelse:
-            self._start_line(nl = True)
-            self._write("else:")
-            self._newline()
-            self._write_body(tree.orelse)
+            self._next_statement()
+            self._write("else")
+            self._write_block(tree.orelse)
 
     def _write_While(self, tree):
         """
@@ -305,16 +295,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write("while ")
         self._write(tree.test)
-        self._write(":")
-
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
 
         if tree.orelse:
-            self._start_line(nl = True)
-            self._write("else:")
-            self._newline()
-            self._write_body(tree.orelse)
+            self._next_statement()
+            self._write("else")
+            self._write_block(tree.orelse)
 
     def _write_If(self, tree):
         """
@@ -338,15 +324,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         self._write("if ")
         self._write(tree.test)
-        self._write(":")
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
 
         if tree.orelse:
-            self._start_line(nl = True)
-            self._write("else:")
-            self._newline()
-            self._write_body(tree.orelse)
+            self._next_statement()
+            self._write("else")
+            self._write_block(tree.orelse)
 
 
     def _write_With(self, tree):
@@ -372,9 +355,7 @@ class BasicWriter(sourcewriter.SourceWriter):
             self._write(" as ")
             self._write(tree.optional_vars)
 
-        self._write(":")
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
 
 
     def _write_Raise(self, tree):
@@ -420,18 +401,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("try:")
-        self._newline()
-        self._write_body(tree.body)
+        self._write("try")
+        self._write_block(tree.body)
 
         self._interleave_write(tree.handlers,
-            before = (lambda: self._start_line(nl = True)))
+            before = self._next_statement)
 
         if tree.orelse:
-            self._start_line(nl = True)
-            self._write("else:")
-            self._newline()
-            self._write_body(tree.orelse)
+            self._next_statement()
+            self._write("else")
+            self._write_block(tree.orelse)
         
 
     def _write_TryFinally(self, tree):
@@ -452,14 +431,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("try:")
-        self._newline()
-        self._write_body(tree.body)
+        self._write("try")
+        self._write_block(tree.body)
 
-        self._start_line(nl = True)
-        self._write("finally:")
-        self._newline()
-        self._write_body(tree.finalbody)
+        self._next_statement()
+        self._write("finally")
+        self._write_block(tree.finalbody)
 
     def _write_Assert(self, tree):
         """
@@ -1112,9 +1089,7 @@ class BasicWriter(sourcewriter.SourceWriter):
             if tree.name != None:
                 self._write(" as " + tree.name)
 
-        self._write(":")
-        self._newline()
-        self._write_body(tree.body)
+        self._write_block(tree.body)
 
 
     # arguments

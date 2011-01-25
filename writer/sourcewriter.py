@@ -20,6 +20,13 @@ class SourceWriter(metaclass = abc.ABCMeta):
     Additionally it will define abstract methods for all the types in
     the ast definition here: http://docs.python.org/py3k/library/ast.html
 
+    The assumption for the writers is that all blocks (even top level blocks)
+    should be written by _write_block. Each statement will already have lines
+    prepared and can use _next_statement to write more sections (like if-else).
+
+    _write_block will prepare for its own addition so for example _start_line
+    should never be called before writing a block.
+
     """
 
     def __init__(self,
@@ -35,7 +42,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         self.__indentation = []
         self.__character_level = 0
-        self._is_interactive = False
+        self.__is_interactive = False
 
     def write(self):
         """Dump out the entire source tree."""
@@ -89,13 +96,16 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         self._write("".join(self.__indentation))
 
-    def _start_line(self, nl : "Start with a new line" = False):
-        """Start a new line at the correct indentation level."""
+    def _is_interactive(self, interactive = None):
+        if interactive != None:
+            self.__is_interactive = interactive
+        return self.__is_interactive
 
-        if nl:
-            self._newline()
-        if self._is_interactive:
-            if self._indent_level():
+    def _start_line(self):
+        """Set up a line at the correct indentation level."""
+
+        if self._is_interactive():
+            if self._indent_level(): # is indented
                 self._write("... ")
             else:
                 self._write(">>> ")
@@ -103,6 +113,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
     def _interleave_write(self,
                           exprs : "List of expressions to write",
+                          *, # So the rest are keyword only
                           before : "Write before each expr" = (lambda: None),
                           between : "Write between each expr" = (lambda: None),
                           after : "Write after each expr" = (lambda: None),
@@ -132,19 +143,27 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _write_int(self, i): self._write(str(i))
     def _write_float(self, f): self._write(str(f))
 
-    def _write_body(self,
+    def _write_block(self,
                     stmts : "List of statements inside the block.",
-                    indent : "Whether or not to indent." = True):
+                    indent : "Should we be indenting?" = True):
         """Write a list of statements, each on a new line in a new indentation level."""
 
-        # Don't start with a new line
         if indent:
+            self._write(":")
             self._inc_indent()
-        self._interleave_write(stmts,
-            before=self._start_line,
-            between=self._newline)
-        if indent:
+            self._newline()    # not next_statement as we want to allow 
+                               # next statement to change independently
+            self._write_block(stmts, indent = False)
             self._dec_indent()
+        else:
+            self._start_line()
+            self._interleave_write(stmts, between=self._next_statement)
+
+    def _next_statement(self):
+        """Add any syntax needed before we write the next statement."""
+
+        self._newline()
+        self._start_line()
 
     # Below are abstract methods to write all the tags listed in
     # the AST definition
