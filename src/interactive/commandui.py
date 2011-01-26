@@ -19,7 +19,6 @@ class CommandUI(cmd.Cmd):
                       "If you're confused, type help!")
 
         self._commands = {}
-        self.shared = {}
 
     def postcmd(self, stop, line):
         print()
@@ -41,7 +40,7 @@ class CommandUI(cmd.Cmd):
         except KeyError:
             return cmd.Cmd.default(self, line)
         else:
-            return todo.do(self.shared, params)
+            return todo.do(params)
 
     def do_quit(self, line):
         """Exit the program."""
@@ -62,7 +61,7 @@ class CommandUI(cmd.Cmd):
         except KeyError:
             return cmd.Cmd.completedefault(self, text, line, begidx, endidx)
         else:
-            return todo.complete(self.shared, text, params, begidx, endidx)
+            return todo.complete(text, params, begidx, endidx)
 
     def do_help(self, line):
         """Get help on a given subject."""
@@ -98,7 +97,7 @@ class CommandUI(cmd.Cmd):
         """Show status for the current session."""
 
         for command in self._commands:
-            self._commands[command].status(self.shared)
+            self._commands[command].status()
 
 
 class CommandOptions(optparse.OptionParser):
@@ -123,9 +122,9 @@ class Command:
     def __init__(self, id : "Name of the command"):
         self.id = id
 
-    def do(self, info, line): pass
-    def complete(self, info, text, params, begidx, endidx): pass
-    def status(self, info): pass
+    def do(self, line): pass
+    def complete(self, text, params, begidx, endidx): pass
+    def status(self): pass
 
     def help(self):
         if self.do.__doc__:

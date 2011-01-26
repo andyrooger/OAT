@@ -15,10 +15,10 @@ class ParseCommand(commandui.Command):
     def __init__(self):
         commandui.Command.__init__(self, "parse")
 
-        self._parsed_tree = None
-        self._parsed_file = None
+        self.parsed_tree = None
+        self.parsed_file = None
 
-    def do(self, info, line):
+    def do(self, line):
         """Parse a source file to an AST."""
 
         paths = line.split()
@@ -50,19 +50,19 @@ class ParseCommand(commandui.Command):
             print("Could not use the data in the specified file.")
             return False
 
-        info["parsed_tree"] = theast
-        info["parsed_file"] = path
+        self.parsed_tree = theast
+        self.parsed_file = path
 
 
-    def complete(self, info, text, line, begidx, endidx):
+    def complete(self, text, line, begidx, endidx):
         return commandui.path_completer(line.rpartition(" ")[2], len(text))
 
-    def status(self, info):
+    def status(self):
         """Show status for the current session."""
 
         print("Parsed tree: ", end="")
-        print(info["parsed_tree"], end="")
-        if info["parsed_file"] != None:
-            print(" : " + info["parsed_file"])
+        print(self.parsed_tree, end="")
+        if self.parsed_file != None:
+            print(" : " + self.parsed_file)
         else:
             print()

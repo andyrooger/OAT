@@ -16,6 +16,8 @@ class SolidConsole(commandui.CommandUI):
     def __init__(self):
         commandui.CommandUI.__init__(self)
 
-        self.add_command(parsecmd.ParseCommand())
-        self.add_command(formatcmd.FormatCommand())
+        parse = parsecmd.ParseCommand()
+        format = formatcmd.FormatCommand(parse)
+        self.add_command(parse)
+        self.add_command(format)
 
