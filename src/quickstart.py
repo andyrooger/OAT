@@ -6,11 +6,11 @@ sensible place.
 
 """
 
-from interactive.commandui import CommandUI
+from interactive.solidconsole import SolidConsole
 
 def go(intro = None):
     try:
-        CommandUI().cmdloop(intro)
+        SolidConsole().cmdloop(intro)
     except KeyboardInterrupt:
         print()
         go("")
