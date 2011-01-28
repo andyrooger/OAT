@@ -15,13 +15,13 @@ class ExploreCommand(commandui.Command):
     def __init__(self, parsecmd):
         commandui.Command.__init__(self, "explore")
 
-        self._opts.add_argument("-f", "--fields", action="store_true", default=False,
-                                help="Show fields contained in the current node.")
-        self._opts.add_argument("-a", "--attributes", action="store_true", default=False,
-                                help="Show attributes of the current node.")
-        self._opts.add_argument("-e", "--enter", metavar="FIELD",
-                                nargs="?", const=False, default=None,
-                                help="Drop through the AST into the given field or move up to the parent if no field is given.")
+        group = self._opts.add_mutually_exclusive_group()
+        group.add_argument("field", metavar="FIELD", default=None, nargs="?",
+                           help="Field to drop through the tree into.")
+        group.add_argument("-a", "--attributes", action="store_true", default=False,
+                           help="Show attributes of the current node.")
+        group.add_argument("-p", "--parent", action="store_true", default=False,
+                           help="Head up the tree to a parent.")
 
         self._related_parsecmd = parsecmd
         self._ensure_node_sync()
@@ -53,52 +53,52 @@ class ExploreCommand(commandui.Command):
         """Explore the AST."""
 
         self._ensure_node_sync()
+
         if self.ast_current == None:
             print("There is no AST to explore. Have you create one with the parse command?")
             return
 
-        if args.enter != None:
-            if args.enter:
-                if not self.enter_field(args.enter):
-                    return
-            else:
-                if not self.level_up():
-                    return
+        if args.field != None:
+            if self.enter_field(args.field):
+                print("Looking at: " + self.describe_node(self.ast_current))
+            return
+        elif args.parent:
+            if self.level_up():
+                print("Looking at: " + self.describe_node(self.ast_current))
+            return
 
         current = self.ast_current
-
-        print("Now at: " + self.describe_node(current))
+        print("Looking at: " + self.describe_node(current))
 
         if args.attributes:
             print()
             print("Attributes:")
             if isinstance(current, ast.AST):
-                for attr in current._attributes:
-                    print("  " + attr + " - " + str(getattr(current, attr)))
+                if current._attributes:
+                    for attr in current._attributes:
+                        print("  " + attr + " - " + str(getattr(current, attr)))
+                else:
+                    print("  There are no attributes for this node.")
             else:
                 print("  Attributes are not valid on this type of node.")
 
-        if args.fields:
-            print()
-            print("Fields:")
-            if isinstance(current, ast.AST):
-                for field in current._fields:
-                    print("  " + field + " - " + self.describe_node(getattr(current, field)))
-            elif isinstance(current, list):
-                for i in range(len(current)):
-                    print("  " + str(i) + " - " + self.describe_node(current[i]))
-            else:
-                print("  Fields are not valid on this type of node.")
+        print()
+        print("Fields:")
+        if isinstance(current, ast.AST):
+            for field in current._fields:
+                print("  " + field + " - " + self.describe_node(getattr(current, field)))
+        elif isinstance(current, list):
+            for i in range(len(current)):
+                print("  " + str(i) + " - " + self.describe_node(current[i]))
+        else:
+            print("  Fields are not valid on this type of node.")
 
     def status(self):
         self._ensure_node_sync()
-        print("Viewing node: " + self.describe_node())
+        print("Viewing node: " + self.describe_node(self.ast_current))
 
-    def describe_node(self, node=None):
+    def describe_node(self, node):
         """Get basic details for the current node."""
-
-        if node == None:
-            node = self.ast_current
 
         if node == None:
                 return "No node"
@@ -116,26 +116,21 @@ class ExploreCommand(commandui.Command):
         elif isinstance(node, list):
             return "Block of statements"
         else:
-            return "Unknown (" + str(node) + ")"
+            return "Unknown node (" + str(node) + ")"
 
     def enter_field(self, field):
         current = self.ast_current
         child = None
 
         if isinstance(current, ast.AST) and field in current._fields:
-                child = getattr(current, field)
-        elif isinstance(current, list):
-            try:
-                child = current[int(field)]
-            except ValueError:
-                pass
-            except IndexError:
-                pass
-
-        if child == None:
+            child = getattr(current, field)
+        elif isinstance(current, list) and field.isdigit() and int(field) < len(current):
+            child = current[int(field)]
+        else:
             print("Field does not exist.")
             return False
-        elif not isinstance(child, ast.AST) and not isinstance(child, list):
+
+        if not isinstance(child, ast.AST) and not isinstance(child, list):
             print("Field is not a valid node.")
             return False
 
