@@ -7,7 +7,11 @@ Command based UI for the obfuscator.
 
 import cmd
 import os
-import optparse
+
+try:
+    import argparse
+except ImportError:
+    from thirdparty import argparse
 
 class CommandUI(cmd.Cmd):
     """Command UI base class, use self.cmdloop() to run."""
@@ -98,37 +102,49 @@ class CommandUI(cmd.Cmd):
 
         for command in self._commands:
             self._commands[command].status()
-
-
-class CommandOptions(optparse.OptionParser):
-    """Child of OptionParser tailored to be used in the command interface."""
-
-    def __init__(self, command):
-        optparse.OptionParser.__init__(self,
-                                       add_help_option = False,
-                                       prog = command)
-
-    def error(self, msg):
-        raise OptionError(msg)
-
-
-class OptionError(ValueError):
-    pass
+            print()
 
 
 class Command:
     """Base class for any commands to add to the console."""
 
     def __init__(self, id : "Name of the command"):
+        self._opts = Command.CommandArgs(description = self.run.__doc__,
+                                         add_help = False,
+                                         prog = id)
         self.id = id
 
-    def do(self, line): pass
+    def do(self, line):
+        try:
+            args = self._opts.parse_args(line.split())
+        except ValueError as exc:
+            print("Problem: " + str(exc))
+            print()
+            self.help()
+            return False
+        except IOError as exc:
+            print(exc.strerror + ": " + exc.filename)
+        else:
+            return self.run(args)
+
+    def run(self, args): raise NotImplementedError
     def complete(self, text, params, begidx, endidx): pass
     def status(self): pass
 
     def help(self):
-        if self.do.__doc__:
-            print(self.do.__doc__)
+        self._opts.print_help()
+
+    class CommandArgs(argparse.ArgumentParser):
+        """Child of OptionParser tailored to be used in the command interface."""
+
+        def __init__(self, *args, **kwargs):
+            argparse.ArgumentParser.__init__(self, *args, **kwargs)
+
+        def error(self, msg):
+            raise ValueError(msg)
+
+
+
 
     
 def path_completer(path : "Full path",

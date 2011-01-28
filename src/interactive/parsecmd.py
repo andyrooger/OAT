@@ -7,6 +7,11 @@ Parses ASTs for the console.
 
 import ast
 
+try:
+    import argparse
+except ImportError:
+    from thirdparty import argparse
+
 from . import commandui
 
 class ParseCommand(commandui.Command):
@@ -15,34 +20,21 @@ class ParseCommand(commandui.Command):
     def __init__(self):
         commandui.Command.__init__(self, "parse")
 
+        self._opts.add_argument("file", type=argparse.FileType("r"),
+                                help="File to parse.")
+
         self.parsed_tree = None
         self.parsed_file = None
 
-    def do(self, line):
+    def run(self, args):
         """Parse a source file to an AST."""
-
-        paths = line.split()
-        if not paths:
-            print("You need to specify a path to parse.")
-            return False
-        if len(paths) != 1:
-            print("Currently only one file may be parsed at a time.")
-            return False
-
-        path = paths[0]
-
-        source = None
-        try:
-            with open(path, "r") as file:
-                source = file.read()
-        except:
-            print("Could not read the specified file.")
-            return False
+        
+        source = args.file.read()
+        args.file.close()
 
         theast = None
-
         try:
-            theast = ast.parse(source, filename=path)
+            theast = ast.parse(source, filename=file.name)
         except SyntaxError:
             print("Could not parse the specified file. Are you sure it's Python?")
             return False
@@ -52,7 +44,6 @@ class ParseCommand(commandui.Command):
 
         self.parsed_tree = theast
         self.parsed_file = path
-
 
     def complete(self, text, line, begidx, endidx):
         return commandui.path_completer(line.rpartition(" ")[2], len(text))

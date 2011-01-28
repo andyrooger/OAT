@@ -7,6 +7,11 @@ Write out source for the console.
 
 import os
 
+try:
+    import argparse
+except ImportError:
+    from thirdparty import argparse
+
 from . import commandui
 
 from writer import sourcewriter
@@ -18,37 +23,27 @@ class FormatCommand(commandui.Command):
     def __init__(self, parsecmd):
         commandui.Command.__init__(self, "format")
 
-        opts = commandui.CommandOptions("format")
-        opts.add_option("-w", "--write", dest="filename",
-                        help="Filename to write to. If this is not specified we write to stdout.")
-        opts.add_option("-f", action="store_true", default=False, dest="force",
-                        help="Force - to overwrite files or do something we may want to check first.")
-        self._format_options = opts
+        self._opts.add_argument("-w", "--write", dest="filename",
+                                help="Filename to write to. If this is not specified we write to stdout.")
+        self._opts.add_argument("-f", action="store_true", default=False, dest="force",
+                                help="Force - to overwrite files or do something we may want to check first.")
 
         self._related_parsecmd = parsecmd
         self.source_writer = basicwriter.BasicWriter
 
-    def do(self, line):
+    def run(self, args):
         """Output formatted source from the current AST."""
-
+        
         if not self._related_parsecmd.parsed_tree:
             print("You do not have an AST to format!")
             print("Use the parse command to create one.")
             return False
 
-        try:
-            (options, args) = self._format_options.parse_args(line.split())
-        except OptionError as exc:
-            print(str(exc))
-            return False
-        else:
-            if args:
-                print("Unrecognised options: " + ",".join(args))
-                return False
-            if options.filename:
-                return self.write_to_file(self._related_parsecmd.parsed_tree, options.filename, options.force)
+            if args.filename:
+                return self.write_to_file(self._related_parsecmd.parsed_tree, args.filename, args.force)
             else:
-                return self.write_to_stdout(self._related_parsecmd.parsed_tree, options.force)
+                return self.write_to_stdout(self._related_parsecmd.parsed_tree, args.force)
+
 
     def write_to_file(self, tree, filename, force):
         if not force and os.path.lexists(filename):
@@ -68,9 +63,4 @@ class FormatCommand(commandui.Command):
             print("Use -f to confirm, otherwise add a filename argument.")
             return False
         sourcewriter.printSource(tree, self.source_writer)
-
-    def help(self):
-        print(self.do.__doc__)
-        print()
-        self._format_options.print_help()
 
