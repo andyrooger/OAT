@@ -34,7 +34,7 @@ class ParseCommand(commandui.Command):
 
         theast = None
         try:
-            theast = ast.parse(source, filename=file.name)
+            theast = ast.parse(source, filename=args.file.name)
         except SyntaxError:
             print("Could not parse the specified file. Are you sure it's Python?")
             return False
@@ -43,7 +43,7 @@ class ParseCommand(commandui.Command):
             return False
 
         self.parsed_tree = theast
-        self.parsed_file = path
+        self.parsed_file = args.file.name
 
     def complete(self, text, line, begidx, endidx):
         return commandui.path_completer(line.rpartition(" ")[2], len(text))

@@ -102,7 +102,6 @@ class CommandUI(cmd.Cmd):
 
         for command in self._commands:
             self._commands[command].status()
-            print()
 
 
 class Command:

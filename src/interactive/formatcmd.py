@@ -33,16 +33,16 @@ class FormatCommand(commandui.Command):
 
     def run(self, args):
         """Output formatted source from the current AST."""
-        
+
         if not self._related_parsecmd.parsed_tree:
             print("You do not have an AST to format!")
             print("Use the parse command to create one.")
             return False
 
-            if args.filename:
-                return self.write_to_file(self._related_parsecmd.parsed_tree, args.filename, args.force)
-            else:
-                return self.write_to_stdout(self._related_parsecmd.parsed_tree, args.force)
+        if args.filename:
+            return self.write_to_file(self._related_parsecmd.parsed_tree, args.filename, args.force)
+        else:
+            return self.write_to_stdout(self._related_parsecmd.parsed_tree, args.force)
 
 
     def write_to_file(self, tree, filename, force):
