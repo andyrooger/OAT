@@ -126,8 +126,23 @@ class Command:
         else:
             return self.run(args)
 
+    def complete(self, text, line, begidx, endidx):
+        beg = begidx - len(self.id) - 1
+        end = endidx - len(self.id) - 1
+        begarg = line.rfind(" ", None, end) + 1
+        endarg = end #line.rfind(" ", beg, None)
+        if begarg == -1:
+            begarg = 0
+        if endarg == -1:
+            endarg = len(line)
+        arg = line[begarg:endarg]
+        before = line[:begarg].split()
+        after = line[endarg:].split()
+        completions = self.autocomplete(before, arg, after)
+        return [completion[len(arg)-len(text):] for completion in completions]
+
     def run(self, args): raise NotImplementedError
-    def complete(self, text, params, begidx, endidx): pass
+    def autocomplete(self, before, arg, after): return []
     def status(self): pass
 
     def help(self):
@@ -142,17 +157,11 @@ class Command:
         def error(self, msg):
             raise ValueError(msg)
 
-
-
-
     
-def path_completer(path : "Full path",
-                   suffix : "Length of suffix to replace/extend"):
+def path_completer(path : "Path to complete"):
     """Completer for file paths."""
 
     directory, base = os.path.split(path)
-    fixed = path[:-suffix] if suffix else path
-    fixed_l = len(fixed)
     entries = []
 
     try:
@@ -164,5 +173,4 @@ def path_completer(path : "Full path",
         entries = []
 
     suggestions = [os.path.join(directory, file) for file in entries if file.startswith(base)]
-    replaceables = [file[fixed_l:] for file in suggestions if file.startswith(fixed)]
-    return replaceables
+    return suggestions

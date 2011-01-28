@@ -45,8 +45,11 @@ class ParseCommand(commandui.Command):
         self.parsed_tree = theast
         self.parsed_file = args.file.name
 
-    def complete(self, text, line, begidx, endidx):
-        return commandui.path_completer(line.rpartition(" ")[2], len(text))
+    def autocomplete(self, before, arg, after):
+        if len(before):
+            return []
+        else:
+            return commandui.path_completer(arg)
 
     def status(self):
         """Show status for the current session."""
