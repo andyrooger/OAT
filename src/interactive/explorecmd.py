@@ -152,3 +152,16 @@ class ExploreCommand(commandui.Command):
             self.ast_parents = []
         elif not hasattr(self, "ast_parents") or self.ast_top != self._related_parsecmd.parsed_tree:
             self.ast_parents = [self._related_parsecmd.parsed_tree]
+
+    def autocomplete(self, before, arg, after):
+        if not arg.startswith("-"):
+            self._ensure_node_sync()
+            current = self.ast_current
+            if current != None:
+                fields = []
+                if isinstance(current, ast.AST):
+                    fields = list(current._fields)
+                if isinstance(current, list):
+                    fields = [str(index) for index in range(len(current))]
+                return [field for field in fields if field.startswith(arg)]
+        return []
