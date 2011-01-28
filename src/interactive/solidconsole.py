@@ -9,6 +9,7 @@ from . import commandui
 
 from . import parsecmd
 from . import formatcmd
+from . import explorecmd
 
 class SolidConsole(commandui.CommandUI):
     """Solid command class."""
@@ -18,6 +19,8 @@ class SolidConsole(commandui.CommandUI):
 
         parse = parsecmd.ParseCommand()
         format = formatcmd.FormatCommand(parse)
+        explore = explorecmd.ExploreCommand(parse)
         self.add_command(parse)
         self.add_command(format)
+        self.add_command(explore)
 
