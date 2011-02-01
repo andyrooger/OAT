@@ -18,8 +18,8 @@ class SolidConsole(commandui.CommandUI):
         commandui.CommandUI.__init__(self)
 
         parse = parsecmd.ParseCommand()
-        format = formatcmd.FormatCommand(parse)
         explore = explorecmd.ExploreCommand(parse)
+        format = formatcmd.FormatCommand(explore)
         self.add_command(parse)
         self.add_command(format)
         self.add_command(explore)

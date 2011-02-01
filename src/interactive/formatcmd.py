@@ -20,29 +20,37 @@ from writer import basicwriter
 class FormatCommand(commandui.Command):
     """Format and write commands for the console."""
 
-    def __init__(self, parsecmd):
+    def __init__(self, explorecmd):
         commandui.Command.__init__(self, "format")
 
         self._opts.add_argument("-w", "--write", dest="filename",
                                 help="Filename to write to. If this is not specified we write to stdout.")
         self._opts.add_argument("-f", action="store_true", default=False, dest="force",
                                 help="Force - to overwrite files or do something we may want to check first.")
+        group = self._opts.add_mutually_exclusive_group()
+        group.add_argument("-c", "--current", action="store_false", dest="top_node", default=False,
+                                help="Write the current node (view with explore)")
+        group.add_argument("-t", "--top", action="store_true", dest="top_node",
+                                help="Write the top node (parsed with parse)")
 
-        self._related_parsecmd = parsecmd
+        self._related_explorecmd = explorecmd
         self.source_writer = basicwriter.BasicWriter
 
     def run(self, args):
         """Output formatted source from the current AST."""
 
-        if not self._related_parsecmd.parsed_tree:
+        self._related_explorecmd._ensure_node_sync()
+        towrite = self._related_explorecmd.ast_top if args.top_node else self._related_explorecmd.ast_current
+
+        if not towrite:
             print("You do not have an AST to format!")
             print("Use the parse command to create one.")
             return False
 
         if args.filename:
-            return self.write_to_file(self._related_parsecmd.parsed_tree, args.filename, args.force)
+            return self.write_to_file(towrite, args.filename, args.force)
         else:
-            return self.write_to_stdout(self._related_parsecmd.parsed_tree, args.force)
+            return self.write_to_stdout(towrite, args.force)
 
 
     def write_to_file(self, tree, filename, force):
@@ -59,7 +67,7 @@ class FormatCommand(commandui.Command):
 
     def write_to_stdout(self, tree, force):
         if not force:
-            print("Are you sure you wish to print to stout?..This could be big!")
+            print("Are you sure you wish to print to stdout?..This could be big!")
             print("Use -f to confirm, otherwise add a filename argument.")
             return False
         sourcewriter.printSource(tree, self.source_writer)
