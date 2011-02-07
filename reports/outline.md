@@ -5,6 +5,8 @@
 Introduction
 ============
 
+In this project 
+
 Python is a high-level cross-platform interpreted language with a strong philosophy of readable and elegant code.
 With its extensive standard library and ability to be easily extended or embedded into other applications using native code it has become increasingly popular among developers.
 
@@ -47,6 +49,21 @@ This tool will need to be accompanied by another tool that will try to analyse t
 
 Background
 ==========
+
+Code Obfuscation
+----------------
+
+Code obfuscation is a technique employed to mask the true function of a section of code.
+It should make it difficult for a human to read or understand the code while still keeping it functionally equivalent to the original source.
+That said, no obfuscation technique is bulletproof and can always be reverse-engineered given enough time.
+Therefore the aim of obfuscating code is 
+
+This can be used to protect sensitive algorithms and intellectual property from copycats or to avoid reverse-engineers tampering with the program.
+For example Skype obfuscates their code heavily to avoid 
+Sometimes it can even 
+
+When writing software, it is often important that those other than the original author cannot read or modify the code.
+For example when
 
 Traditionally a language such as C or Java can be obfuscated, meaning that the source code or bytecode is modified to obscure the functionality from a human reader.
 The resulting code may still be run by a machine.
