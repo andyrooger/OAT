@@ -6,8 +6,9 @@ cd temp
 
 BASEFILE=${1%\.*}
 
-pandoc -t latex --template=../report.template --base-header-level=2 -o $BASEFILE.tex ../$1 &&
-pdflatex $BASEFILE.tex > /dev/null
+#pandoc -t latex --template=../report.template --base-header-level=2 -o $BASEFILE.tex ../$1 &&
+#pdflatex $BASEFILE.tex > /dev/null
+pdflatex ../$BASEFILE.tex > /dev/null
 
 cp $BASEFILE.pdf ..
 cd ..
