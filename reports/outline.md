@@ -2,10 +2,30 @@
 % Andy Gurden; Supervised by: Herbert Wiklicky
 % Friday 11th February
 
-\pagebreak
-
 Introduction
 ============
+
+Python is a high-level cross-platform interpreted language with a strong philosophy of readable and elegant code.
+With its extensive standard library and ability to be easily extended or embedded into other applications using native code it has become increasingly popular among developers.
+
+The fact that Python is interpreted brings with it a number of advantages but also some drawbacks when it comes to deploying your software into the real world.
+For example it means that a Python program can run anywhere its interpreter will run, which is a great many places in fact.
+Unfortunately it also means that an interpreter is needed on the system before you deploy your code.
+This is not so much of a problem as one may expect as the Python platform is installed by default on most major Linux distributions and Mac OS.
+It can also be easily installed on any recent Windows machine.
+
+Of course there is also a minor speed loss associated with interpreting the source code before it is run.
+This is often offset by much faster development speed and less actual code to achieve the same goal.
+In fact by using a just-in-time compiler such as unladen swallow, the speed difference can be minimised even further.
+
+The specific problem with using an interpreter that this project intends to address is that Python needs to be distributed as source code - in a form that anyone can read.
+This is likely to be a major problem for organisations wishing to distribute a system written entirely in Python as it's quite possible they will not want their hard work exposed to the world to copy or steal.
+It may also be the case that sensitive algorithms inside the program need to be hidden from the wider public to protect security and keep the software and its users from abuse.
+
+A number of solutions to this problem exist, all have positives and negatives and are discussed later.
+The route I will take during this project is to create a tool to obfuscate the code, or hide its meaning from a human reader.
+This tool will need to be accompanied by another tool that will try to analyse the code to remove any modifications made by the obfuscator.
+
 
 > You should be able to clearly explain what the problem is, why the problem is important and why it is difficult to address.
 > You should also be able to succinctly describe your main idea and what issues need to be addressed.
@@ -27,6 +47,13 @@ Introduction
 
 Background
 ==========
+
+Traditionally a language such as C or Java can be obfuscated, meaning that the source code or bytecode is modified to obscure the functionality from a human reader.
+The resulting code may still be run by a machine.
+This is particularly important to Java or other languages that are not compiled to native machine code and Java in particular can be decompiled fairly easily to retrieve almost the original code.
+
+While there are many tools to support obfuscation for well established compiled languages, Python has a great deal fewer options.
+This is likely due to a 
 
 > By now you should have studied most of the background work, so the background section of your outline report should already contain most of the contents of the background section of your final report.
 >
