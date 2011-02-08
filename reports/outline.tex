@@ -16,6 +16,77 @@
 
 \section{Introduction}
 
+With the increasing popularity of interpreted languages like Java or Python, we are starting
+to see a change in the way that program code is distributed.
+
+Not so long ago a programmer could write their program in a language such as C. Once compiled
+to machine code for a given architecture, the program could be handed out to anyone without
+worrying about whether a hacker or reverse-engineer could recover the original source code.
+Of course it can be done and there are tools to reverse the translation\cite{cdecomp} but it
+is a difficult process and there are methods to make this harder\cite{disres}.
+
+The difference for interpreted languages is that much more of the original code is kept in the
+distributed format. For example Java code is usually distributed as bytecode for their virtual
+machine. This still holds information about class and method names for example\cite{classinfo},
+making it much easier to decompile a Java class.
+
+In a language like Python, it is usually raw source code that is distributed. Therefore a
+user need not put in any effort to view the inner workings of the program. While this is good
+for the security of a user\cite{noobf}, it is likely the author will not want sensitive
+proprietry parts of their code open to inspection or theft. So it is essential that there is a
+way to protect it. This is the problem I shall be addressing during this project - specifically
+in the Python language (reasons in next section).
+
+It must be pointed out that there are (good and bad) methods to protect Python source code already.
+These will also be discussed in the next section along with the reasons I believe my solution can
+contribute further.
+
+By the end of this project, I hope to be able to show you a basic functioning but extensible obfuscator
+that can modify the control flow of a program with the aim of diverting a human reader from its actual
+function. I also hope to show you a sister program that will try to reverse these modifications with the
+aim of recovering the original source code.
+
+I shall aim to do this by taking a subset of obfuscation techniques used on other languages (e.g.
+\cite{taxobftrans}) and seeing how well these will work in a such a dynamic language as Python. On the
+surface this seems rather simple, however due to the nature of Python it can be very difficult to analyse
+\cite[p13]{staticanal} in the same way needed for many obfuscation techniques used in statically compiled
+languages like Java. These problems may appear or they may not depending on the techinques tried and it
+will be the job of this paper to spot them.
+
+\section{Background}
+
+As described in the previous section I shall describe here 
+
+* Obfuscation types (and specific ones for me to try)
+* Python code protection (good, bad)
+* Language - Python, Why Python 3? (i.e. version, run-time) NASA, google use it, wide.
+* Current tools for obfuscation
+* Current tools for analysis
+
+MAke it clear I know about important key work in the subject
+
+Enough detail to make self contained, no more.
+
+No routine bullshit
+
+Critically analyse work
+
+Synthesis and analysis
+
+\section{Body}
+
+What I did and why?
+Justify tools etc
+Key challenges
+
+\section{Evaluation}
+
+
+
+\section{Plan of Work}
+
+\section{Introduction}
+
 In this project
 
 Python is a high-level cross-platform interpreted language with a
@@ -94,23 +165,28 @@ answer
 \end{quote}
 \section{Background}
 
+\subsection{Python}
+
+Python is a cross plaform dynamic language being used by an increasing
+number of developers. It is interpreted and so 
+
 \subsection{Code Obfuscation}
 
 Code obfuscation is a technique employed to mask the true function
-of a section of code. It should make it difficult for a human to
-read or understand the code while still keeping it functionally
-equivalent to the original source. That said, no obfuscation
-technique is bulletproof and can always be reverse-engineered given
-enough time. Therefore the aim of obfuscating code is
+of a section of code. It involves transforming the source or machine
+code should make it difficult for a human to read or understand
+while still keeping it functionally equivalent to the original
+program. That said, no obfuscation technique is bulletproof and can
+always be reverse-engineered given enough time. Therefore the aim of
+obfuscating code is just to increase the time and hassle involved in
+reverse engineering to an unacceptable level.
 
-This can be used to protect sensitive algorithms and intellectual
-property from copycats or to avoid reverse-engineers tampering with
-the program. For example Skype obfuscates their code heavily to
-avoid Sometimes it can even
+These techniques can be employed to protect sensitive algorithms and
+intellectual property from copycats or to avoid reverse-engineers
+tampering with the program. For example Skype obfuscates their code
+(and behaviour) heavily to deter reverse engineers \cite[skypeobf].
 
-When writing software, it is often important that those other than
-the original author cannot read or modify the code. For example
-when \cite[p1]{taxobftrans}
+
 
 Traditionally a language such as C or Java can be obfuscated,
 meaning that the source code or bytecode is modified to obscure the
