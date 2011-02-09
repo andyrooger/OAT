@@ -35,7 +35,7 @@ user need not put in any effort to view the inner workings of the program. While
 for the security of a user\cite{noobf}, it is likely the author will not want sensitive
 proprietry parts of their code open to inspection or theft. So it is essential that there is a
 way to protect it. This is the problem I shall be addressing during this project - specifically
-in the Python language (reasons in next section).
+in the Python language.
 
 It must be pointed out that there are (good and bad) methods to protect Python source code already.
 These will also be discussed in the next section along with the reasons I believe my solution can
@@ -50,16 +50,91 @@ I shall aim to do this by taking a subset of obfuscation techniques used on othe
 \cite{taxobftrans}) and seeing how well these will work in a such a dynamic language as Python. On the
 surface this seems rather simple, however due to the nature of Python it can be very difficult to analyse
 \cite[p13]{staticanal} in the same way needed for many obfuscation techniques used in statically compiled
-languages like Java. These problems may appear or they may not depending on the techinques tried and it
+languages like Java. These problems may appear or they may not, depending on the techiniques tried and it
 will be the job of this paper to spot them.
 
 \section{Background}
 
-As described in the previous section I shall describe here 
+Here I will talk a little about Python and current solutions for protecting code, as well as some
+obfuscation techniques and current tools.
+
+\subsection{Python}
+
+As the introduction states, the project aims to implement known obfuscation techniques on Python source.
+The language has widespread use from the popular web framework Django\cite{django} through many applications
+from Google\cite{pygoogle} and even embedded as a scripting language for extensions in programs like GNU
+Image Manipulation Program (GIMP)\cite{gimp}. Due to its wide and varied use, it is of increased importance
+that someone wishing to protect their Python code from theft or reverse-engineering can do. Luckily for me,
+by programming in Python I gain a huge standard library full of tools to help with this task. 
+
+To be specific about the code and techniques I will restrict my efforts to obfuscating Python 3 (nicknamed
+3000 or py3k) and try to use methods such that the resulting program will still be portable across the many
+runtime implementations. The most popular version of Python is still 2.x, however this version will soon go
+stale as the language moves 3.x, on its way dropping some compatibility with 2.x.
+
+\subsubsection{Methods of Protection}
+
+There are a number of ways Python developers currently try to hide their code. Some of them work and some of
+them don't.
+
+For instance there is a misconception that using the Python tool Freeze will protect code. In fact Freeze will
+just take your code and compile it to bytecode, zipping it up with the neccessary parts of the runtime to run
+on systems without Python installed. As it says in the README\cite{freezereadme} this provides little if any
+protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
+tools such as the one mentioned here\cite{pirates} to help analyse the code, as well as a program called
+decompyle\cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
+2.3). There is a similar tool to Freeze called py2exe\cite{py2exe} that will create a Windows executable but
+suffers from exactly the same problem.
+
+From the above paragraph it's easy to spot that another sometimes used method, just distributing the Python
+bytecode, also fails to thwart reverse-engineering for the same reasons. In fact there is another problem
+with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail\cite{dis}
+of the default Python implementation, CPython! By relying on this to distribute your code, you are gluing any
+user to a specific implementation on Python and possibly even a specific version. This removes the portability
+expected from a Python program and contradicts the condition that solutions must be portable, specified earlier.
+
+A more secure solution for protecting your code, and one that works for many people is to pull the most
+sensitive parts out and replace them with C extensions to the Python program. This way the code becomes machine
+code, it can use the wealth of obfuscation tools for C and can be compiled to machine code, making it much
+harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, gluing to
+user to a particular runtime as well as a particular machine type that you compiled the modules for.
+
+Now a portable way to protect the code is to obfuscate it, performing source to source translations that can
+confuse a reader or program analyser. This is not and will never be a perfect solution, however all attempts
+to avoid reverse engineering will be overcome eventually. The difference between one method of protection and
+another is the time and effort taken to break it and how much the result is worth to the attacker. There are
+programs already for obfuscating Python code, though not many. These will be discussed later.
+
+\subsubsection{Ethics of Obfuscating}
+
+Although it's maybe not obvious, there are ethical implications to obfuscation. Specifically for Python, the
+language is based on a philosophy of clear and readable code, it actually enforces this to some extend in the
+grammer. Obviously obfuscation is an attempt to take this away.
+
+This hits out against certain expectations a user may have about a Python program. A nice part of having your
+software handed to you in source form is that you always know what it's doing. Deliberately obscuring the
+function of software, but in a format that is almost always open for inspection removes trust. This means
+trust in the user is removed by not allowing them to use the software as they wish, but more importantly
+trust in the software can be lost.
+
+If the software is hiding what it is doing this could be for a legitimate reason such as hiding novel ideas
+from competitors, or it could be to mask malicious content. A user cannot tell, and if the obfuscation is
+good enough a program cannot tell which the reason is. This is a technique employed all the time by malware
+writers to avoid detection by anti-virus software\cite{dycodeobf}. In fact it has been argued that any and
+all obfuscated code should be treated as if it were malware\cite{noobf}, assuming software is guilty until
+proven otherwise.
+
+My view and the view taken for the remainder of the paper is that these issues are for software writers to
+resolve. A tool is just a tool, it can be used for research, protecting legitimate software or for hiding
+malware. The authors of each would do exactly the same without the tool, it would just take longer.
+
+\subsection{Types of Obfuscation}
+
+\subsection{Current Tools}
+
+
 
 * Obfuscation types (and specific ones for me to try)
-* Python code protection (good, bad)
-* Language - Python, Why Python 3? (i.e. version, run-time) NASA, google use it, wide.
 * Current tools for obfuscation
 * Current tools for analysis
 
@@ -184,8 +259,7 @@ reverse engineering to an unacceptable level.
 These techniques can be employed to protect sensitive algorithms and
 intellectual property from copycats or to avoid reverse-engineers
 tampering with the program. For example Skype obfuscates their code
-(and behaviour) heavily to deter reverse engineers \cite[skypeobf].
-
+(and behaviour) heavily to deter reverse engineers.
 
 
 Traditionally a language such as C or Java can be obfuscated,
