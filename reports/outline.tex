@@ -2,7 +2,9 @@
 \usepackage{amssymb,amsmath}
 \usepackage[mathletters]{ucs}
 \usepackage[utf8x]{inputenc}
-\usepackage[breaklinks=true,unicode=true]{hyperref}
+\usepackage[breaklinks=true,unicode=true,pdfborder={0 0 0},colorlinks=false]{hyperref}
+\usepackage{listings}
+\lstset{language=Python}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \setcounter{secnumdepth}{0}
@@ -26,8 +28,8 @@ Of course it can be done and there are tools to reverse the translation\cite{cde
 is a difficult process and there are methods to make this harder\cite{disres}.
 
 The difference for interpreted languages is that much more of the original code is kept in the
-distributed format. For example Java code is usually distributed as bytecode for their virtual
-machine. This still holds information about class and method names for example\cite{classinfo},
+distributed format. For example Java code is usually distributed as bytecode for the Java Virtual
+Machine (JVM). This still holds information about class and method names for example\cite{classinfo},
 making it much easier to decompile a Java class.
 
 In a language like Python, it is usually raw source code that is distributed. Therefore a
@@ -50,8 +52,8 @@ I shall aim to do this by taking a subset of obfuscation techniques used on othe
 \cite{taxobftrans}) and seeing how well these will work in a such a dynamic language as Python. On the
 surface this seems rather simple, however due to the nature of Python it can be very difficult to analyse
 \cite[p13]{staticanal} in the same way needed for many obfuscation techniques used in statically compiled
-languages like Java. These problems may appear or they may not, depending on the techiniques tried and it
-will be the job of this paper to spot them.
+languages like Java. Issues with the analysis may appear or they may not, depending on the techiniques
+tried and it will be part of this project to find them.
 
 \section{Background}
 
@@ -67,10 +69,11 @@ Image Manipulation Program (GIMP)\cite{gimp}. Due to its wide and varied use, it
 that someone wishing to protect their Python code from theft or reverse-engineering can do. Luckily for me,
 by programming in Python I gain a huge standard library full of tools to help with this task. 
 
-To be specific about the code and techniques I will restrict my efforts to obfuscating Python 3 (nicknamed
-3000 or py3k) and try to use methods such that the resulting program will still be portable across the many
-runtime implementations. The most popular version of Python is still 2.x, however this version will soon go
-stale as the language moves 3.x, on its way dropping some compatibility with 2.x.
+To be specific about the code and techniques I am restricting my efforts to using obfuscation methods that will
+result in standard Python code so it is portable across any of the many runtime implementations. The version
+of Python I am working on is 3.x (nicknamed 3000 or py3k) for both source and generated code. The most popular
+version of Python is still 2.x, however this version will soon go stale as the language moves 3.x, on its way
+dropping some compatibility with 2.x.
 
 \subsubsection{Methods of Protection}
 
@@ -83,11 +86,11 @@ on systems without Python installed. As it says in the README\cite{freezereadme}
 protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
 tools such as the one mentioned here\cite{pirates} to help analyse the code, as well as a program called
 decompyle\cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
-2.3). There is a similar tool to Freeze called py2exe\cite{py2exe} that will create a Windows executable but
-suffers from exactly the same problem.
+2.3). There is a similar tool to Freeze, called py2exe\cite{py2exe}, that will create a Windows executable but
+this too suffers from the same problems.
 
 From the above paragraph it's easy to spot that another sometimes used method, just distributing the Python
-bytecode, also fails to thwart reverse-engineering for the same reasons. In fact there is another problem
+bytecode, also fails to thwart reverse-engineering attempts. In fact there is another problem
 with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail\cite{dis}
 of the default Python implementation, CPython! By relying on this to distribute your code, you are gluing any
 user to a specific implementation on Python and possibly even a specific version. This removes the portability
@@ -119,7 +122,7 @@ trust in the software can be lost.
 
 If the software is hiding what it is doing this could be for a legitimate reason such as hiding novel ideas
 from competitors, or it could be to mask malicious content. A user cannot tell, and if the obfuscation is
-good enough a program cannot tell which the reason is. This is a technique employed all the time by malware
+good enough a program cannot tell which the reason is. This is a technique employed often by malware
 writers to avoid detection by anti-virus software\cite{dycodeobf}. In fact it has been argued that any and
 all obfuscated code should be treated as if it were malware\cite{noobf}, assuming software is guilty until
 proven otherwise.
@@ -130,26 +133,118 @@ malware. The authors of each would do exactly the same without the tool, it woul
 
 \subsection{Types of Obfuscation}
 
-\subsection{Current Tools}
+Having decided to obfuscate the code from source to source, it is worth taking a look at the types of
+obfuscation already used, how they are useful and which I will pursue. I will classify them into 3 categories
+taken from here\cite[p10]{desevobf}.
+
+\subsubsection{Layout Obfuscation}
+
+These will apply transformations to the source language or possibly bytecode that do not affect the running of the
+program. This is a very common form of obfuscation\cite[p10]{desevobf} and involves things like removing comments,
+scrambling identifiers or removing as much whitespace as possible to make the code unreadable.
+
+Comments and identifiers often hold a lot of semantic information as that is what they are designed to do, so
+removal of these transformations is quite effective and irreversible. Other transformations involving syntax
+can be easily removed by a source formatter and so will only be effective against an impatient human.
+
+While some of these transformations may be easy to perform in traditional languages, there are places where
+Pythons constructs can cause problems. Fortunately these kinds of transformations are already covered in existing
+tools, although not neccessarily compatible with Python 3. Therefore I will not be dealing much with layout obfuscation.
+
+\subsubsection{Data Obfuscation}
+
+This type of obfuscation transforms data layout and can help to obfuscate the structure of the program. It can be
+particularly helpful in Python as the language makes it very easy to inspect programs as they run, dissecting data
+structures and learning about how the program works.
+
+Examples of techniques here include adding extra layers of inheritance into a class's inheritance tree or traversing arrays
+in unexpected orders.
+
+\subsubsection{Control-flow Obfuscation}
+
+Control flow obfuscation alters or obscures the control flow of the original code. This will confuse an analyser as to the
+true control flow of the program. For example a transformation may introduce a conditional branch to dead or broken code
+that never happens, however the value of a the condition is hard for the analyser to prove.
+
+Reversal of this type of transformation can require careful analysis and can be difficult to perform. Often the reversal
+of this type of transformation will result in optimisation of the code.
+
+These are the type of transformations I intend to implement first.
+
+\subsection{Tools}
+
+I have previously mentioned that there are tools to do similar obfuscation in Python already. Here I will discuss some
+examples of these, as well as tools to try to reverse the transformations.
+
+\subsubsection{Python Obfuscation}
+
+There are a number of tools out there that claim to do this. For example BitBoost has a Python obfuscator\cite{bitboost}
+that claims to use layout obfuscation as well as "pyschologically inspired techniques" to confuse readers. Sadly as a
+single machine license costs \$200 it is not possible to test the tool outside of their web-based demo.
+
+In the free realm, the freeze\cite{freezereadme} or py2exe\cite{py2exe} programs will also obfuscate python very slightly,
+though only by distributing bytecode rather than raw source.
+
+Alternatively pyobfuscate\cite{pyobf} will scramble a subset of the identifiers used in your program as well as performing
+some other layout transformations. It has it's limitations however\cite{pyobf} so is not powerful enough for real use cases.
+
+Pyobfuscate, along with many of the other tools, hasn't been updated in a long time and so is likely to be unable to cope with
+recent versions of Python code.
+
+\subsubsection{Analysis Tools}
+
+For analysis of Python code there are more tools available.
+
+Firstly to reverse the very basic syntax transformations there are a great number of Python pretty printers such as
+pygments\cite{pygments} or PythonTidy\cite{pythontidy}. This should never be a particularly difficult task as Python is
+designed with readability in mind and enforces clear formatting in the syntax.
+
+PyLint\cite{pylint}, PyChecker\cite{pychecker} and PyFlakes\cite{pyflakes} are all tools designed to help look for possible
+bugs in Python code and so may have some use in checking validity of obfuscated source files. They also look for bad design so
+could help to determine how difficult a program is to understand for a human reader.
+
+PyDev\cite{pydev} is a plugin for the Eclipse IDE for developing in Python. It performs some useful code analysis on projects to detect
+possible bugs and allow easy refactoring of code. While it is implemented in Java as well as Jython (an alternate Python runtime)
+it should be possible to use the ideas if needed. Tools for refactoring are easily available as PyDev uses Bicycle Repair
+Man\cite{bikerepair}, a Python library for specifically for this task. PyDev also definitely supports Python 3.x.
+
+To attempt decompilation of the Python bytecode if necessary there is a tool called decompyle\cite{decompyle} that has already been
+mentioned earlier. This should not be necessary though as we have already discussed reasons to not use bytecode during the project.
+
+Some of the greatest analysis tools come from Python itself. Programs are often run from an interactive Python interpreter, and this
+can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and dissassembling source code.
+There are also tools for creating interactive sessions within the program. For example by inserting the following code at any point
+in the program:
+
+\begin{lstlisting}
+from code import InteractiveConsole
+InteractiveConsole(locals()).interact()
+\end{lstlisting}
+
+You can effectively create a breakpoint and launch an interactive shell to inspect and possibly modify the current local
+variables. The program will continue as soon as the shell is closed.
+
+Other more sophisticated tools are available for debugging or inspection such as AntiFreeze\cite{pirates} if necessary,
+however Python provides more than enough in its standard library.
+
+\section{Design Overview}
+
+The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
+to assess its effectiveness. To create this there need to be a few basic building blocks. Specifically the following:
+
+\begin{itemize}
+\item A Python parser/lexer to read and make sense of Python source files.
+\item Hooks for any number of possible obfuscating transformations.
+\item Hooks for any number of possible analysis techniques.
+\item A Python writer to take my abstract representation of the source code and spit out a file.
+\item A user interface!
+\end{itemize}
 
 
-
-* Obfuscation types (and specific ones for me to try)
-* Current tools for obfuscation
-* Current tools for analysis
-
-MAke it clear I know about important key work in the subject
-
-Enough detail to make self contained, no more.
-
-No routine bullshit
-
-Critically analyse work
-
-Synthesis and analysis
 
 \section{Body}
 
+Essentials
 What I did and why?
 Justify tools etc
 Key challenges
