@@ -4,7 +4,8 @@
 \usepackage[utf8x]{inputenc}
 \usepackage[breaklinks=true,unicode=true,pdfborder={0 0 0},colorlinks=false]{hyperref}
 \usepackage{listings}
-\lstset{language=Python}
+\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format}}
+\lstset{language=Python, numbers=left, showstringspaces=false, frame=single}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \setcounter{secnumdepth}{0}
@@ -227,11 +228,11 @@ variables. The program will continue as soon as the shell is closed.
 Other more sophisticated tools are available for debugging or inspection such as AntiFreeze\cite{pirates} if necessary,
 however Python provides more than enough in its standard library.
 
-\section{Design Overview}
+\section{Basic Design}
 
 The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
-to assess its effectiveness. If I want to make sure the transformations I make to programs are really correct I need to
-know the ins and outs of the language well. This was I can easily pick up on language features that may contradict my
+to assess its effectiveness. If I want to make sure the transformations I make to programs are really correct, I need to
+know the ins and outs of the language well. This way I can easily pick up on language features that may contradict my
 expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
 variable would be free of side effects. This is not the case, depending on the code the assignment can run absolutely
 anything\cite{pyprop} and doesn't even have to assign the given value to a variable.
@@ -254,59 +255,345 @@ blocks. Specifically the following:
 The most fundamental parts here in the workflow are the readers and writers for the source files.
 Without these the other parts are useless, so this is where the implementation begins.
 
-\subsection{Parsing Source}
+\subsection{Reading and Writing Source}
 
-There are a number of choices of how to write this. The most obvious is using Python's own standard library to do it for me.
+There are plenty of free tools that do this as part of their tasks. For example PyDev, mentioned in the background section, will
+perform these tasks during code formatting. For this project I have the choice between writing software from scratch, attempting
+to take relevant parts from free projects, or using libraries to take the work away from myself.
+
+The first we should look at is the option to write the code from scratch myself. This could be very time consuming and would require time
+to read through documentation on Python's grammar which is freely available online\cite{pygrammar}. While the language is well
+documented it does seems silly to repeat work that has been done in so many other places.
+
+Next we look at extracting the functionality from other free (open source) software. The most likely source to source translation tools
+I would use for this are PyDev or the 2to3 tool\cite{2to3}, used to convert Python 2.x source code to Python 3.x. In the end, I have
+chosen not to delve into these tools due to the amount of time I could waste searching for relevant parts of code. It's likely that I
+would end up finding they used a separate library to do most of the work anyway.
+
+This leaves me with libraries. In fact the 2to3 documentation points to a Python standard library called lib2to3 that can be used to
+perform automatic translation on Python source. Unfortunately further reading shows that the library API is unstable and could change by
+the next release. This is not something I want to have to deal with.
+
+Fortunately the Python standard library contains a number of modules devoted to its own language. By using these to parse a source file
+I can hold the source as an abstract syntax tree. This will give me the freedom to transform the language how I like and I will only need
+to code the translations and an AST to source writer. There are some flaws to storing the program as an AST as this drops certain information.
+For example the elif statement, meaning the same as an else if statement in other languages allows many tests without nesting in source.
+When this construct is parsed it becomes an if statement within an else statement and can create large changes to the expected code. Information
+such as comments are also dropped from the representation. I think these are reasonable compromises and so this is the option I have chosen
+to use. It gives a lot of freedom, while being fast to write.
+
+The design of the writer I have used is simple. At the bottom lies an abstract class called SourceWriter that any code wishing to write
+source may request. Derived from this is a very basic source write called BasicWriter. This class recursively writes out the tree in the
+most basic form possible. Every node that could exist in the tree has a method used to write itself, and these can be overridden by any
+other derived classes to change the look of that particular node in source. In addition to these methods there are some hooks for how
+the source looks as a whole. These can change things like the indentation or the way in which a new statement is begun.
+
+Hopefully this makes the source writer easily extendable to create pretty printers or minifiers and can allow for a degree of layout
+obfuscation. As an example, the following is a sample program passed through BasicWriter. You can see it comes out a little uglier than
+it started.
+
+\begin{minipage}[t]{0.45\linewidth}
+Sample Program
+
+\lstset{basicstyle=\tiny}
+\begin{lstlisting}
+"""
+I am an example file!
+
+"""
+
+try:
+    from wikipedia import myreport
+except ImportError as e:
+    pass #print(e)
 
 
-...when talking about choices to write the parser, explain why restricting obfuscator to 3.x is ok.
+def a_function(arg1, arg2=None):
+    """I am a function."""
 
-\section{Body}
+    print("I don't really do anything")
+    return arg1
 
-Essentials
-What I did and why?
-Justify tools etc
-Key challenges
+@a_function
+class a_class:
+    pass
+
+class other_class(a_class):
+    """I'm empty too"""
+\end{lstlisting}
+\end{minipage}
+\hspace{0.5cm}
+\begin{minipage}[t]{0.45\linewidth}
+Output from BasicWriter
+
+\lstset{basicstyle=\tiny}
+\begin{lstlisting}
+'\nI am an example file!\n\n'
+try:
+    from wikipedia import myreport
+except ImportError as e:
+    pass
+def a_function(arg1, arg2 = None):
+    'I am a function.'
+    print("I don't really do anything")
+    return arg1
+@a_function
+class a_class:
+    pass
+class other_class(a_class):
+    "I'm empty too"
+\end{lstlisting}
+\end{minipage}
+
+Any writers are held in the writer package.
+
+\subsection{User Interface}
+
+The next important part to think about is the user interface. This tool would be difficult to use without one.
+
+Current tools such as pyobfuscate or BitBoost's obfuscator are automated. This means while a user has a little control
+over what happens, they really just stick in a file and get back an unreadable one. I want to be able to effectively
+evaluate what my tool is doing the the source, so I need control over what gets changed and what transformations are
+performed. Therefore this isn't really an approach I can use.
+
+Knowing I have to be able to direct and control transformations I had a few different ideas of how. Really these fit into
+either solutions that involve me interactively looking through the AST and choosing how to transform or analyse certain
+nodes, or those that let me mark pieces of the code for obfuscation.
+
+There are a methods already used in other tools that I can use to mark code. For example the doctest module in the standard
+library uses docstrings (programatically accessible comments) to specify unit tests for the code. Another possibility would
+be to use empty decorators to mark functions or classes for transformation. These are usually used to transform the code in
+some way at run time, but could easily do nothing and be picked up by the obfuscator as flags.
+
+The trouble with these methods is that transformations would be restricted to single nodes that support either docstrings or
+decorators. For the fine control I need when evaluating the product, I have decided to use an interactive explorer.
+Transformations or analysis may be performed at which ever part of the code the user is currently pointing to.
+
+This brings a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
+Python contains tools to make both much easier in the form of libraries such as the cmd library\cite{pycmd} for command
+interpreters or Tkinter\cite{pytkinter} for GUIs.
+
+In the interest of speed of development and as user friendliness is not the main focus for us we opted for a command interface.
+More specifically an interactive interpreter similar to a unix shell. The Python offering has been extended to make it easy to
+plug new commands in as command objects, allowing easy extensions with new analytic techniques or new obfuscating transformations.
+
+Obviously the interface is worthless without plugging in some commands. At this point in time the operations supported on the
+interface include:
+
+\paragraph{Help}
+
+This will list help on the program as a whole as well as individual commands. It is an essential tool to find your way around a
+command based program such as this one.
+
+\paragraph{Quit}
+
+Used to leave the program. Also very necessary as this is not built in to the default interpreter.
+
+\paragraph{Status}
+
+This will send a message to all other commands asking them to relay their status if they have anything to contribute. It can be
+used to check the state of certain parts of the program.
+
+\paragraph{Parse}
+
+Actual parsing of Python source files is done using this command. It uses the Python library functions to do the parsing but also
+deals with problems like finding the files and handling incorrect syntax. Once a correct source file is parsed, the resulting AST
+is stored in memory for use by the other commands.
+
+\paragraph{Explore}
+
+This is used to explore an AST recovered by the parse command. It will always point at a particular node in the tree and allows
+inspection of any of the nodes properties. It is also possible to traverse the tree, moving between current node's parents or
+children freely.
+
+\paragraph{Format}
+
+The integration point for the source writers. This can print either the whole abstract syntax tree or the subtree pointed to by
+explore. In future if source writers other than the BasicWriter are created, this should allow these to be selected and used for
+the printing.
+
+Where possible all of these commands implement autocompletion to guide the user and save time.
+
+The following is an example session:
+
+\begin{lstlisting}[language=obftool,basicstyle=\small]
+andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
+Welcome to this little obfuscation tool.
+If you're confused, type help!
+--) help
+
+Documented commands (type help <topic>):
+========================================
+help  quit  status  parse  explore  format
+
+
+--) help parse
+usage: parse file
+
+Parse a source file to an AST.
+
+positional arguments:
+  file  File to parse.
+
+--) parse 
+interactive    quickstart.py  thirdparty     writer         
+--) parse quickstart.py
+
+--) status
+Parsed tree: <_ast.Module object at 0x1bdab90> : quickstart.py
+Viewing node: Module
+
+--) explore
+Looking at: Module
+
+Fields:
+  body - Block of statements
+
+--) explore body
+Looking at: Block of statements
+
+--) explore
+Looking at: Block of statements
+
+Fields:
+  0 - Expr (line 7, col -1)
+  1 - ImportFrom (line 9, col 0)
+  2 - FunctionDef (line 11, col 0)
+  3 - If (line 19, col 0)
+
+--) explore 3
+Looking at: If (line 19, col 0)
+
+--) explore
+Looking at: If (line 19, col 0)
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) explore -a
+Looking at: If (line 19, col 0)
+
+Attributes:
+  lineno - 19
+  col_offset - 0
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) format -f
+if __name__ == '__main__':
+    go()
+
+--) quit
+\end{lstlisting}
+
+\section{Analysing and Obfuscating}
+
+In the previous section we saw the basic blocks of the tool form together. The code
+is already in place to read, inspect, and write out Python source. Now we can move
+on to fulfillment of the project aims; to analyse and obfuscate the code.
+
+Due to the design of the tool, we are required to write code for both of these tasks
+that will perform on nodes in an abstract syntax tree. Command objects may then be
+created and passed to the user interface controller that will expose the functionality
+to users.
+
+The specific techniques to implement are not finalised yet. However it is required that
+any implemented obfuscating transformations have an accompanying analysis that can be
+used to (attempt to) reverse the modification.
+
+There are two obfuscation techniques proposed to be implemented by the end of the project.
+The first will introduce branches into the code which jump either to the rest of the program
+or some cleverly disguised garbage. The conditional of the branch will be an opaque predicate
+\cite{taxobftrans}, meaning we always know what it evaluates to, but a static analysis will not.
+
+To reverse the transformation dead code analysis will be used. The success of this analysis
+depends on both the strength of the analysis and the strength of the opaque predicate.
+
+The other technique to be implemented is to simply reorder instructions. There is often a
+great deal of semantic information in the order and grouping of instructions
+\cite{taxobftrans}, so by changing this while keeping the program correct we can increase
+the confusion to a reader.
+
+Reversal of this transformation will require analysis of a sequence of statements to decide
+valid orderings, as well as the construction of a value function to choose the most suitable
+ordering. This could have some interesting results.
+
+Both of the described transformations and their analysis will require careful testing. This
+has been done so far using Python's doctest library to write unit tests inside the docstrings
+in each piece of code. It is likely a more high level approach will be more suitable later in
+the project, testing a program's validity before and after obfuscations as well as the validity
+of the analysis.
 
 \section{Evaluation}
 
+\subsection{How to Evaluate}
 
+Evaluation of the final product will be difficult, this is mainly due to the lack of similar tools.
+Comparison to other Python obfuscators is not viable as only the pyobfuscate tool is available to
+use. While this does perform obfuscation on Python source, it does not operate on the same version of
+the source or perform the same type of obfuscation. In fact most available obfuscators will deal with
+layout transformation rather than control flow.
+
+There are a few obfuscators that will deal with control flow obfuscation in other languages, for example
+the Kava tool for Java is discussed in detail here \cite{taxobftrans}. We could attempt to compare these
+tools with our own, however they tend to be written for much less flexible or dynamic languages than
+Python (and hence easier analysable). Indeed it is one of the intentions of this project to assess the
+extra difficulty a dynamic language such as Python adds when writing these tools, but to compare the final
+product would be misleading from such different bases.
+
+As well as comparing to similar tools, we have the option to assess an obfuscator's merit based on
+its ability to create output that withstands reverse engineering or analysis. In fact this should be
+a much better analysis of the product as we can say if it is good at what it is designed to do, rather
+than whether it's just better at performing the same function as another tool.
+
+To aid in this form of evaluation we will need tools to analyse the obfuscated source code. There are plenty
+mentioned in the background, however these tend to be designed to optimise code or detect possible bugs and so
+are not ideal.
+
+The solution proposed for this project is to write tools for analysis along side the tools for obfuscation.
+By doing this we can really target the analysis at detecting and reversing the particular transformations
+our obfuscator implements. Hopefully this should not create a great deal of extra work as the analysis
+needed for reversing a transformation is often likely to be the same form of analysis to make that
+transformation in the first place, so the work is already there.
+
+Of course this is not a perfect solution. Ideally analytic tools would be written by someone else without
+knowledge of the specific obfuscator. This would move closer to representing a reverse-enginner or analytic
+tool in the real world, as hopefully neither would be able to tell the software used to perform the obfuscation
+or the specific techniques used on specific code locations. In theory this should give the analysis tool an
+advantage, lowering the expected potency of the obfuscator.
+
+Another problem caused by the same author writing both sides of a competing set of software is that the competition
+may not be so fierce as in the real world. For instance any design oversights in one software will likely show up
+in the other, rather than being exploited as would hopefully be the case in two free thinking developers. As a real
+example, the Java decompiler Mocha will crash if it finds extra statements after a function has returned
+\cite{hosemocha}[p4]. The bytecode obfuscator HoseMocha uses this to prevent Mocha decompiling programs. Had these two
+pieces of software been written by the same developer, one whos decompiler doesn't check for the unlikely case described,
+then it is probable that this case would never have been thought of for the obfuscator - and HoseMocha would never have
+been created.
+
+We do not have the privilege of a separate developer to help with this evaluation. The best solution to mitigate the effect
+of this is to compare the development of the analysis tool to the available analysis tools discussed in background. Although
+these have different primary functions, at least some functionality will overlap and allow a loose comparison. From this it
+should be possible to determine if our analysis tool is sub-par or better than average and to judge the obfuscator
+accordingly.
+
+\subsection{What to Evaluate}
+
+We have looked at how we can evaluate the software, and we know the tools we will use to do so. What we don't know yet is
+the specific criteria we will be evaluating. 
+
+* Obfuscation based on confusion, hard to define a metric for that as it is very subjective to a viewer or program.
+* Other metrics used include complexity etc, will likely be mostly equivalent.
+* Will use these as well as knowledge about the analyser and implementer to assess the differences for a dynamic language
+* Talk about difficulties in creating analyser?
 
 \section{Plan of Work}
 
-\section{Body}
-
-\begin{quote}
-At this stage you should be able to explain the main aspects of the
-solution that your project proposes. For more implementation based
-projects you should have already the main aspects of the
-architecture, the outline of the algorithms, etc. In essence, you
-should be able to write a specification of the solution in such
-level of detail that if given to an external programmer he should
-be able to implement it. Of course, some aspects of the solution
-may be missing, in which case you should be able to explain the
-main idea for tackling them.
-
-Final:
-
-The central part of the report usually consists of three of four
-chapters detailing the technical work undertaken during the
-project. The structure of these chapters is highly project
-dependent. They can reflect the chronological development of the
-project, e.g.~design, implementation, experimentation,
-optimisation, evaluation etc. although this is not always the best
-approach. However you choose to structure this part of the report,
-you should make it clear how you arrived at your chosen approach in
-preference to the other alternatives documented in the background.
-If you have built a new piece of software you should describe and
-justify the design of your program at some high level, possibly
-using an approved graphical formalism such as UML. It should also
-document any interesting problems with, or features of, your
-implementation. Integration and testing are also important to
-discuss in some cases. You need to discuss the content of these
-sections thoroughly with your supervisor.
-
-\end{quote}
 \section{Evaluation}
 
 \begin{quote}
