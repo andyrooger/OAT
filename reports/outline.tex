@@ -98,7 +98,7 @@ expected from a Python program and contradicts the condition that solutions must
 
 A more secure solution for protecting your code, and one that works for many people is to pull the most
 sensitive parts out and replace them with C extensions to the Python program. This way the code becomes machine
-code, it can use the wealth of obfuscation tools for C and can be compiled to machine code, making it much
+code, it can use the wealth of obfuscation tools for C and being machine code makes it much
 harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, gluing to
 user to a particular runtime as well as a particular machine type that you compiled the modules for.
 
@@ -230,17 +230,31 @@ however Python provides more than enough in its standard library.
 \section{Design Overview}
 
 The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
-to assess its effectiveness. To create this there need to be a few basic building blocks. Specifically the following:
+to assess its effectiveness. If I want to make sure the transformations I make to programs are really correct I need to
+know the ins and outs of the language well. This was I can easily pick up on language features that may contradict my
+expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
+variable would be free of side effects. This is not the case, depending on the code the assignment can run absolutely
+anything\cite{pyprop} and doesn't even have to assign the given value to a variable.
+
+To get to grips this well with the language, I am using it to write the software. The hope is that heavy use will help to
+drill out some of the less obvious features. For the same reason I have chosen to write the code to run on a Python 3.x
+interpreter.
+
+Having chosen the language and version I need to design what I'm going to write. This is split into a few basic building
+blocks. Specifically the following:
 
 \begin{itemize}
 \item A Python parser/lexer to read and make sense of Python source files.
-\item Hooks for any number of possible obfuscating transformations.
-\item Hooks for any number of possible analysis techniques.
+\item Implementations of a number of obfuscating transformations.
+\item Implementations of a number of analytic techniques.
 \item A Python writer to take my abstract representation of the source code and spit out a file.
 \item A user interface!
 \end{itemize}
 
+The most fundamental parts here in the workflow are the readers and writers for the source files.
+Without these the other parts are useless, so this is where the implementation begins.
 
+...when talking about choices to write the parser, explain why restricting obfuscator to 3.x is ok.
 
 \section{Body}
 
