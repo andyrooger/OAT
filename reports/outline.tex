@@ -196,7 +196,7 @@ some other layout transformations. It has it's limitations however \cite{pyobf} 
 Pyobfuscate, along with many of the other tools, hasn't been updated in a long time and so is likely to be unable to cope with
 recent versions of Python code.
 
-\subsubsection{Analysis Tools}
+\subsubsection{Analytic Tools}
 
 For analysis of Python code there are more tools available.
 
@@ -232,7 +232,7 @@ variables. The program will continue as soon as the shell is closed.
 Other more sophisticated tools are available for debugging or inspection such as AntiFreeze \cite{pirates} if necessary,
 however Python provides more than enough in its standard library.
 
-\section{Basic Design}
+\section{Creating the Obfuscator}
 
 The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
 to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
@@ -422,6 +422,8 @@ Where possible all of these commands implement auto-completion to guide the user
 
 The following is an example session:
 
+\clearpage
+
 \begin{lstlisting}[language=obftool,basicstyle=\small]
 andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
 Welcome to this little obfuscation tool.
@@ -583,7 +585,7 @@ then it is probable that this case would never have been thought of for the obfu
 been created.
 
 We do not have the privilege of a separate developer to help with this evaluation. The best solution to mitigate the effect
-of this is to compare the development of the analysis tool to the available analysis tools discussed in background. Although
+of this is to compare the development of the analysis tool to the available analytic tools discussed in background. Although
 these have different primary functions, at least some functionality will overlap and allow a loose comparison. From this it
 should be possible to determine if our analysis tool is sub-par or better than average and to judge the obfuscator
 accordingly.
