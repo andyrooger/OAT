@@ -25,32 +25,32 @@ to see a change in the way that program code is distributed.
 Not so long ago a programmer could write their program in a language such as C. Once compiled
 to machine code for a given architecture, the program could be handed out to anyone without
 worrying about whether a hacker or reverse-engineer could recover the original source code.
-Of course it can be done and there are tools to reverse the translation\cite{cdecomp} but it
-is a difficult process and there are methods to make this harder\cite{disres}.
+Of course it can be done and there are tools to reverse the translation \cite{cdecomp} but it
+is a difficult process and there are methods to make this harder \cite{disres}.
 
 The difference for interpreted languages is that much more of the original code is kept in the
 distributed format. For example Java code is usually distributed as bytecode for the Java Virtual
-Machine (JVM). This still holds information about class and method names for example\cite{classinfo},
+Machine (JVM). This still holds information about class and method names for example \cite{classinfo},
 making it much easier to decompile a Java class.
 
 In a language like Python, it is usually raw source code that is distributed. Therefore a
 user need not put in any effort to view the inner workings of the program. While this is good
-for the security of a user\cite{noobf}, it is likely the author will not want sensitive
+for the security of a user \cite{noobf}, it is likely the author will not want sensitive
 proprietry parts of their code open to inspection or theft. So it is essential that there is a
-way to protect it. This is the problem I shall be addressing during this project - specifically
-in the Python language.
+way to protect it. This is the problem we shall be addressing during this project.
 
-It must be pointed out that there are (good and bad) methods to protect Python source code already.
-These will also be discussed in the next section along with the reasons I believe my solution can
-contribute further.
+It must be pointed out that there are (good and bad) methods to protect Python source code
+already. These will also be discussed in the next section along with the problems that mean 
+we can contribute further.
 
-By the end of this project, I hope to be able to show you a basic functioning but extensible obfuscator
+More specifically, during this project we shall implement a basic functioning but extensible obfuscator
 that can modify the control flow of a program with the aim of diverting a human reader from its actual
-function. I also hope to show you a sister program that will try to reverse these modifications with the
-aim of recovering the original source code.
+function. This will act upon Python source code and should help to solve the issue described above.
+We will also create a sister program that will try to reverse these modifications performed by the
+obfuscator with the aim of recovering the original source code.
 
-I shall aim to do this by taking a subset of obfuscation techniques used on other languages (e.g.
-\cite{taxobftrans}) and seeing how well these will work in a such a dynamic language as Python. On the
+We shall aim to do this by taking a subset of obfuscation techniques used on other languages (e.g.
+\cite{taxobftrans}) and looking at how well these will transfer to such a dynamic language as Python. On the
 surface this seems rather simple, however due to the nature of Python it can be very difficult to analyse
 \cite[p13]{staticanal} in the same way needed for many obfuscation techniques used in statically compiled
 languages like Java. Issues with the analysis may appear or they may not, depending on the techiniques
@@ -58,21 +58,20 @@ tried and it will be part of this project to find them.
 
 \section{Background}
 
-Here I will talk a little about Python and current solutions for protecting code, as well as some
-obfuscation techniques and current tools.
+Here we will discuss Python and some solutions for protecting code, as well as some obfuscation techniques
+and current tools.
 
 \subsection{Python}
 
 As the introduction states, the project aims to implement known obfuscation techniques on Python source.
-The language has widespread use from the popular web framework Django\cite{django} through many applications
-from Google\cite{pygoogle} and even embedded as a scripting language for extensions in programs like GNU
-Image Manipulation Program (GIMP)\cite{gimp}. Due to its wide and varied use, it is of increased importance
-that someone wishing to protect their Python code from theft or reverse-engineering can do. Luckily for me,
-by programming in Python I gain a huge standard library full of tools to help with this task. 
+The language has widespread use from the popular web framework Django \cite{django} through many applications
+from Google \cite{pygoogle} and even embedded as a scripting language for extensions in programs like GNU
+Image Manipulation Program (GIMP) \cite{gimp}. Due to its wide and varied use, it is of increased importance
+that someone wishing to protect their Python code from theft or reverse-engineering can do.
 
-To be specific about the code and techniques I am restricting my efforts to using obfuscation methods that will
-result in standard Python code so it is portable across any of the many runtime implementations. The version
-of Python I am working on is 3.x (nicknamed 3000 or py3k) for both source and generated code. The most popular
+To be specific about the code and techniques, we will restrict our efforts to using obfuscation methods that will
+result in standard Python code so that it is portable across any of the many runtime implementations. The version
+of Python we will be working with is 3.x (nicknamed 3000 or py3k) for both source and generated code. The most popular
 version of Python is still 2.x, however this version will soon go stale as the language moves 3.x, on its way
 dropping some compatibility with 2.x.
 
@@ -83,25 +82,25 @@ them don't.
 
 For instance there is a misconception that using the Python tool Freeze will protect code. In fact Freeze will
 just take your code and compile it to bytecode, zipping it up with the neccessary parts of the runtime to run
-on systems without Python installed. As it says in the README\cite{freezereadme} this provides little if any
+on systems without Python installed. As it says in the README \cite{freezereadme} this provides little if any
 protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
-tools such as the one mentioned here\cite{pirates} to help analyse the code, as well as a program called
-decompyle\cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
-2.3). There is a similar tool to Freeze, called py2exe\cite{py2exe}, that will create a Windows executable but
+tools such as the one mentioned here \cite{pirates} to help analyse the code, as well as a program called
+decompyle \cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
+2.3). There is a similar tool to Freeze, called py2exe \cite{py2exe}, that will create a Windows executable but
 this too suffers from the same problems.
 
 From the above paragraph it's easy to spot that another sometimes used method, just distributing the Python
 bytecode, also fails to thwart reverse-engineering attempts. In fact there is another problem
-with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail\cite{dis}
-of the default Python implementation, CPython! By relying on this to distribute your code, you are gluing any
-user to a specific implementation on Python and possibly even a specific version. This removes the portability
-expected from a Python program and contradicts the condition that solutions must be portable, specified earlier.
+with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail \cite{dis}
+of the default Python implementation, CPython. Relying on this to distribute code, would glue any
+user to a specific implementation of Python and possibly even to a specific version. This would remove the portability
+expected from a Python program and contradict the condition that solutions must be portable, specified earlier.
 
-A more secure solution for protecting your code, and one that works for many people is to pull the most
-sensitive parts out and replace them with C extensions to the Python program. This way the code becomes machine
+A more secure solution for protecting Python code, and one that works for many people is to remove the most
+sensitive parts and replace them with C extensions to the Python program. This way the code becomes machine
 code, it can use the wealth of obfuscation tools for C and being machine code makes it much
-harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, gluing to
-user to a particular runtime as well as a particular machine type that you compiled the modules for.
+harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, restricting a
+user to a particular runtime as well as a particular machine architecure (that the modules are compiled for).
 
 Now a portable way to protect the code is to obfuscate it, performing source to source translations that can
 confuse a reader or program analyser. This is not and will never be a perfect solution, however all attempts
@@ -111,9 +110,9 @@ programs already for obfuscating Python code, though not many. These will be dis
 
 \subsubsection{Ethics of Obfuscating}
 
-Although it's maybe not obvious, there are ethical implications to obfuscation. Specifically for Python, the
-language is based on a philosophy of clear and readable code, it actually enforces this to some extend in the
-grammer. Obviously obfuscation is an attempt to take this away.
+Although it's maybe not obvious, there are ethical and possibly legal implications to obfuscation.
+Specifically for Python, the language is based on a philosophy of clear and readable code, it actually
+enforces this to some extend in the grammer. Obviously obfuscation is an attempt to take this away.
 
 This hits out against certain expectations a user may have about a Python program. A nice part of having your
 software handed to you in source form is that you always know what it's doing. Deliberately obscuring the
@@ -124,24 +123,28 @@ trust in the software can be lost.
 If the software is hiding what it is doing this could be for a legitimate reason such as hiding novel ideas
 from competitors, or it could be to mask malicious content. A user cannot tell, and if the obfuscation is
 good enough a program cannot tell which the reason is. This is a technique employed often by malware
-writers to avoid detection by anti-virus software\cite{dycodeobf}. In fact it has been argued that any and
-all obfuscated code should be treated as if it were malware\cite{noobf}, assuming software is guilty until
+writers to avoid detection by anti-virus software \cite{dycodeobf}. In fact it has been argued that any and
+all obfuscated code should be treated as if it were malware \cite{noobf}, assuming software is guilty until
 proven otherwise.
 
-My view and the view taken for the remainder of the paper is that these issues are for software writers to
+My view and the view we will take for the remainder of the paper is that these issues are for software writers to
 resolve. A tool is just a tool, it can be used for research, protecting legitimate software or for hiding
 malware. The authors of each would do exactly the same without the tool, it would just take longer.
+
+As a side note, this conclusion may be different was I based outside of the UK. For example in Germany a law
+know as 202(c) \cite{202c} could make it illegal to write or distribute this software if it could be used for
+certain forms of cybercrime.
 
 \subsection{Types of Obfuscation}
 
 Having decided to obfuscate the code from source to source, it is worth taking a look at the types of
-obfuscation already used, how they are useful and which I will pursue. I will classify them into 3 categories
-taken from here\cite[p10]{desevobf}.
+obfuscation already used, how they are useful and which we will pursue. We will classify them into 3 categories
+taken from this paper \cite[p10]{desevobf}.
 
 \subsubsection{Layout Obfuscation}
 
 These will apply transformations to the source language or possibly bytecode that do not affect the running of the
-program. This is a very common form of obfuscation\cite[p10]{desevobf} and involves things like removing comments,
+program. This is a very common form of obfuscation \cite[p10]{desevobf} and involves things like removing comments,
 scrambling identifiers or removing as much whitespace as possible to make the code unreadable.
 
 Comments and identifiers often hold a lot of semantic information as that is what they are designed to do, so
@@ -150,7 +153,7 @@ can be easily removed by a source formatter and so will only be effective agains
 
 While some of these transformations may be easy to perform in traditional languages, there are places where
 Pythons constructs can cause problems. Fortunately these kinds of transformations are already covered in existing
-tools, although not neccessarily compatible with Python 3. Therefore I will not be dealing much with layout obfuscation.
+tools, although not neccessarily compatible with Python 3. Therefore we will not be dealing much with layout obfuscation.
 
 \subsubsection{Data Obfuscation}
 
@@ -168,26 +171,26 @@ true control flow of the program. For example a transformation may introduce a c
 that never happens, however the value of a the condition is hard for the analyser to prove.
 
 Reversal of this type of transformation can require careful analysis and can be difficult to perform. Often the reversal
-of this type of transformation will result in optimisation of the code.
+of this type of transformation could result in optimisation of the code.
 
-These are the type of transformations I intend to implement first.
+These are the type of transformations we will attempt to implement first.
 
 \subsection{Tools}
 
-I have previously mentioned that there are tools to do similar obfuscation in Python already. Here I will discuss some
+We have previously said that there are tools to do similar obfuscation in Python already. Now we will discuss some
 examples of these, as well as tools to try to reverse the transformations.
 
 \subsubsection{Python Obfuscation}
 
-There are a number of tools out there that claim to do this. For example BitBoost has a Python obfuscator\cite{bitboost}
+There are a number of tools out there that claim to do this. For example BitBoost has a Python obfuscator \cite{bitboost}
 that claims to use layout obfuscation as well as "pyschologically inspired techniques" to confuse readers. Sadly as a
 single machine license costs \$200 it is not possible to test the tool outside of their web-based demo.
 
-In the free realm, the freeze\cite{freezereadme} or py2exe\cite{py2exe} programs will also obfuscate python very slightly,
+In the free realm, the freeze \cite{freezereadme} or py2exe \cite{py2exe} programs will also obfuscate python very slightly,
 though only by distributing bytecode rather than raw source.
 
-Alternatively pyobfuscate\cite{pyobf} will scramble a subset of the identifiers used in your program as well as performing
-some other layout transformations. It has it's limitations however\cite{pyobf} so is not powerful enough for real use cases.
+Alternatively pyobfuscate \cite{pyobf} will scramble a subset of the identifiers used in programs as well as performing
+some other layout transformations. It has it's limitations however \cite{pyobf} so is not powerful enough for real use cases.
 
 Pyobfuscate, along with many of the other tools, hasn't been updated in a long time and so is likely to be unable to cope with
 recent versions of Python code.
@@ -197,22 +200,22 @@ recent versions of Python code.
 For analysis of Python code there are more tools available.
 
 Firstly to reverse the very basic syntax transformations there are a great number of Python pretty printers such as
-pygments\cite{pygments} or PythonTidy\cite{pythontidy}. This should never be a particularly difficult task as Python is
+pygments \cite{pygments} or PythonTidy \cite{pythontidy}. This should never be a particularly difficult task as Python is
 designed with readability in mind and enforces clear formatting in the syntax.
 
-PyLint\cite{pylint}, PyChecker\cite{pychecker} and PyFlakes\cite{pyflakes} are all tools designed to help look for possible
+PyLint \cite{pylint}, PyChecker \cite{pychecker} and PyFlakes \cite{pyflakes} are all tools designed to help look for possible
 bugs in Python code and so may have some use in checking validity of obfuscated source files. They also look for bad design so
 could help to determine how difficult a program is to understand for a human reader.
 
-PyDev\cite{pydev} is a plugin for the Eclipse IDE for developing in Python. It performs some useful code analysis on projects to detect
+PyDev \cite{pydev} is a plugin for the Eclipse IDE for developing in Python. It performs some useful code analysis on projects to detect
 possible bugs and allow easy refactoring of code. While it is implemented in Java as well as Jython (an alternate Python runtime)
 it should be possible to use the ideas if needed. Tools for refactoring are easily available as PyDev uses Bicycle Repair
-Man\cite{bikerepair}, a Python library for specifically for this task. PyDev also definitely supports Python 3.x.
+Man \cite{bikerepair}, a Python library for specifically for this task. PyDev also definitely supports Python 3.x.
 
-To attempt decompilation of the Python bytecode if necessary there is a tool called decompyle\cite{decompyle} that has already been
+To attempt decompilation of the Python bytecode if necessary there is a tool called decompyle \cite{decompyle} that has already been
 mentioned earlier. This should not be necessary though as we have already discussed reasons to not use bytecode during the project.
 
-Some of the greatest analysis tools come from Python itself. Programs are often run from an interactive Python interpreter, and this
+Some of the greatest  tools for analysis come from Python itself. Programs are often run from an interactive Python interpreter, and this
 can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and dissassembling source code.
 There are also tools for creating interactive sessions within the program. For example by inserting the following code at any point
 in the program:
@@ -222,26 +225,26 @@ from code import InteractiveConsole
 InteractiveConsole(locals()).interact()
 \end{lstlisting}
 
-You can effectively create a breakpoint and launch an interactive shell to inspect and possibly modify the current local
+We can effectively create a breakpoint and launch an interactive shell to inspect and possibly modify the current local
 variables. The program will continue as soon as the shell is closed.
 
-Other more sophisticated tools are available for debugging or inspection such as AntiFreeze\cite{pirates} if necessary,
+Other more sophisticated tools are available for debugging or inspection such as AntiFreeze \cite{pirates} if necessary,
 however Python provides more than enough in its standard library.
 
 \section{Basic Design}
 
 The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
-to assess its effectiveness. If I want to make sure the transformations I make to programs are really correct, I need to
-know the ins and outs of the language well. This way I can easily pick up on language features that may contradict my
+to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
+know the ins and outs of the language well. This way we can easily pick up on language features that may contradict our
 expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
 variable would be free of side effects. This is not the case, depending on the code the assignment can run absolutely
-anything\cite{pyprop} and doesn't even have to assign the given value to a variable.
+anything \cite{pyprop} and doesn't even have to assign the given value to a variable.
 
-To get to grips this well with the language, I am using it to write the software. The hope is that heavy use will help to
-drill out some of the less obvious features. For the same reason I have chosen to write the code to run on a Python 3.x
+To become this intimate with the language, we will use it to write the software. The hope is that heavy use will help to
+drill out some of the less obvious features. For the same reason we will be writing the code to run on a Python 3.x
 interpreter.
 
-Having chosen the language and version I need to design what I'm going to write. This is split into a few basic building
+Having chosen the language and version we need to design the software we are about to write. This is split into a few basic building
 blocks. Specifically the following:
 
 \begin{itemize}
@@ -249,48 +252,49 @@ blocks. Specifically the following:
 \item Implementations of a number of obfuscating transformations.
 \item Implementations of a number of analytic techniques.
 \item A Python writer to take my abstract representation of the source code and spit out a file.
-\item A user interface!
+\item A user interface.
 \end{itemize}
 
 The most fundamental parts here in the workflow are the readers and writers for the source files.
-Without these the other parts are useless, so this is where the implementation begins.
+Without these the other parts are useless, so this is where the implementation will begin.
 
 \subsection{Reading and Writing Source}
 
 There are plenty of free tools that do this as part of their tasks. For example PyDev, mentioned in the background section, will
-perform these tasks during code formatting. For this project I have the choice between writing software from scratch, attempting
-to take relevant parts from free projects, or using libraries to take the work away from myself.
+perform these tasks during code formatting. For this project we have the choice between writing software from scratch, attempting
+to take relevant parts from free projects, or using libraries to take the work away from ourselves.
 
-The first we should look at is the option to write the code from scratch myself. This could be very time consuming and would require time
-to read through documentation on Python's grammar which is freely available online\cite{pygrammar}. While the language is well
-documented it does seems silly to repeat work that has been done in so many other places.
+The first we should look at is the option to write the code from scratch oursevles. This could be very time consuming, requiring
+us to write complicated software as well as studying documentation on Python's grammar which is freely available online \cite{pygrammar}.
+While the language is well documented it does seems silly to repeat work that has been done in so many other places.
 
 Next we look at extracting the functionality from other free (open source) software. The most likely source to source translation tools
-I would use for this are PyDev or the 2to3 tool\cite{2to3}, used to convert Python 2.x source code to Python 3.x. In the end, I have
-chosen not to delve into these tools due to the amount of time I could waste searching for relevant parts of code. It's likely that I
+we could use for this are PyDev or the 2to3 tool \cite{2to3}, used to convert Python 2.x source code to Python 3.x. Ultimately we will not
+delve into these tools due to the amount of time we could waste searching for relevant parts of code. It's likely that we
 would end up finding they used a separate library to do most of the work anyway.
 
-This leaves me with libraries. In fact the 2to3 documentation points to a Python standard library called lib2to3 that can be used to
+This leaves us with libraries. In fact the 2to3 documentation points to a Python standard library called lib2to3 that can be used to
 perform automatic translation on Python source. Unfortunately further reading shows that the library API is unstable and could change by
-the next release. This is not something I want to have to deal with.
+the next release. This is not something we want to have to deal with.
 
 Fortunately the Python standard library contains a number of modules devoted to its own language. By using these to parse a source file
-I can hold the source as an abstract syntax tree. This will give me the freedom to transform the language how I like and I will only need
-to code the translations and an AST to source writer. There are some flaws to storing the program as an AST as this drops certain information.
+we can hold the source as an abstract syntax tree. This will give us the freedom to transform the language as we like and additionally we will only need
+to code the translations as well as an AST to source writer. There are some flaws to storing the program as an AST as this drops certain information.
 For example the elif statement, meaning the same as an else if statement in other languages allows many tests without nesting in source.
 When this construct is parsed it becomes an if statement within an else statement and can create large changes to the expected code. Information
-such as comments are also dropped from the representation. I think these are reasonable compromises and so this is the option I have chosen
-to use. It gives a lot of freedom, while being fast to write.
+such as comments are also dropped from the representation. These seem to be reasonable compromise and so this is the option we will use. It gives
+a lot of freedom, whilst being fast to write.
 
-The design of the writer I have used is simple. At the bottom lies an abstract class called SourceWriter that any code wishing to write
-source may request. Derived from this is a very basic source write called BasicWriter. This class recursively writes out the tree in the
+Having made these decisions we can describe a solid design and implementation of the AST writer. The design is fairly simple.
+At the centre lies an abstract class called SourceWriter that any code wishing to write source may request. Derived from this
+is a very basic source writer called BasicWriter. This class recursively writes out the tree in the
 most basic form possible. Every node that could exist in the tree has a method used to write itself, and these can be overridden by any
 other derived classes to change the look of that particular node in source. In addition to these methods there are some hooks for how
 the source looks as a whole. These can change things like the indentation or the way in which a new statement is begun.
 
-Hopefully this makes the source writer easily extendable to create pretty printers or minifiers and can allow for a degree of layout
-obfuscation. As an example, the following is a sample program passed through BasicWriter. You can see it comes out a little uglier than
-it started.
+Hopefully this will make the source writer easily extendable to create pretty printers or minifiers and so can allow for a degree of layout
+obfuscation. As an example, the following is a sample program passed through the actual implementation of BasicWriter. We can see it comes
+out a little uglier than it started.
 
 \begin{minipage}[t]{0.45\linewidth}
 Sample Program
@@ -345,44 +349,45 @@ class other_class(a_class):
 \end{lstlisting}
 \end{minipage}
 
-Any writers are held in the writer package.
+All writers are held in the writer package.
 
 \subsection{User Interface}
 
 The next important part to think about is the user interface. This tool would be difficult to use without one.
 
 Current tools such as pyobfuscate or BitBoost's obfuscator are automated. This means while a user has a little control
-over what happens, they really just stick in a file and get back an unreadable one. I want to be able to effectively
-evaluate what my tool is doing the the source, so I need control over what gets changed and what transformations are
-performed. Therefore this isn't really an approach I can use.
+over what happens, they really just insert a file and are returned an unreadable one. We want to be able to effectively
+evaluate what our tool is doing to the source, so we need control over what gets changed and which transformations are
+performed. Therefore this isn't really an approach we can use.
 
-Knowing I have to be able to direct and control transformations I had a few different ideas of how. Really these fit into
-either solutions that involve me interactively looking through the AST and choosing how to transform or analyse certain
-nodes, or those that let me mark pieces of the code for obfuscation.
+Knowing we have to be able to direct and control transformations, there are a few different ideas of how. Really these fit into
+either solutions that involve us interactively looking through the AST and choosing how to transform or analyse certain
+nodes, or those that let us mark pieces of the code for obfuscation.
 
-There are a methods already used in other tools that I can use to mark code. For example the doctest module in the standard
+There are a methods already used in other tools that we could use to mark code. For example the doctest module in the standard
 library uses docstrings (programatically accessible comments) to specify unit tests for the code. Another possibility would
 be to use empty decorators to mark functions or classes for transformation. These are usually used to transform the code in
 some way at run time, but could easily do nothing and be picked up by the obfuscator as flags.
 
 The trouble with these methods is that transformations would be restricted to single nodes that support either docstrings or
-decorators. For the fine control I need when evaluating the product, I have decided to use an interactive explorer.
-Transformations or analysis may be performed at which ever part of the code the user is currently pointing to.
+decorators. For the fine control we need when evaluating the product, we will actually use an interactive explorer.
+Transformations or analysis may then be performed at which ever part of the code the user is currently pointing to.
 
 This brings a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
-Python contains tools to make both much easier in the form of libraries such as the cmd library\cite{pycmd} for command
-interpreters or Tkinter\cite{pytkinter} for GUIs.
+Python contains tools to make both much easier. These come in the form of libraries such as the cmd library \cite{pycmd} for command
+interpreters or Tkinter \cite{pytkinter} for GUIs.
 
-In the interest of speed of development and as user friendliness is not the main focus for us we opted for a command interface.
-More specifically an interactive interpreter similar to a unix shell. The Python offering has been extended to make it easy to
-plug new commands in as command objects, allowing easy extensions with new analytic techniques or new obfuscating transformations.
+In the interest of speed of development and as user friendliness is not the main focus for us, we will use a command interface.
+More specifically we will implement an interactive interpreter similar to a unix shell.
 
-Obviously the interface is worthless without plugging in some commands. At this point in time the operations supported on the
-interface include:
+In our implementation, the Python command interface offering has been extended to make it easy to plug new commands in as
+command objects, allowing easy extensions with new analytic techniques or new obfuscating transformations. Obviously the
+interface is worthless without plugging in some commands. At this point in time the following commands are available on the
+interface:
 
 \paragraph{Help}
 
-This will list help on the program as a whole as well as individual commands. It is an essential tool to find your way around a
+This will list help on the program as a whole as well as individual commands. It is an essential tool for a user to find their way around a
 command based program such as this one.
 
 \paragraph{Quit}
@@ -412,7 +417,7 @@ The integration point for the source writers. This can print either the whole ab
 explore. In future if source writers other than the BasicWriter are created, this should allow these to be selected and used for
 the printing.
 
-Where possible all of these commands implement autocompletion to guide the user and save time.
+Where possible all of these commands implement auto-completion to guide the user and save time.
 
 The following is an example session:
 
@@ -587,43 +592,22 @@ accordingly.
 We have looked at how we can evaluate the software, and we know the tools we will use to do so. What we don't know yet is
 the specific criteria we will be evaluating. 
 
-* Obfuscation based on confusion, hard to define a metric for that as it is very subjective to a viewer or program.
-* Other metrics used include complexity etc, will likely be mostly equivalent.
-* Will use these as well as knowledge about the analyser and implementer to assess the differences for a dynamic language
-* Talk about difficulties in creating analyser?
+As we already know, the aim of obfuscation is to confuse a human reader or a programatic analysis. In measuring the effectiveness
+of a particular obfuscation we are actually attempting to quantify the additional confusion caused by it. This is not an easy task
+as confusion is a very subjective to a particular viewer or program.
 
-\section{Plan of Work}
+Previous attempts to do this tend to use program complexity metrics to measure the impact of a particular obfuscation. Many fail to
+actually quantify transformation benefit, preferring instead to give a rough estimation, although recently there have been improvements in
+this area \cite{obfquant}.
 
-\section{Evaluation}
+Actually, although these metrics can be used during the obfuscating and analysing, they are unlikely to help with evaluation as we are
+not proposing any new transformations. Instead we are comparing the same transformation in an environment with looser rules than normal.
+In this case complexity metrics will be very similar if not the same and so not helpful to us.
 
-\begin{quote}
-You should be able to explain how you are going to evaluate the
-resulting solution of the project in some amount of detail. In
-particular you should explain which aspects need to be evaluated
-for comparison with existing prior work, what qualitative and
-quantitative aspects will need evaluating, which tests and
-benchmarks you will run, etc.
+A much more helpful approach will be to discuss freely (and using the metrics) the challenges faced in implementing these obfuscations
+in Python as well as breaking them. This can be compared to other languages and implementations. Finally the comparative performances
+of the obfuscator and analyser will be assessed on some example programs.
 
-Final:
-
-Be warned that many projects fall down through poor evaluation.
-Simply building a system and documenting its design and
-functionality is not enough to gain top marks. It is extremely
-important that you evaluate what you have done both in absolute
-terms and in comparison with existing techniques, software,
-hardware etc. This might involve quantitative evaluation, for
-example based on numerical results, performance etc. or something
-more qualitative such as expressibility, functionality, ease-of-use
-etc. At some point you should also evaluate the strengths and
-weaknesses of what you have done. Avoid statements like "The
-project has been a complete success and we have solved all the
-problems asssociated with blah\ldots{}; - you will be shot down
-immediately! It is important to understand that there is no such
-thing as a perfect project. Even the very best pieces of work have
-their limitations and you are expected to provide a proper critical
-appraisal of what you have done.
-
-\end{quote}
 \section{Plan of Work}
 
 \begin{quote}
