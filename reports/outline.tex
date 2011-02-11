@@ -6,6 +6,7 @@
 \usepackage{listings}
 \lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format}}
 \lstset{language=Python, numbers=left, showstringspaces=false, frame=single}
+\usepackage{pst-gantt}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \setcounter{secnumdepth}{0}
@@ -610,17 +611,43 @@ of the obfuscator and analyser will be assessed on some example programs.
 
 \section{Plan of Work}
 
-\begin{quote}
-You must explain what remains to be done in order to complete the
-project and roughly what you expect the timetable to be (allowing
-sufficient time to write the final report, presentation and work on
-the final demonstration). It is not sufficient to simply give a
-timetable, you must also explain what the fall-back positions are
-if you run out of time and what extensions can be added if you have
-more time. You should be able to succinctly discuss the relative
-priority of the remaining tasks and its rationale.
+The following is a proposed timetable of work for the remainder of the project. The period from the beginning of the project on Monday
+the 8th of November to current date is ignored. The chart actually starts starts after this report at week 1, beginning Monday the 14th
+of February. Week 19 begins on Monday the 20th of June.
 
-\end{quote}
+\newpsstyle{Exam}{fillstyle=vlines}
+\newpsstyle{Normal}{fillstyle=solid, fillcolor=white}
+\begin{PstGanttChart}[
+    ChartShowIntervals,
+    ChartUnitIntervalName={},
+    ]{6}{19}
+\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Final Report}]{0}{11}
+\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Obfuscation 1}]{0}{4}
+\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Obfuscation 2}]{4}{4}
+\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Fixes}]{8}{3}
+\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Finalisation}]{16}{3}
+\PstGanttTask[TaskStyle=Exam,TaskOutsideLabel={Exams}]{11}{5}
+\end{PstGanttChart}
+
+The first part of this chart to look to is the exams block. At this point all work on the project will halt as there will be no
+resources spare to contribute. By the time this point comes, everything should be almost entirely finished.
+
+Obfuscation 1 and 2 are tasks that are yet to be decided but involve implementing 2 obfuscation techniques and 2 analytic techniques
+to combat them. The most likely choices for these two techniques will be those suggested in the Analysing and Obfuscating section, and
+they may be in any order.
+
+The fixes task is to allow bug fixing in the implementation before the exams arrive. In reality these are likely to be performed during
+the obfuscation 1 and 2 tasks. This is acceptable as when the obfuscation tasks are delayed they will only drift into the fixes task,
+which is being shortened anyway.
+
+By the time exams halt work, the final report is expected to be almost completely finished. The finalisation task therefore is just to
+clean up and fix any last minute issues (or gaping holes) in the report. It could also be used to finish the evaluation knowing that
+coding is finished. The presentation will also be prepared during this time.
+
+Finally in the event that one or both obfuscation or analytic implementations are not completed, the programming should still stop
+by the time exams come. It is a high priority to have at least one of these running correctly, however a failure with strong reasons
+will be interesting to the conclusion of the project as one of the goals is to assess the added difficulties of implementation in
+a dynamic language.
 
 \bibliographystyle{plain}
 \bibliography{outline}
