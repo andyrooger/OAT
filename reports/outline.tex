@@ -37,7 +37,7 @@ making it much easier to decompile a Java class.
 In a language like Python it is usually raw source code that is distributed, therefore a
 user need not put in any effort to view the inner workings of the program. While this is good
 for the security of a user \cite{noobf}, it is often the case that the author will not want sensitive,
-perhaps proprietry, parts of their code open to inspection or theft. With this in mind, we will work on ways to protect it.
+perhaps proprietary, parts of their code open to inspection or theft. With this in mind, we will work on ways to protect it.
 
 We should note that there are existing solutions for the protection of Python source code, examples of which very in quality.
 These will be discussed in the next section, along with their drawbacks and areas to which we can contribute further.
@@ -56,7 +56,7 @@ loop flattening or instruction reordering \cite{taxobftrans}) and looking at how
 On the surface this may appear rather simple, however as Python is such a highly dynamic language it can be very difficult to analyse
 \cite[p13]{staticanal} as thoroughly as a more traditional compiled language such as Java. In such languages, it is much easier to perform a static
 analysis of the code. This is simply not feasible for many applications in Python, yet many program transformations will require this type of
-thorough analysis. Issues in this area may appear or they may not, depending on the techiniques we decide to implement, and it will be part of
+thorough analysis. Issues in this area may appear or they may not, depending on the techniques we decide to implement, and it will be part of
 this project to notice and evaluate these issues.
 
 \section{Background}
@@ -84,7 +84,7 @@ There are a number of ways Python developers currently try to hide or protect th
 of success and security.
 
 One method is to use a Python tool called Freeze. This tool will simply take given source code and compile
-it to bytecode. This will be combined neccessary parts of the runtime to allow a program run
+it to bytecode. This will be combined necessary parts of the runtime to allow a program run
 on systems without Python installed. As it says in the README \cite{freezereadme} this provides little if any
 protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
 tools such as AntiFreeze \cite{pirates} to help analyse the code, as well as a program called
@@ -92,7 +92,7 @@ decompyle \cite{decompyle} that will actually try to generate the original sourc
 2.3). There is a similar tool to Freeze, called py2exe \cite{py2exe}, that will create a Windows executable but
 this too suffers from the same problems.
 
-From the above paragraph, it's easy to spot that just distributing the Python bytecode, another method occasionaly
+From the above paragraph, it's easy to spot that just distributing the Python bytecode, another method occasionally
 used, also fails to thwart reverse-engineering attempts. In fact there is another problem
 with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail \cite{dis}
 of the default Python implementation, CPython. Relying on this to distribute code would glue any
@@ -103,7 +103,7 @@ A more secure solution for protecting Python code, and one that works for many p
 sensitive parts and replace them with C extensions to the Python program. This way the code becomes machine
 code, it can use the wealth of obfuscation tools for C and being machine code makes it much
 harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, restricting a
-user to a particular runtime as well as a particular machine architecure (that the modules are compiled for).
+user to a particular runtime as well as a particular machine architecture (that the modules are compiled for).
 
 A portable way to protect the code would be to obfuscate it, performing source to source translations that can
 confuse a reader or program analyser. This is not and will never be a perfect solution, because all attempts
@@ -159,7 +159,7 @@ can be easily removed by a source formatter and so will only be effective agains
 
 While some of these transformations may be easy to perform in traditional languages, there are places in which
 Python's constructs can cause problems. Fortunately these kinds of transformations are already covered in existing
-tools, although these are not neccessarily compatible with Python 3. For these reasons, we will be focusing on other forms of
+tools, although these are not necessarily compatible with Python 3. For these reasons, we will be focusing on other forms of
 obfuscation which have received less attention.
 
 \subsubsection{Data Obfuscation}
@@ -190,7 +190,7 @@ examples of these, as well as other tools to try to reverse the transformations.
 \subsubsection{Python Obfuscation}
 
 There are a number of tools out there that claim to do this. For example BitBoost Systems have a Python obfuscator \cite{bitboost}
-that claims to use layout obfuscation as well as ``pyschologically inspired techniques'' to confuse readers. Sadly, as a
+that claims to use layout obfuscation as well as ``psychologically inspired techniques'' to confuse readers. Sadly, as a
 single machine license costs \$200 it is not possible to test the tool outside of their web-based demo.
 
 In the free realm, the freeze \cite{freezereadme} or py2exe \cite{py2exe} programs will also obfuscate python very slightly,
@@ -224,7 +224,7 @@ To attempt decompilation of the Python bytecode if necessary, there is a tool ca
 mentioned. This should not be necessary though as we have already discussed reasons not to use bytecode during the project.
 
 Some of the greatest  tools for analysis come from Python itself. Programs are often run from an interactive Python interpreter, and this
-can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and dissassembling source code.
+can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and disassembling source code.
 There are also tools for creating interactive sessions within the program. For example by inserting the following code at any point
 in the program:
 
@@ -241,7 +241,7 @@ however Python provides more than enough in its standard library.
 
 \section{Creating the Obfuscator}
 
-The end product of this project is intended to be a useable source to source Python obfuscator as well as an analytic tool
+The end product of this project is intended to be a usable source to source Python obfuscator as well as an analytic tool
 to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
 know the ins and outs of the language well. This way we can easily pick up on language features that may contradict our
 expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
@@ -375,7 +375,7 @@ either solutions that involve us interactively looking through the AST and choos
 nodes, or those that let us mark pieces of the code for obfuscation.
 
 There are methods already used in other tools that we could use to mark code. For example the doctest module in the standard
-library uses docstrings (programatically accessible comments) to specify unit tests for the code. Another possibility would
+library uses docstrings (programmatically accessible comments) to specify unit tests for the code. Another possibility would
 be to use empty decorators to mark functions or classes for transformation. These are usually used to transform the code in
 some way at run time, but could easily do nothing and be picked up as flags for the obfuscator.
 
@@ -510,7 +510,7 @@ if __name__ == '__main__':
 
 In the previous section we saw the basic blocks of the tool fall into place. The code
 is already set to read, inspect, and write out Python source. Now we can move
-on to fulfillment of the project aims; to analyse and obfuscate the code.
+on to fulfilment of the project aims; to analyse and obfuscate the code.
 
 Due to the design of the tool, we are required to write code for both of these tasks
 that will perform their function on nodes in an abstract syntax tree. Command objects may then be
@@ -539,7 +539,7 @@ valid orderings, as well as the construction of a value function to choose the m
 ordering. This could have some interesting results.
 
 Both of the described transformations and their analysis will require careful testing. So far,
-this has been done using Python's doctest library to write unit tests inside the docstrings
+this has been done using Python's doc test library to write unit tests inside the docstrings
 in each piece of code. It is likely a higher level approach will be more suitable later in
 the project, testing a program's validity before and after obfuscations as well as the validity
 of the analysis.
@@ -578,8 +578,8 @@ transformation in the first place, so the work is already done.
 
 Of course this is not a perfect solution. Ideally analytic tools would be written by someone else without
 knowledge of the specific obfuscator. This would move closer to representing a reverse-engineer or analytic
-tool in the real world, as hopefully neither would be able to acertain the software used to perform the obfuscation
-or the specific techniques used on specific code locations. In theory this should give the analyitic tool an
+tool in the real world, as hopefully neither would be able to ascertain the software used to perform the obfuscation
+or the specific techniques used on specific code locations. In theory this should give the analytic tool an
 advantage, lowering our expected potency for the obfuscator.
 
 Another problem caused by the same author writing both sides of a competing set of software is that the competition
@@ -602,7 +602,7 @@ accordingly.
 We have looked at how we can evaluate the software, and we know the tools we will use to do so. What we don't know yet is
 the specific criteria that we will be evaluating. 
 
-As we already know, the aim of obfuscation is to confuse a human reader or a programatic analysis. In measuring the effectiveness
+As we already know, the aim of obfuscation is to confuse a human reader or a programmatic analysis. In measuring the effectiveness
 of a particular obfuscation we are actually attempting to quantify the additional confusion caused by it. This is not an easy task
 as confusion is very subjective to a particular viewer or program.
 
