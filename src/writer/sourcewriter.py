@@ -44,6 +44,11 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__character_level = 0
         self.__is_interactive = False
 
+    def _node_type(self, tree : "Node whose type to find"):
+        """Get the type of this node as a string."""
+
+        return tree.__class__.__name__
+
     def write(self):
         """Dump out the entire source tree."""
 
@@ -58,7 +63,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         """
 
         try:
-            method = getattr(self, "_write_" + tree.__class__.__name__)
+            method = getattr(self, "_write_" + self._node_type(tree))
         except AttributeError as exc:
             raise TypeError("Unknown AST node") from exc
         else:
@@ -69,6 +74,15 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         self.__character_level += len(s)
         self.__out.write(s)
+
+    def _char_level(self, relative = True):
+        """Get the absolute character level or relative to the indentation."""
+
+        if relative:
+            ind = sum([len(i) for i in self.__indentation])
+            return self.__character_level - ind
+        else:
+            return self.__character_level
 
     def _newline(self):
         """Write out a new line."""
