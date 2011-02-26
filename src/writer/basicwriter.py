@@ -11,7 +11,7 @@ This should be extended for obfuscated syntax or really pretty output etc.
 import ast
 import sys
 
-from . import sourcewriter
+import sourcewriter
 
 class BasicWriter(sourcewriter.SourceWriter):
     """
