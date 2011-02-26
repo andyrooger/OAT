@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Holds the base class for source writers, it should somehow take an AST and
 ouput correct source.
@@ -20,13 +18,14 @@ class BasicWriter(sourcewriter.SourceWriter):
     One option would have been to build an ast walker from the given walker
     classes, but I want a definite order. (None specified in the docs).
 
-    >>> import ast, sourcewriter
+    >>> import ast
+    >>> from . import sourcewriter
     >>> theast = None
-    >>> with open("../../example/startup.py") as file:
-    ...     theast = ast.parse(file.read(), "startup.py", "exec")
+    >>> with open("../example/stuff.py") as file:
+    ...     theast = ast.parse(file.read(), "stuff.py", "exec")
     >>> type(theast)
     <class '_ast.Module'>
-    >>> with open("../../example/startup.py.basicformat") as file:
+    >>> with open("../example/stuff.py.basicformat") as file:
     ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
     True
 
@@ -54,7 +53,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a Module object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.Module([ast.Expr(ast.Str("Hello"))])
         >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
@@ -67,7 +67,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an interactive session.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.Interactive([ast.Expr(ast.Str("Hello"))])
         >>> sourcewriter.srcToStr(myast, BasicWriter) == ">>> 'Hello'"
         True
@@ -83,7 +84,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a solo expression.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.Expression(ast.Expr(ast.Str("Hello")))
         >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
@@ -101,7 +103,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a function.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... @afunction
         ... def myfunction(arg1, arg2, arg3=None):
@@ -134,7 +137,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a class definition.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... @aclassdecorator
         ... class myclass(base1, base2, metaclass=m, *varpos, **varkey):
@@ -185,7 +189,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a return statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("return 'Hello there'")
         >>> sourcewriter.printSource(myast, BasicWriter)
         return 'Hello there'
@@ -199,7 +204,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a delete statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("del myvar, yourvar")
         >>> sourcewriter.printSource(myast, BasicWriter)
         del myvar, yourvar
@@ -215,7 +221,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an assignment statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a=b=c=142")
         >>> sourcewriter.printSource(myast, BasicWriter)
         a = b = c = 142
@@ -230,7 +237,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an assignment augmentation statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a+=2")
         >>> sourcewriter.printSource(myast, BasicWriter)
         a += 2
@@ -247,7 +255,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a for loop.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... for i in range(3):
         ...     print(str(i))
@@ -278,7 +287,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a while loop.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... while True:
         ...     pass
@@ -307,7 +317,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an if statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... if "linux" in sys.platform:
         ...     print(":)")
@@ -337,7 +348,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out with statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... with open("/dev/null") as nothing:
         ...     nothing.write("hello")
@@ -363,7 +375,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out raise statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("raise Exception('Bad thing happened') from Exception()")
         >>> sourcewriter.printSource(myast, BasicWriter)
         raise Exception('Bad thing happened') from Exception()
@@ -382,7 +395,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a try catch statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... try: raise Exception
         ... except Exception: pass
@@ -418,7 +432,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a try finally statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... try: raise Exception
         ... finally: pass
@@ -443,7 +458,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an assert statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("assert False, 'Oh dear'")
         >>> sourcewriter.printSource(myast, BasicWriter)
         assert False, 'Oh dear'
@@ -462,7 +478,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an import statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("import sys, os")
         >>> sourcewriter.printSource(myast, BasicWriter)
         import sys, os
@@ -477,7 +494,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an import from statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("from .. sys import sys as sys2, os")
         >>> sourcewriter.printSource(myast, BasicWriter)
         from ..sys import sys as sys2, os
@@ -497,7 +515,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a global variable.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("global g1, g2")
         >>> sourcewriter.printSource(myast, BasicWriter)
         global g1, g2
@@ -513,7 +532,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a nonlocal variable.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("nonlocal n1, n2")
         >>> sourcewriter.printSource(myast, BasicWriter)
         nonlocal n1, n2
@@ -529,7 +549,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an expression.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> innerast = ast.Str("Hello")
         >>> outerast = ast.Expr(innerast)
         >>> sourcewriter.srcToStr(innerast, BasicWriter) == sourcewriter.srcToStr(outerast, BasicWriter)
@@ -550,7 +571,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a boolean operation.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a and b or c")
         >>> sourcewriter.printSource(myast, BasicWriter)
         ((a and b) or c)
@@ -570,7 +592,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a binary operation.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a / 2 * 3 + 10")
         >>> sourcewriter.printSource(myast, BasicWriter)
         (((a / 2) * 3) + 10)
@@ -589,7 +612,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a unary operation.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("not ~a")
         >>> sourcewriter.printSource(myast, BasicWriter)
         not ~ a
@@ -604,7 +628,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a lambda expression.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("lambda a,b,c: a + b + c")
         >>> sourcewriter.printSource(myast, BasicWriter)
         lambda a, b, c: ((a + b) + c)
@@ -622,7 +647,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an inline if expression.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a if b else c")
         >>> sourcewriter.printSource(myast, BasicWriter)
         a if b else c
@@ -640,7 +666,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a dictionary object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("{1 : 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}")
         >>> sourcewriter.printSource(myast, BasicWriter)
         {1: 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}
@@ -664,7 +691,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a set object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("{2,3,5,7,13,17,19}")
         >>> sourcewriter.printSource(myast, BasicWriter)
         {2, 3, 5, 7, 13, 17, 19}
@@ -681,7 +709,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a list comprehension.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("[x*y for x in range(10) if x != 5 for y in range(10) if y != 5]")
         >>> sourcewriter.printSource(myast, BasicWriter)
         [(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5]
@@ -698,7 +727,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a set comprehension.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("{x*y for x in range(10) if x != 5 for y in range(10) if y != 5}")
         >>> sourcewriter.printSource(myast, BasicWriter)
         {(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5}
@@ -715,7 +745,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a dictionary comprehension.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("{x: y for x in range(10) if x != 5 for y in range(10) if y != 5}")
         >>> sourcewriter.printSource(myast, BasicWriter)
         {x: y for x in range(10) if x != 5 for y in range(10) if y != 5}
@@ -734,7 +765,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a generator expression.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("(x*y for x in range(10) if x != 5 for y in range(10) if y != 5)")
         >>> sourcewriter.printSource(myast, BasicWriter)
         ((x * y) for x in range(10) if x != 5 for y in range(10) if y != 5)
@@ -751,7 +783,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a yield statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("yield x")
         >>> sourcewriter.printSource(myast, BasicWriter)
         yield x
@@ -767,7 +800,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a compare statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("a != b < c > d")
         >>> sourcewriter.printSource(myast, BasicWriter)
         a != b < c > d
@@ -786,7 +820,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a function call.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("print('Hello world')")
         >>> sourcewriter.printSource(myast, BasicWriter)
         print('Hello world')
@@ -821,7 +856,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a numerical object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("1042"), BasicWriter)
         1042
 
@@ -833,7 +869,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a String object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.Str("Hello"), BasicWriter)
         'Hello'
 
@@ -845,7 +882,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a Bytes object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("b'hello world'")
         >>> sourcewriter.printSource(myast, BasicWriter)
         b'hello world'
@@ -862,7 +900,8 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         Context is ignored.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("sys.path")
         >>> sourcewriter.printSource(myast, BasicWriter)
         sys.path
@@ -879,7 +918,8 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         Context is ignored.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("mylist[2]")
         >>> sourcewriter.printSource(myast, BasicWriter)
         mylist[2]
@@ -897,7 +937,8 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         Context is ignored.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("head, *tail = list(range(10))")
         >>> sourcewriter.printSource(myast, BasicWriter)
         (head, *tail) = list(range(10))
@@ -911,7 +952,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a name object. We ignore context...
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("a_var_name"), BasicWriter)
         a_var_name
 
@@ -923,7 +965,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a list object.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("[1,2,3,4]"), BasicWriter)
         [1, 2, 3, 4]
 
@@ -939,7 +982,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a tuple.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("(a,b,c)"), BasicWriter)
         (a, b, c)
 
@@ -964,7 +1008,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a slice.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("mylist[1:10:2]"), BasicWriter)
         mylist[1:10:2]
 
@@ -983,7 +1028,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an extended slice.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("mylist[:2,4:]"), BasicWriter)
         mylist[:2,4:]
 
@@ -996,7 +1042,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an index.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> sourcewriter.printSource(ast.parse("mylist[1]"), BasicWriter)
         mylist[1]
 
@@ -1046,7 +1093,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out one piece of a comprehension.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("[x for x in range(10) if x != 5]")
         >>> sourcewriter.printSource(myast, BasicWriter)
         [x for x in range(10) if x != 5]
@@ -1067,7 +1115,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an exception handler.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... try: pass
         ... except Exception as exc: pass
@@ -1098,7 +1147,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a set of arguments.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... def f(a : "An argument", b = None, *args, kwo = True, **kwargs): pass
         ... '''
@@ -1170,7 +1220,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a single argument.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... def f(a : "An argument"): pass
         ... '''
@@ -1192,7 +1243,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out a keyword from an argument list.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("class c(a = b): pass")
         >>> sourcewriter.printSource(myast, BasicWriter)
         class c(a = b):
@@ -1210,7 +1262,8 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
         Write out an alias.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> myast = ast.parse("import hello as world")
         >>> sourcewriter.printSource(myast, BasicWriter)
         import hello as world

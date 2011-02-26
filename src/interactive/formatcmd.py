@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Write out source for the console.
 
@@ -16,6 +14,7 @@ from . import commandui
 
 from writer import sourcewriter
 from writer import basicwriter
+from writer import prettywriter
 
 class FormatCommand(commandui.Command):
     """Format and write commands for the console."""
@@ -32,9 +31,10 @@ class FormatCommand(commandui.Command):
                                 help="Write the current node (view with explore)")
         group.add_argument("-t", "--top", action="store_true", dest="top_node",
                                 help="Write the top node (parsed with parse)")
+        self._opts.add_argument("-s", "--style", choices=["basic", "pretty"],
+                                help="Style to write source code with. Defaults to pretty.", default="pretty")
 
         self._related_explorecmd = explorecmd
-        self.source_writer = basicwriter.BasicWriter
 
     def run(self, args):
         """Output formatted source from the current AST."""
@@ -47,28 +47,33 @@ class FormatCommand(commandui.Command):
             print("Use the parse command to create one.")
             return False
 
+        writer = {
+            "basic" : basicwriter.BasicWriter,
+            "pretty" : prettywriter.PrettyWriter
+        }.get(args.style)
+
         if args.filename:
-            return self.write_to_file(towrite, args.filename, args.force)
+            return self.write_to_file(towrite, writer, args.filename, args.force)
         else:
-            return self.write_to_stdout(towrite, args.force)
+            return self.write_to_stdout(towrite, writer, args.force)
 
 
-    def write_to_file(self, tree, filename, force):
+    def write_to_file(self, tree, writer, filename, force):
         if not force and os.path.lexists(filename):
             print("The specified file already exists. Use -f to overwrite.")
             return False
 
         try:
             with open(filename, "w") as file:
-                self.source_writer(tree, file).write()
+                writer(tree, file).write()
             print("Written to: " + filename)
         except IOError:
             print("The file could not be written to.")
 
-    def write_to_stdout(self, tree, force):
+    def write_to_stdout(self, tree, writer, force):
         if not force:
             print("Are you sure you wish to print to stdout?..This could be big!")
             print("Use -f to confirm, otherwise add a filename argument.")
             return False
-        sourcewriter.printSource(tree, self.source_writer)
+        sourcewriter.printSource(tree, writer)
 

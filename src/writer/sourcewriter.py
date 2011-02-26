@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Holds the abstract base class for source writers.
 
@@ -44,6 +42,11 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__character_level = 0
         self.__is_interactive = False
 
+    def _node_type(self, tree : "Node whose type to find"):
+        """Get the type of this node as a string."""
+
+        return tree.__class__.__name__
+
     def write(self):
         """Dump out the entire source tree."""
 
@@ -58,7 +61,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         """
 
         try:
-            method = getattr(self, "_write_" + tree.__class__.__name__)
+            method = getattr(self, "_write_" + self._node_type(tree))
         except AttributeError as exc:
             raise TypeError("Unknown AST node") from exc
         else:
@@ -70,11 +73,20 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__character_level += len(s)
         self.__out.write(s)
 
+    def _char_level(self, relative = True):
+        """Get the absolute character level or relative to the indentation."""
+
+        if relative:
+            ind = sum([len(i) for i in self.__indentation])
+            return self.__character_level - ind
+        else:
+            return self.__character_level
+
     def _newline(self):
         """Write out a new line."""
 
-        self.__character_level = 0
         self._write("\n")
+        self.__character_level = 0
 
     def _inc_indent(self, by : "How far to indent - '' to indent to character level" = "    "):
         """Increase indentation."""
@@ -155,7 +167,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
                                # next statement to change independently
             self._write_block(stmts, indent = False)
             self._dec_indent()
-        else:
+        elif stmts: # Don't write if no statements
             self._start_line()
             self._interleave_write(stmts, between=self._next_statement)
 
@@ -397,7 +409,7 @@ def printSource(tree : "Tree to print", writer : "Type to write with"):
     Write an AST as source to stdout. Works with doctest.
 
     >>> import ast
-    >>> from basicwriter import BasicWriter
+    >>> from . basicwriter import BasicWriter
     >>> myast = ast.Str("Hello there")
     >>> printSource(myast, BasicWriter)
     'Hello there'
@@ -412,7 +424,7 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
     Write an AST as source to a string.
 
     >>> import ast
-    >>> from basicwriter import BasicWriter
+    >>> from . basicwriter import BasicWriter
     >>> myast = ast.Str("Hello there")
     >>> srcToStr(myast, BasicWriter)
     "'Hello there'"

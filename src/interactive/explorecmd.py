@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Explore ASTs from the console.
 
