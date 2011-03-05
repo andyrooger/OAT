@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import doctest
-
 from writer import sourcewriter
 from writer import basicwriter
 from writer import prettywriter
@@ -12,5 +10,4 @@ import doctest
 
 for mod in modules:
     print("Testing module: " + mod.__name__)
-    print()
     doctest.testmod(mod)
