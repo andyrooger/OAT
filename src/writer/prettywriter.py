@@ -18,11 +18,12 @@ class PrettyWriter(BasicWriter):
 
     Extends the basic writer's functionality to print readable code.
 
-    >>> import ast, sourcewriter
+    >>> import ast
+    >>> from . import sourcewriter
     >>> theast = None
-    >>> with open("../../example/startup.py") as file:
+    >>> with open("../example/stuff.py") as file:
     ...     theast = ast.parse(file.read(), "startup.py", "exec")
-    >>> with open("../../example/startup.py.prettyformat") as file:
+    >>> with open("../example/stuff.py.prettyformat") as file:
     ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
     True
 
@@ -44,7 +45,8 @@ class PrettyWriter(BasicWriter):
 
         Should only be called when the expression is a statement.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... def myfunc():
         ...     \"\"\"
@@ -141,19 +143,20 @@ class PrettyWriter(BasicWriter):
         This will prettify the output by using new lines wherever
         default values or annotations are used in the arguments.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> a = ast.parse('def f(a): pass')
         >>> sourcewriter.printSource(a, PrettyWriter)
         def f(a):
             pass
         >>> b = ast.parse('def g(b : "hi"): pass')
         >>> sourcewriter.printSource(b, PrettyWriter)
-        def g(b : "hi"):
+        def g(b : 'hi'):
             pass
         >>> c = ast.parse('def h(b : "hi", c : "Bye"): pass')
         >>> sourcewriter.printSource(c, PrettyWriter)
-        def h(b : "hi",
-              c : "Bye"):
+        def h(b : 'hi',
+              c : 'Bye'):
             pass
 
         """
@@ -200,7 +203,8 @@ class PrettyWriter(BasicWriter):
         """
         Write arguments object with newlines between arguments.
 
-        >>> import ast, sourcewriter
+        >>> import ast
+        >>> from . import sourcewriter
         >>> c = '''
         ... def myfunc(a, b : "Hello", c : "Goodbye" = 2):
         ...     pass
@@ -208,8 +212,8 @@ class PrettyWriter(BasicWriter):
         >>> myast = ast.parse(c)
         >>> sourcewriter.printSource(myast, PrettyWriter)
         def myfunc(a,
-                   b : "Hello",
-                   c : "Goodbye" = 2):
+                   b : 'Hello',
+                   c : 'Goodbye' = 2):
             pass
 
         """
@@ -224,6 +228,7 @@ class PrettyWriter(BasicWriter):
         # positional args
         for arg in tree.args[:n_posargs]:
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = True
             self._write(arg)
@@ -231,6 +236,7 @@ class PrettyWriter(BasicWriter):
         # keyword args
         for (arg, default) in zip(tree.args[n_posargs:], tree.defaults):
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = True
             self._write(arg)
@@ -240,6 +246,7 @@ class PrettyWriter(BasicWriter):
         # variable positional args
         if tree.vararg != None:
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = True
             self._write("*")
@@ -249,6 +256,7 @@ class PrettyWriter(BasicWriter):
                 self._write(tree.varargannotation)
         elif tree.kwonlyargs:
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = True
             self._write("*")
@@ -256,6 +264,7 @@ class PrettyWriter(BasicWriter):
         # keyword only args
         for (arg, default) in zip(tree.kwonlyargs, tree.kw_defaults):
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = True
             self._write(arg)
@@ -265,6 +274,7 @@ class PrettyWriter(BasicWriter):
         # variable keyword args
         if tree.kwarg != None:
             if had_arg:
+                self._write(",")
                 self._next_statement()
             had_arg = False
             self._write("**")
