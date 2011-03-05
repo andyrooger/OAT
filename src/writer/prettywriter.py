@@ -9,47 +9,34 @@ from basicwriter.
 import ast
 import sys
 
-import sourcewriter
-from basicwriter import BasicWriter
+from . import sourcewriter
+from . basicwriter import BasicWriter
 
 class PrettyWriter(BasicWriter):
     """
     Writes pretty source from an AST.
 
-#    Extends the basic writer's functionality to print readable code.
+    Extends the basic writer's functionality to print readable code.
 
-#    One option would have been to build an ast walker from the given walker
-#    classes, but I want a definite order. (None specified in the docs).
-
-#    >>> import ast, sourcewriter
-#    >>> theast = None
-#    >>> with open("../../example/startup.py") as file:
-#    ...     theast = ast.parse(file.read(), "startup.py", "exec")
-#    >>> type(theast)
-#    <class '_ast.Module'>
-#    >>> with open("../../example/startup.py.basicformat") as file:
-#    ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
-#    True
+    >>> import ast, sourcewriter
+    >>> theast = None
+    >>> with open("../../example/startup.py") as file:
+    ...     theast = ast.parse(file.read(), "startup.py", "exec")
+    >>> with open("../../example/startup.py.prettyformat") as file:
+    ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
+    True
 
     """
 
     def __init__(self,
                  top_ast : "The AST to be printed" = None,
                  out : "Output file" = sys.stdout):
-        """
-#        Create the writer.
-
-#        >>> BasicWriter("hello world")
-#        Traceback (most recent call last):
-#            ...
-#        TypeError: The tree needs to begin with an AST node.
-#        >>> import ast
-#        >>> myast = ast.AST()
-#        >>> myast = BasicWriter(myast)
-
-        """
 
         BasicWriter.__init__(self, top_ast, out)
+
+    ###############################
+    # Docstrings
+    ###############################
 
     def _write_Expr(self, tree):
         """
@@ -143,6 +130,151 @@ class PrettyWriter(BasicWriter):
 
         return trimmed
 
+    ###############################
+    # Arguments
+    ###############################
+
+    def _write_arguments(self, tree):
+        """
+        Write out a list of arguments.
+
+        This will prettify the output by using new lines wherever
+        default values or annotations are used in the arguments.
+
+        >>> import ast, sourcewriter
+        >>> a = ast.parse('def f(a): pass')
+        >>> sourcewriter.printSource(a, PrettyWriter)
+        def f(a):
+            pass
+        >>> b = ast.parse('def g(b : "hi"): pass')
+        >>> sourcewriter.printSource(b, PrettyWriter)
+        def g(b : "hi"):
+            pass
+        >>> c = ast.parse('def h(b : "hi", c : "Bye"): pass')
+        >>> sourcewriter.printSource(c, PrettyWriter)
+        def h(b : "hi",
+              c : "Bye"):
+            pass
+
+        """
+
+        if self._has_defaults(tree) or self._has_annotations(tree):
+            self._write_newlineargs(tree)
+        else:
+            super()._write_arguments(tree)
+
+
+    def _has_defaults(self, tree):
+        """
+        Check if an argument object has any arguments with defaults.
+
+        """
+
+        return tree.defaults != None or tree.kw_defaults != None
+
+
+    def _has_annotations(self, tree):
+        """
+        Check if an argument object has any arguments with annotations.
+
+        """
+
+        for arg in tree.args:
+            if arg.annotation != None:
+                return True
+
+        if tree.varargannotation != None:
+            return True
+
+        for arg in tree.kwonlyargs:
+            if arg.annotation != None:
+                return True
+
+        if tree.kwargannotation != None:
+            return True
+
+        return False
+
+
+    def _write_newlineargs(self, tree):
+        """
+        Write arguments object with newlines between arguments.
+
+        >>> import ast, sourcewriter
+        >>> c = '''
+        ... def myfunc(a, b : "Hello", c : "Goodbye" = 2):
+        ...     pass
+        ... '''
+        >>> myast = ast.parse(c)
+        >>> sourcewriter.printSource(myast, PrettyWriter)
+        def myfunc(a,
+                   b : "Hello",
+                   c : "Goodbye" = 2):
+            pass
+
+        """
+
+        char_lv = self._char_level()
+        if char_lv > 0:
+            self._inc_indent(" "*char_lv)
+
+        had_arg = False # Cannot use _separated_write here
+        n_posargs = len(tree.args) - len(tree.defaults)
+
+        # positional args
+        for arg in tree.args[:n_posargs]:
+            if had_arg:
+                self._next_statement()
+            had_arg = True
+            self._write(arg)
+
+        # keyword args
+        for (arg, default) in zip(tree.args[n_posargs:], tree.defaults):
+            if had_arg:
+                self._next_statement()
+            had_arg = True
+            self._write(arg)
+            self._write(" = ")
+            self._write(default)
+
+        # variable positional args
+        if tree.vararg != None:
+            if had_arg:
+                self._next_statement()
+            had_arg = True
+            self._write("*")
+            self._write(tree.vararg)
+            if tree.varargannotation != None:
+                self._write(" : ")
+                self._write(tree.varargannotation)
+        elif tree.kwonlyargs:
+            if had_arg:
+                self._next_statement()
+            had_arg = True
+            self._write("*")
+
+        # keyword only args
+        for (arg, default) in zip(tree.kwonlyargs, tree.kw_defaults):
+            if had_arg:
+                self._next_statement()
+            had_arg = True
+            self._write(arg)
+            self._write(" = ")
+            self._write(default)
+
+        # variable keyword args
+        if tree.kwarg != None:
+            if had_arg:
+                self._next_statement()
+            had_arg = False
+            self._write("**")
+            self._write(tree.kwarg)
+            if tree.kwargannotation != None:
+                self._write(" : ")
+                self._write(tree.kwargannotation)
+
+        if char_lv > 0:
+            self._dec_indent()
 
 if __name__ == "__main__":
     import doctest
