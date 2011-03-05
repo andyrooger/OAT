@@ -22,7 +22,7 @@ class PrettyWriter(BasicWriter):
     >>> with open("../example/stuff.py") as file:
     ...     theast = ast.parse(file.read(), "startup.py", "exec")
     >>> with open("../example/stuff.py.prettyformat") as file:
-    ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
+    ...         file.read() == sourcewriter.srcToStr(theast, PrettyWriter)
     True
 
     """
@@ -80,9 +80,11 @@ class PrettyWriter(BasicWriter):
             c = c.replace('\t', '\\t')
             clean.append(c)
 
-        if len(clean) < 2: # Single line (or none)
+        if len(clean) == 0: # Empty
+            self._write("\"\"\"\"\"\"")
+        elif len(clean) < 2: # Single line
             self._write("\"\"\"")
-            self._write(clean)
+            self._write(clean[0])
             self._write("\"\"\"")
         else: # multiline
             char_lv = self._char_level()
