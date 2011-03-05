@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Parses ASTs for the console.
 

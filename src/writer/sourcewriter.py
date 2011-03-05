@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Holds the abstract base class for source writers.
 

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Command based UI for the obfuscator.
 

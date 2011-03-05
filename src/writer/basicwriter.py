@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Holds the base class for source writers, it should somehow take an AST and
 ouput correct source.

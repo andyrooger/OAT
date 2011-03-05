@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Tries to write the source in an attractive way. Most functionality comes
 from basicwriter.

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """
 Write out source for the console.
 
