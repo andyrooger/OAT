@@ -411,7 +411,7 @@ def printSource(tree : "Tree to print", writer : "Type to write with"):
     Write an AST as source to stdout. Works with doctest.
 
     >>> import ast
-    >>> from basicwriter import BasicWriter
+    >>> from . basicwriter import BasicWriter
     >>> myast = ast.Str("Hello there")
     >>> printSource(myast, BasicWriter)
     'Hello there'
@@ -426,7 +426,7 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
     Write an AST as source to a string.
 
     >>> import ast
-    >>> from basicwriter import BasicWriter
+    >>> from . basicwriter import BasicWriter
     >>> myast = ast.Str("Hello there")
     >>> srcToStr(myast, BasicWriter)
     "'Hello there'"
