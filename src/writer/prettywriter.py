@@ -369,11 +369,17 @@ class PrettyWriter(BasicWriter):
             prev_node = oldgroup[-1].__class__.__name__
 
             if node_type in single_nodes:
-                return True
+                return True # Always own group
+
+            if prev_node in single_nodes:
+                return True # Can't group with previous
 
             for group in grouped_nodes: # Look through grouped nodes
                 if node_type in group: # We found our group
                     return prev_node not in group # new if we're the first in this group
+
+                if prev_node in group: # Are we part of previous group
+                    return True # we know our statement is not part of this group
 
             return False
 
