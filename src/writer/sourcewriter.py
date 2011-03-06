@@ -167,7 +167,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
                                # next statement to change independently
             self._write_block(stmts, indent = False)
             self._dec_indent()
-        else:
+        elif stmts: # Don't write if no statements
             self._start_line()
             self._interleave_write(stmts, between=self._next_statement)
 
