@@ -161,7 +161,7 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        if self._has_defaults(tree) or self._has_annotations(tree):
+        if self._has_annotations(tree): # or self._has_defaults(tree)
             self._write_newlineargs(tree)
         else:
             super()._write_arguments(tree)
