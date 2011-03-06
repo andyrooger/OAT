@@ -286,6 +286,98 @@ class PrettyWriter(BasicWriter):
         if char_lv > 0:
             self._dec_indent()
 
+    ###############################
+    # Arguments
+    ###############################
+
+    def _write_block(self,
+                     stmts : "List of statements inside the block.",
+                     indent : "Should we be indenting?" = True):
+        """Write a list of statements, each on a new line in a new indentation level."""
+
+        if indent:
+            super()._write_block(stmts, True)
+        else:
+            split_stmts = self._split_block(stmts)
+
+            if split_stmts:
+                # First group as before
+                super()._write_block(split_stmts[0], False)
+
+                # Other groups preceded with newline
+                for group in split_stmts[1:]:
+                    self._next_statement()
+                    self._interleave_write(group, before=self._next_statement)
+
+    def _split_block(self, stmts):
+        """
+        Take a block and split into groups of related instructions.
+
+        >>> import ast
+        >>> instructions = [
+        ...     ast.Import(),
+        ...     ast.Import(),
+        ...     ast.FunctionDef(),
+        ...     ast.ClassDef(),
+        ...     ast.Return()
+        ... ]
+        >>> spl = PrettyWriter(ast.AST())._split_block(instructions)
+        >>> for s in spl:
+        ...     print([x.__class__.__name__ for x in s])
+        ['Import', 'Import']
+        ['FunctionDef']
+        ['ClassDef']
+        ['Return']
+
+        """
+
+        current = [] # Current statement list
+        total = [] # Total statement grouping
+
+        for stmt in stmts:
+            if self._statement_new_group(current, stmt):
+                if current:
+                    total.append(current)
+                    current = [stmt]
+            else:
+                current.append(stmt)
+
+        if current: # Append last group
+            total.append(current)
+
+        return total
+
+    def _statement_new_group(self, oldgroup, statement):
+        """Check if a statement should be in the same group or a new one."""
+
+        single_nodes = set([ # Nodes to always be in their own group
+            "Module", "Interactive", "Expression", "Suite",
+            "FunctionDef", "ClassDef", "Return",
+            "For", "While", "If", "With",
+            "TryExcept", "TryFinally"
+        ])
+
+        grouped_nodes = set([ # Nodes to group with others of the same type
+            ("Import", "ImportFrom"),
+            ("Global", "NonLocal")
+        ])
+
+        if not oldgroup:
+            return False # Current group is empty to doesn't matter
+        else:
+            node_type = statement.__class__.__name__
+            prev_node = oldgroup[-1].__class__.__name__
+
+            if node_type in single_nodes:
+                return True
+
+            for group in grouped_nodes: # Look through grouped nodes
+                if node_type in group: # We found our group
+                    return prev_node not in group # new if we're the first in this group
+
+            return False
+
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
