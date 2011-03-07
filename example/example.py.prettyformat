@@ -8,13 +8,12 @@ And this is also a multiline docstring.
 try:
     from wikipedia import myreport
 except ImportError as e:
-    pass #print(e)
+    pass
 
-
-def a_function(arg1, arg2=None):
+def a_function(arg1, arg2 = None):
     """I am a function."""
-
     print("I don't really do anything")
+    
     return arg1
 
 @a_function
