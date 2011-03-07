@@ -302,64 +302,45 @@ most basic form possible. Every node that could exist in the tree has a method u
 other derived classes to change the look of that particular node. In addition to these methods there are some hooks to determine how
 the source looks as a whole. These affect things such as the level of indentation or the way in which a new statement begins.
 
-Hopefully this will make the source writer easily extendable to create pretty printers or minifiers\footnote{Minification of a program involves shrinking it's file size by removing as many unnecessary characters as possible. It is often used for interpreted languages such as JavaScript that need to be lightweight for transmission.} and so can allow for a degree of layout
-obfuscation if we choose the expand our implementation later. As an example, the following is a sample program passed through the current implementation of BasicWriter. We can see the source code
-is returned to us much uglier that it began.
+This makes the source writer easily extendable to create pretty printers, minifiers\footnote{Minification of a program involves shrinking its file size by removing as many unnecessary characters as possible. It is often used for interpreted languages such as JavaScript that need to be lightweight for transmission.}
+or, even at a later date if we choose to extend our implementation, a basic layout obfuscator. In fact we will also produce a PrettyWriter class derived from BasicWriter
+as an example, designed to produce readable code. PrettyWriter will alter the printing of a number of nodes, specifically it:
 
-\begin{minipage}[t]{0.45\linewidth}
+\begin{itemize}
+\item Checks if docstrings span multiple lines and if so writes them as such.
+\item Writes function arguments on multiple lines when the list is expected to be complicated. Actually this looks for arguments with annotations and splits the entire function's argument list if one is found.
+\item Inserts blank lines between certain types of statements to separate blocks of code.
+\end{itemize}
+
+To illustrate, the following is a sample program passed through our implementation of BasicWriter and PrettyWriter. We can see a large difference between the source code
+returned by the two writers, one is much uglier than the other.
+
+\begin{minipage}[t]{0.9\linewidth}
 Sample Program
 
 \lstset{basicstyle=\tiny}
-\begin{lstlisting}
-"""
-I am an example file!
-
-"""
-
-try:
-    from wikipedia import myreport
-except ImportError as e:
-    pass #print(e)
-
-
-def a_function(arg1, arg2=None):
-    """I am a function."""
-
-    print("I don't really do anything")
-    return arg1
-
-@a_function
-class a_class:
-    pass
-
-class other_class(a_class):
-    """I'm empty too"""
-\end{lstlisting}
+\lstinputlisting{../../example/example.py}
 \end{minipage}
+
 \hspace{0.5cm}
-\begin{minipage}[t]{0.45\linewidth}
+
+\begin{minipage}[t]{0.9\linewidth}
 Output from BasicWriter
 
 \lstset{basicstyle=\tiny}
-\begin{lstlisting}
-'\nI am an example file!\n\n'
-try:
-    from wikipedia import myreport
-except ImportError as e:
-    pass
-def a_function(arg1, arg2 = None):
-    'I am a function.'
-    print("I don't really do anything")
-    return arg1
-@a_function
-class a_class:
-    pass
-class other_class(a_class):
-    "I'm empty too"
-\end{lstlisting}
+\lstinputlisting{../../example/example.py.basicformat}
 \end{minipage}
 
-This unintentional layout obfuscation should be fixed later by creating a pretty printer for the code. All of these writers will be held in the writer package.
+\hspace{0.5cm}
+
+\begin{minipage}[t]{0.9\linewidth}
+Output from PrettyWriter
+
+\lstset{basicstyle=\tiny}
+\lstinputlisting{../../example/example.py.prettyformat}
+\end{minipage}
+
+All of these writers will be held in the writer package.
 
 \subsection{User Interface}
 
@@ -392,8 +373,8 @@ More specifically we will implement an interactive interpreter designed to be si
 
 In our implementation, the standard Python command interface offering has been extended to make it easy to plug new commands in as
 objects, allowing easy extensions with new analytic techniques or new obfuscating transformations. Obviously the
-interface is worthless without actually plugging in some commands. At this point in time the following commands are available from the
-interface:
+interface is worthless without actually plugging in some commands. Before we start to look at the obfuscation and analysis of code, the set of commands
+available from the interface is as follows:
 
 \paragraph{Help}
 
@@ -424,8 +405,7 @@ children freely.
 \paragraph{Format}
 
 The integration point for the source writers. This can print either the whole abstract syntax tree or the subtree pointed to by
-explore. In future if source writers other than the BasicWriter are created, these should be available for selection to be used for
-printing.
+explore. The printing style can also be changed between basic or pretty, and possibly other styles if the writers for these are created in future
 
 Where possible all of these commands implement auto-completion to guide the user and save time.
 
