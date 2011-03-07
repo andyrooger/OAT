@@ -39,7 +39,7 @@ user need not put in any effort to view the inner workings of the program. While
 for the security of a user \cite{noobf}, it is often the case that the author will not want sensitive,
 perhaps proprietary, parts of their code open to inspection or theft. With this in mind, we will work on ways to protect it.
 
-We should note that there are existing solutions for the protection of Python source code, examples of which very in quality.
+We should note that there are existing solutions for the protection of Python source code, examples of which vary in quality.
 These will be discussed in the next section, along with their drawbacks and areas to which we can contribute further.
 
 The approach we will take to the above problem is to obfuscate the Python source code. This technique involves changing the
@@ -84,7 +84,7 @@ There are a number of ways Python developers currently try to hide or protect th
 of success and security.
 
 One method is to use a Python tool called Freeze. This tool will simply take given source code and compile
-it to bytecode. This will be combined necessary parts of the runtime to allow a program run
+it to bytecode. This will be combined with necessary parts of the runtime to allow a program to run
 on systems without Python installed. As it says in the README \cite{freezereadme} this provides little if any
 protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
 tools such as AntiFreeze \cite{pirates} to help analyse the code, as well as a program called
@@ -259,7 +259,7 @@ blocks. Specifically the following:
 \item A Python parser/lexer to read and make sense of Python source files.
 \item Implementations of a number of obfuscating transformations.
 \item Implementations of a number of analytic techniques.
-\item A Python writer to take my abstract representation of the source code and spit out a file.
+\item A Python writer to take my abstract representation of the source code and output a file.
 \item A user interface.
 \end{itemize}
 
@@ -302,8 +302,8 @@ most basic form possible. Every node that could exist in the tree has a method u
 other derived classes to change the look of that particular node. In addition to these methods there are some hooks to determine how
 the source looks as a whole. These affect things such as the level of indentation or the way in which a new statement begins.
 
-Hopefully this will make the source writer easily extendable to create pretty printers or minifiers and so can allow for a degree of layout
-obfuscation. As an example, the following is a sample program passed through the actual implementation of BasicWriter. We can see the source code
+Hopefully this will make the source writer easily extendable to create pretty printers or minifiers\footnote{Minification of a program involves shrinking it's file size by removing as many unnecessary characters as possible. It is often used for interpreted languages such as JavaScript that need to be lightweight for transmission.} and so can allow for a degree of layout
+obfuscation if we choose the expand our implementation later. As an example, the following is a sample program passed through the current implementation of BasicWriter. We can see the source code
 is returned to us much uglier that it began.
 
 \begin{minipage}[t]{0.45\linewidth}
@@ -359,7 +359,7 @@ class other_class(a_class):
 \end{lstlisting}
 \end{minipage}
 
-All writers are held in the writer package.
+This unintentional layout obfuscation should be fixed later by creating a pretty printer for the code. All of these writers will be held in the writer package.
 
 \subsection{User Interface}
 
@@ -567,7 +567,7 @@ a much better analysis of the product as we can say if the software is good at w
 than whether it is just better at performing the same function as another tool.
 
 To aid in this form of evaluation we will need tools to analyse the obfuscated source code. There are plenty
-mentioned in the background, however these tend to be designed to optimise code or detect possible bugs and so
+mentioned in the background section, however these tend to be designed to optimise code or detect possible bugs and so
 are not ideal.
 
 The solution proposed for this project is to write tools for analysis along side the tools for obfuscation.
