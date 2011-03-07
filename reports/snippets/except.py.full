@@ -1,0 +1,4 @@
+try:
+    dangerous_op()
+except (ValueError, TypeError):
+    print("Oh dear.")

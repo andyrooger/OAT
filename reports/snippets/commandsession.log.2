@@ -1,0 +1,31 @@
+--) explore
+Looking at: Module
+
+Fields:
+  body - Block of statements
+
+--) explore body
+Looking at: Block of statements
+
+--) explore
+Looking at: Block of statements
+
+Fields:
+  0 - Expr (line 4 column -1)
+  1 - Import (line 6 column 0)
+  2 - ImportFrom (line 7 column 0)
+  3 - Import (line 8 column 0)
+  4 - Assign (line 10 column 0)
+  5 - FunctionDef (line 12 column 0)
+  6 - ClassDef (line 16 column 0)
+  7 - ClassDef (line 18 column 0)
+
+--) explore 5
+Looking at: FunctionDef (line 12 column 0)
+
+--) format -f
+def func(a, b, c = 1, d = [], *e, f = 6, g = ' ', **h):
+    print((a + 'hello'))
+    pass
+
+--) quit

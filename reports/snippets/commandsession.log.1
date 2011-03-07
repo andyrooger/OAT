@@ -1,0 +1,32 @@
+andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
+Welcome to OAT - Obfuscation and Analysis Tool!
+If you are confused, type help.
+--) help
+
+Documented commands (type help <topic>):
+========================================
+help  quit  status  format  parse  explore
+
+
+--) help parse
+usage: parse [-l | -s] [file]
+
+Parse a source file to an AST.
+
+positional arguments:
+  file        File to parse.
+
+optional arguments:
+  -l, --load  Load the AST from its stored form
+  -s, --save  Save the AST with markings for later
+
+--) parse 
+analysis       goat           quickstart.py  testing        util
+example.py     interactive    test.py        thirdparty     writer
+--) parse example.py
+Loaded AST for file: example.py
+
+--) status
+Parsed tree: example.py
+Tree hash: 1b47ec50853b9623e39bd60fd91263fb9a6235af4328efe54950f20b
+Viewing node: Module

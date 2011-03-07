@@ -1,0 +1,13 @@
+>>> def f():
+...     class C: pass
+...     return C
+... 
+>>> a = f(); b = f()
+>>> a
+<class '__main__.C'>
+>>> b
+<class '__main__.C'>
+>>> a is b # Are a and b the same object?
+False
+>>> a == b # Does a even equal b?
+False
