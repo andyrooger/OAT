@@ -361,30 +361,17 @@ as an example, designed to produce readable code. PrettyWriter will alter the pr
 To illustrate, the following is a sample program passed through our implementation of BasicWriter and PrettyWriter. We can see a large difference between the source code
 returned by the two writers, one is much uglier than the other.
 
-\begin{minipage}[t]{0.9\linewidth}
 Sample Program
 
-\lstset{basicstyle=\tiny}
-\lstinputlisting{../../example/example.py}
-\end{minipage}
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py}
 
-\hspace{0.5cm}
-
-\begin{minipage}[t]{0.9\linewidth}
 Output from BasicWriter
 
-\lstset{basicstyle=\tiny}
-\lstinputlisting{../../example/example.py.basicformat}
-\end{minipage}
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py.basicformat}
 
-\hspace{0.5cm}
-
-\begin{minipage}[t]{0.9\linewidth}
 Output from PrettyWriter
 
-\lstset{basicstyle=\tiny}
-\lstinputlisting{../../example/example.py.prettyformat}
-\end{minipage}
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py.prettyformat}
 
 All of these writers will be held in the writer package.
 
@@ -532,37 +519,152 @@ if __name__ == '__main__':
 --) quit
 \end{lstlisting}
 
-\section{Analysing and Obfuscating}
+\section{Reordering Instructions}
 
 In the previous section we saw the basic blocks of the tool fall into place. The code
 is already set to read, inspect, and write out Python source. Now we can move
 on to fulfilment of the project aims; to analyse and obfuscate the code.
 
-Due to the design of the tool, we are required to write code for both of these tasks
-that will perform their function on nodes in an abstract syntax tree. Command objects may then be
-created and passed to the user interface controller that will expose the functionality
-to users.
+The first technique we will seek to implement is the reordering of instructions. As it is required that
+any implemented obfuscating transformations have an accompanying analysis that can be used to (attempt to)
+reverse the modification, we will also try to implement this.
 
-The specific techniques to implement are not finalised yet. However, it is required that
-any implemented obfuscating transformations have an accompanying analysis that can be
-used to (attempt to) reverse the modification.
+\subsection{Aims}
 
-There are two obfuscation techniques proposed to be implemented by the end of the project.
-The first will introduce branches into the code which jump either to the remainder of the program
-or to some cleverly disguised garbage. The conditional of the branch will be an opaque predicate
-\cite{taxobftrans}, meaning we always know what it evaluates to, but a static analysis will not.
+Usually a (well-written) program is ordered in such a way as to make it easy for the reader to follow.
 
-To reverse the transformation, dead code analysis will be used. The success of this analysis
+There are two parts of the layout we could look at here, the order of statements, and their grouping (i.e. blocks of statements
+separated, for example, by blank lines). More often than not, the grouping (in a well written program) indicates
+to the reader that all statements in a single group are aimed towards achieving a common goal.
+Knowing this, it is easier for a human reader to read the program with a higher level understanding
+of its function.
+
+Likewise, the ordering of statements in a program often guides a reader through a human thought process. There may
+be many other valid and equally correct orders for the statements, however the program will tend to be written in
+an order most easy for the programmer to follow. This in turn tends to make it easier for the reverse engineer to follow.
+
+Therefore we will attempt to break up these groups, splitting and reordering the statements as a whole.
+
+\subsection{Effects}
+
+As stated above, these tendencies are human in nature. To a machine, the layout (grouping) of instructions will not usually
+make a difference, these will generally be converted to an abstract syntax tree that ignores human semantics present in the
+layout, only recording the syntactic meaning of the program code.
+
+Therefore, to a machine, the grouping of program statements should not affect programatic analysis. Likewise the ordering of
+statements, if still correct, should not make much of an impact on programatic analysis of the code. We still have an
+equivalent program as we have not removed or added any extra steps into the code, only changed the order and layout.
+
+This means it is mainly human analysis and understanding we will be hindering by removing this information. However good
+our obfuscation is, depending on the particular code being obfuscated, a competent reverse engineer may well find it possible
+understand still, or even be able to re-order and group statements to be clearer to the human thought process. The positive token
+we take from the programatic analyser's blindness to these matters is that it can be quite difficult to perform
+the reverse obfusction automatically.
+
+\subsection{Implementation}
+
+We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
+grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. For example common expressions such as assignments are usually statements, or
+an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment and so are also statements.
+
+The current implementation for our obfuscation and analysis tool reads in program source to an AST. This allows us to analyse the code easily
+but also destroys information left in the layout of the code. This is not a problem when obfuscating as we want to remove as much information
+as we can when it is not important to the running of the program.
+
+For the analyser we have slightly more trouble in losing this information. For now we will take a similar route to the obfuscator and assume this
+doesn't matter as the program will probably be obfuscated already and lacking any meaning in its layout. In actual fact, the AST when created
+will still contain information about statements and line/column numbers. This could be used to recover the lost information, however as soon
+as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension.
+
+Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
+to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
+the other permutations of statments which have the same visible output. Once we have a method for this we can obfuscate or deobfuscate by our choice
+of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
+orderings hold the information will a a bridge to cross later on.
+
+Our approach to finding possible statement orderings will be for each node in the list to build a list of every other node in the list that that
+particular node is dependant on. More simply, if the effect of statement A could change the effect of statement B, then B depends on A. For internal
+data such as variable assignments this means if A changes a memory region R that B accesses at some point in the future, then B depends on A.
+
+Also we must look at statements that may perform external changes such as a print statement. An observer of the program would notice immediately
+a change in order of these. Therefore all statements capable of change the world external to the program must remain in order relative to each other.
+We can make sure of this by assuming any function with external effect depends on the IO function immediately previous to it.
+
+When working out possible permutations we can now just search for options that neither add nor remove dependencies between the instructions.
+
+\subsection{Looking for dependencies}
+
+In calculating dependencies, we will start with the simplest possible list of statements. From here we will expand our reasoning slowly until
+we can analyse a substantial portion of the Python language.
+
+\subsubsection{Simplest Case}
+
+Our simplest case would be one where none of the instructions depend on each other. We will ignore external output throughout as we already know
+all we need to do is keep any such functions in order. We allow only assignments here as possible statements, and those that bind constants to
+variables. The assignments should have no effect other than to add the constant into a new region of memory and assign the given name to
+reference this location. This should model a Python program if all identifiers on the left hand side of the assignment are simple names.
+(We also ignore the changes Python will make to certain data such as that returned by the \texttt{locals()} built-in function).
+
+An example:
+
+\begin{lstlisting}
+a = 1
+b = 2
+c = []
+c = 3
+\end{lstlisting}
+
+Here the instructions could move to any order. None of the assignments rely on the previous assignments of any other value to any other name. It's
+worth looking at the two assignments of the same variable, \texttt{c}. If we reversed the order of these two statements we would finish the
+statement list with either the local dictionary \texttt{\{a: 1, b: 2, c: []\}} or \texttt{\{a: 1, b: 2, c: 3\}}.
+
+In fact this difference does not matter. This change is internal to the program and so not visible to an observer. As we have not specified
+any future dependency on \texttt{c}, we can assume that nothing that can affect the observable behaviour of the program will use the value
+of \texttt{c} - meaning the program remains correct.
+
+\subsubsection{Slightly Harder}
+
+Now we allow assignments of values that can either be constant or other local names. We will restrict all of our names to local scope as
+we have not yet introduced the concept of scope to our model.
+
+An example:
+
+\begin{lstlisting}
+a = 1
+b = a
+c = a
+c = b
+\end{lstlisting}
+
+Now we can easily go through line by line and look at which names appear on the right of the assignment to gather a list of dependencies.
+
+TODO - CONTINUE FROM HERE!-------------------------------------------------------------
+
+Problem! What if we added one line to make:
+
+\begin{lstlisting}
+a = 1
+b = a
+d = e
+c = a
+c = b
+\end{lstlisting}
+
+Now we have a line that will cause error. 
+
+\section{Opaque Predicates}
+
+The second obfuscation technique we will implement will insert branches into the code that depend on
+some opaque predicate \cite{taxobftrans}. This is a predicate that we as the obfuscator know the value of,
+but an analyser will find it difficult to evaluate. The branches we will insert will jump either to our valid
+program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
+that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
+
+To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
+branches where we know a program will always take a certain path. The success of this analysis
 depends on both the strength of the analysis and the strength of the opaque predicate.
 
-The other technique to be implemented will simply reorder instructions. There is often a
-great deal of semantic information in the order and grouping of instructions
-\cite{taxobftrans}, so by changing this while keeping the program correct we can increase
-the confusion to a reader.
-
-Reversal of this transformation will require analysis of a sequence of statements to decide
-valid orderings, as well as the construction of a value function to choose the most suitable
-ordering. This could have some interesting results.
+\section{Relocate or Implement me - TODO}
 
 Both of the described transformations and their analysis will require careful testing. So far,
 this has been done using Python's doc test library to write unit tests inside the docstrings
