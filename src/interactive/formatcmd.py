@@ -19,7 +19,7 @@ from writer import prettywriter
 class FormatCommand(commandui.Command):
     """Format and write commands for the console."""
 
-    def __init__(self, explorecmd):
+    def __init__(self, parsecmd, explorecmd):
         commandui.Command.__init__(self, "format")
 
         self._opts.add_argument("-w", "--write", dest="filename",
@@ -34,6 +34,7 @@ class FormatCommand(commandui.Command):
         self._opts.add_argument("-s", "--style", choices=["basic", "pretty"],
                                 help="Style to write source code with. Defaults to pretty.", default="pretty")
 
+        self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
 
     def run(self, args):
@@ -66,9 +67,13 @@ class FormatCommand(commandui.Command):
         try:
             with open(filename, "w") as file:
                 writer(tree, file).write()
-            print("Written to: " + filename)
         except IOError:
             print("The file could not be written to.")
+        else:
+            self._related_parsecmd.ast.file = filename
+            self._related_parsecmd.ast.modified = False
+            print("Written to: " + filename)
+
 
     def write_to_stdout(self, tree, writer, force):
         if not force:

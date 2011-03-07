@@ -1,0 +1,756 @@
+\documentclass{report}
+\usepackage{amssymb,amsmath}
+\usepackage[mathletters]{ucs}
+\usepackage[utf8x]{inputenc}
+\usepackage[breaklinks=true,unicode=true,pdfborder={0 0 0},colorlinks=false]{hyperref}
+\usepackage{listings}
+\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format}}
+\lstset{language=Python, numbers=left, showstringspaces=false, frame=single}
+\usepackage{pst-gantt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\setcounter{secnumdepth}{0}
+
+% For title page
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
+
+\begin{document}
+\begin{titlepage}
+
+\begin{center}
+
+% Upper part of the page
+\textsc{\LARGE Imperial College London}\\[1.5cm]
+\textsc{\Large Undergraduate Individual Project}\\[0.5cm]
+
+% Title
+\HRule \\[0.4cm]
+{\huge \bfseries Obfuscating Python 3000} \\[0.4cm]
+\HRule \\[0.4cm]
+
+Code on git at: ssh://user@shell4.doc.ic.ac.uk/homes/asg08/git/ugproject.git \\[1.5cm]
+
+% Author and supervisor
+\begin{minipage}{0.4\textwidth}
+\begin{flushleft} \large
+\emph{Author:}\\
+Andy Gurden
+\end{flushleft}
+\end{minipage}
+\begin{minipage}{0.4\textwidth}
+\begin{flushright} \large
+\emph{Supervisor:} \\
+Herbert Wikliky
+\end{flushright}
+\end{minipage}
+
+\vfill
+
+% Bottom of the page
+{\large \today}
+
+\end{center}
+\end{titlepage}
+
+\begin{abstract}
+TODO write abstract!
+\end{abstract}
+
+\section*{Acknowledgements}
+
+TODO - write acknowledements - Hayley Hannam, Herbert Wikliky, Chris Hankin, Alex Lamaison
+
+\tableofcontents
+
+\clearpage
+
+\section{Introduction}
+
+With the increasing popularity of interpreted languages like Java or Python, we are starting
+to see a change in the way that program code is distributed.
+
+Not so long ago, a programmer could write their program in a compiled language such as C. This would then be compiled
+to machine code for a given architecture, and the program could be handed out to anyone without
+worrying about whether a hacker or reverse-engineer could recover the original source code.
+Of course, it can be done and there are tools to reverse the translation called decompilers\cite{cdecomp} but it
+is a difficult process and there are methods to make this harder \cite{disres}.
+
+The difference for interpreted languages is that much more of the original code is kept in the
+distributed format. Java code, for example, is usually distributed as bytecode for the Java Virtual
+Machine (JVM). This still holds information about high level constructs such as class and method names for example \cite{classinfo},
+making it much easier to decompile a Java class.
+
+In a language like Python it is usually raw source code that is distributed, therefore a
+user need not put in any effort to view the inner workings of the program. While this is good
+for the security of a user \cite{noobf}, it is often the case that the author will not want sensitive,
+perhaps proprietary, parts of their code open to inspection or theft. With this in mind, we will work on ways to protect it.
+
+We should note that there are existing solutions for the protection of Python source code, examples of which vary in quality.
+These will be discussed in the next section, along with their drawbacks and areas to which we can contribute further.
+
+The approach we will take to the above problem is to obfuscate the Python source code. This technique involves changing the
+original program in some way so that it is more confusing to a reader or more difficult to analyse while still being correct.
+
+More specifically, during this project we shall implement a basic functioning, but extensible, obfuscator
+that can modify the control flow of a program with the aim of diverting a human reader from its actual
+function. This will act upon Python source code and should help to address the issue described above.
+In the interest of evaluation, we will also create a sister program that will try to reverse the modifications performed by the
+obfuscator with the aim of recovering the original source code. 
+We shall aim to create these tools by taking a subset of obfuscation techniques used on other languages (e.g.
+loop flattening or instruction reordering \cite{taxobftrans}) and looking at how well these will transfer to such a dynamic language as Python.
+
+On the surface this may appear rather simple, however as Python is such a highly dynamic language it can be very difficult to analyse
+\cite[p13]{staticanal} as thoroughly as a more traditional compiled language such as Java. In such languages, it is much easier to perform a static
+analysis of the code. This is simply not feasible for many applications in Python, yet many program transformations will require this type of
+thorough analysis. Issues in this area may appear or they may not, depending on the techniques we decide to implement, and it will be part of
+this project to notice and evaluate these issues.
+
+\section{Background}
+
+Here we will discuss Python and some solutions for protecting code, as well as some obfuscation techniques
+and current tools.
+
+\subsection{Python}
+
+As we have discussed in the introduction, the project aims to implement known obfuscation techniques on Python source.
+The language is used widely, from the popular web framework Django \cite{django} through many applications
+from Google \cite{pygoogle} and even embedded as a scripting language for extensions in programs like GNU
+Image Manipulation Program (GIMP) \cite{gimp}. Due to its wide and varied use, it is of increased importance
+that someone wishing to protect their Python code from theft or reverse-engineering can do so.
+
+To be specific about the code and techniques, we will restrict our efforts to using obfuscation methods that will
+result in standard Python code so that it is portable across any of the many Python runtime implementations. The version
+of Python we will be working with is 3.x (nicknamed 3000 or py3k) for both source and generated code. The most popular
+version of Python is still 2.x, however this version will soon ``become stale'' as the language moves towards 3.x, on its way
+dropping some compatibility with 2.x.
+
+\subsubsection{Methods of Protection}
+
+There are a number of ways Python developers currently try to hide or protect their code, with varying degrees
+of success and security.
+
+One method is to use a Python tool called Freeze. This tool will simply take given source code and compile
+it to bytecode. This will be combined with necessary parts of the runtime to allow a program to run
+on systems without Python installed. As it says in the README \cite{freezereadme} this provides little if any
+protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
+tools such as AntiFreeze \cite{pirates} to help analyse the code, as well as a program called
+decompyle \cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
+2.3). There is a similar tool to Freeze, called py2exe \cite{py2exe}, that will create a Windows executable but
+this too suffers from the same problems.
+
+From the above paragraph, it's easy to spot that just distributing the Python bytecode, another method occasionally
+used, also fails to thwart reverse-engineering attempts. In fact there is another problem
+with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail \cite{dis}
+of the default Python implementation, CPython. Relying on this to distribute code would glue any
+user to a specific implementation of Python and possibly even to a specific version. This would remove the portability
+expected from a Python program and contradict the condition that solutions must be portable, specified earlier.
+
+A more secure solution for protecting Python code, and one that works for many people, is to remove the most
+sensitive parts and replace them with C extensions to the Python program. This way the code becomes machine
+code, it can use the wealth of obfuscation tools for C and being machine code makes it much
+harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, restricting a
+user to a particular runtime as well as a particular machine architecture (that the modules are compiled for).
+
+A portable way to protect the code would be to obfuscate it, performing source to source translations that can
+confuse a reader or program analyser. This is not and will never be a perfect solution, because all attempts
+to avoid reverse engineering will be overcome eventually. The difference between one method of protection and
+another is the time and effort taken to break it and how much the result is worth to the attacker. There are already
+programs for obfuscating Python code, though the selection is limited. These will be discussed later.
+
+\subsubsection{Ethics of Obfuscating}
+
+Although it may not be obvious, there are ethical and possibly even legal implications to obfuscation.
+Specifically for Python, the language is based on a philosophy of clear and readable code, and actually
+enforces this by the design of the grammar. Obviously, obfuscation is an attempt to take this away.
+
+This hits out against certain expectations a user may have about a Python program. A key benefit of having your
+software handed to you in source form is that you always know what it's doing. Deliberately obscuring the
+function of software, but in a format that is almost always open for inspection, removes trust. The vendor or developer is
+denying the user trust by not allowing them to use the software as they wish, but more importantly the user's
+trust in the software can be lost.
+
+If the software is hiding what it is doing this could be for a legitimate reason, such as hiding novel ideas
+from competitors, or it could be to mask malicious content. A user or program, provided the obfuscation is
+good enough, cannot tell which the reason is. This is a technique often employed by malware
+writers to avoid detection by anti-virus software \cite{dycodeobf}. In fact, it has been argued that any and
+all obfuscated code should be treated as if it were malware \cite{noobf}, assuming software is guilty until
+proven otherwise.
+
+My view and the view we will take for the remainder of the paper is that these issues create more reason for
+building a tool such as this. By allowing issues such as those described above to block research into a subject
+we are making ourselves much more vulnerable to those who would abuse the technology. Those who may abuse any
+product of this project will be free to do so, as will those who would use the tools and information legitimately.
+
+It is important to note that although my conclusion on this subject would be the same were I based outside of
+the UK, the legal implications stemming from it may not be. For example in German law, clause 202(c) \cite{202c}
+could make it illegal to write or distribute this software if it could be used for
+certain forms of cybercrime. As discussed above, it probably could, and would have implications for anyone distributing
+or using the information presented here.
+
+\subsection{Types of Obfuscation}
+
+Having decided to obfuscate the code from source to source, it is worth taking a look at the types of
+obfuscation already used, how they are useful and which we will pursue. We will classify them into 3 categories
+suggested by \cite[p10]{desevobf}.
+
+\subsubsection{Layout Obfuscation}
+
+These will apply transformations to the source language or possibly bytecode that do not affect the running of the
+program. This is a very common form of obfuscation \cite[p10]{desevobf}, and involves transformations such as removing comments,
+scrambling identifiers, or removing as much whitespace as possible to make the code unreadable.
+
+Comments and identifiers often hold a lot of semantic information as they are designed to do.
+Removal of this information by deletion or renaming is quite effective and almost always irreversible. Other transformations involving syntax
+can be easily removed by a source formatter and so will only be effective against an impatient human.
+
+While some of these transformations may be easy to perform in traditional languages, there are places in which
+Python's constructs can cause problems. Fortunately these kinds of transformations are already covered in existing
+tools, although these are not necessarily compatible with Python 3. For these reasons, we will be focusing on other forms of
+obfuscation which have received less attention.
+
+\subsubsection{Data Obfuscation}
+
+This type of obfuscation transforms data layout and can help to obfuscate the structure of the program. It can be
+particularly helpful in Python as the language makes it very easy to inspect programs as they run, dissecting data
+structures and learning about how the program works.
+
+Examples of techniques here include adding extra layers of inheritance into a class's inheritance tree or traversing arrays
+in unexpected orders.
+
+\subsubsection{Control-flow Obfuscation}
+
+Control flow obfuscation alters or obscures the control flow of the original code. This will confuse an analyser as to the
+true control flow of the program. For example, a transformation may introduce a conditional branch to dead or broken code
+that never happens, however the value of this condition is hard for the analyser to prove or evaluate before runtime.
+
+Reversal of this type of transformation can require careful analysis and can be difficult to perform. Often the reversal
+of this type of transformation could result in optimisation of the code.
+
+These are the type of transformations we will attempt to implement first.
+
+\subsection{Tools}
+
+We have previously seen that there are tools to do similar obfuscation in Python already. We will now discuss some
+examples of these, as well as other tools to try to reverse the transformations.
+
+\subsubsection{Python Obfuscation}
+
+There are a number of tools out there that claim to do this. For example BitBoost Systems have a Python obfuscator \cite{bitboost}
+that claims to use layout obfuscation as well as ``psychologically inspired techniques'' to confuse readers. Sadly, as a
+single machine license costs \$200 it is not possible to test the tool outside of their web-based demo.
+
+In the free realm, the freeze \cite{freezereadme} or py2exe \cite{py2exe} programs will also obfuscate python very slightly,
+though only by distributing bytecode rather than raw source.
+
+Alternatively pyobfuscate \cite{pyobf} will scramble a subset of the identifiers used in programs as well as performing
+some other layout transformations. It has its limitations however \cite{pyobf}, so is not powerful enough for real use cases.
+
+Pyobfuscate, along with many of the other tools, has not been updated in a long time and so is likely to be unable to cope with
+recent versions of Python code.
+
+\subsubsection{Analytic Tools}
+
+For analysis of Python code there are more tools available.
+
+Firstly to reverse the very basic syntax transformations there are a great number of Python pretty printers such as
+pygments \cite{pygments} or PythonTidy \cite{pythontidy}. This should never be a particularly difficult task as Python is
+designed with readability in mind and enforces clear formatting in its syntax.
+
+PyLint \cite{pylint}, PyChecker \cite{pychecker} and PyFlakes \cite{pyflakes} are all tools designed to help look for possible
+bugs in Python code and so may have some use in checking validity of obfuscated source files. They also look for bad design and so
+could help to determine how difficult a program is to understand for a human reader.
+
+PyDev \cite{pydev} is a plugin for the Eclipse IDE for developing in Python. It performs some useful code analysis on projects to detect
+possible bugs and allow easy refactoring of code. While it is implemented in Java as well as Jython (an alternate Python runtime)
+it should be possible to reuse the ideas if needed. Tools for refactoring are easily available as PyDev uses Bicycle Repair
+Man \cite{bikerepair}, a Python library designed specifically for this task. PyDev also definitely supports Python 3.x as opposed to the
+other tools in which this is unclear.
+
+To attempt decompilation of the Python bytecode if necessary, there is a tool called decompyle \cite{decompyle} that has already been
+mentioned. This should not be necessary though as we have already discussed reasons not to use bytecode during the project.
+
+Some of the greatest  tools for analysis come from Python itself. Programs are often run from an interactive Python interpreter, and this
+can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and disassembling source code.
+There are also tools for creating interactive sessions within the program. For example by inserting the following code at any point
+in the program:
+
+\begin{lstlisting}
+from code import InteractiveConsole
+InteractiveConsole(locals()).interact()
+\end{lstlisting}
+
+We can effectively create a breakpoint and launch an interactive shell to inspect and possibly modify the current local
+variables. The program will continue as soon as the shell is closed.
+
+Other more sophisticated tools are available for debugging or inspection such as AntiFreeze \cite{pirates} if necessary,
+however Python provides more than enough in its standard library.
+
+\section{Creating the Obfuscator}
+
+The end product of this project is intended to be a usable source to source Python obfuscator as well as an analytic tool
+to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
+know the ins and outs of the language well. This way we can easily pick up on language features that may contradict our
+expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
+variable would be free of side effects. This is not the case, depending on the code the assignment can run absolutely
+anything \cite{pyprop} and doesn't even have to assign the given value to a variable.
+
+To learn the language to the desired degree we will also use it to write our software. The hope being that heavy use will help to
+drill out some of the less obvious features. For the same reason, we will be writing the code specifically to run on a Python version 3.x
+interpreter.
+
+Having chosen the language and version we will use to develop in, we need to design the software we are about to write. This is split into a few basic building
+blocks. Specifically the following:
+
+\begin{itemize}
+\item A Python parser/lexer to read and make sense of Python source files.
+\item Implementations of a number of obfuscating transformations.
+\item Implementations of a number of analytic techniques.
+\item A Python writer to take my abstract representation of the source code and output a file.
+\item A user interface.
+\end{itemize}
+
+The most fundamental parts here in the workflow are the readers and writers for the source files.
+Without these the other parts are useless, so this is where the implementation will begin.
+
+\subsection{Reading and Writing Source}
+
+There are plenty of free tools that read and write source as part of their tasks. For example PyDev, mentioned in the background section, will
+perform these tasks during code formatting. For this project we have the choice between writing software from scratch, attempting
+to recycle relevant parts from free projects, or using libraries to take the work away from ourselves.
+
+The first option we should look at is to write the code from scratch. This could be very time consuming, requiring
+us to write complicated software as well as studying documentation on Python's grammar which is freely available online \cite{pygrammar}.
+While the language is well documented it does seem wasteful to repeat work that has been done in so many other places.
+
+Next we look at extracting the functionality from other free (open source) software. The most fitting source to source translation tools
+we could use for this are PyDev or the 2to3 tool \cite{2to3}, used to convert Python 2.x source code to Python 3.x. Ultimately we will not
+delve into these tools due to the amount of time we could squander searching for relevant parts of code. It's likely we
+would come to the conclusion that they outsource most of the work to separate libraries anyway.
+
+This leaves us using libraries. In fact the 2to3 documentation points to a Python standard library called lib2to3 that can be used to
+perform automatic translation on Python source. Unfortunately further reading shows that the library API is unstable and could change by
+the next release. This is not something we want to have to deal with.
+
+Fortunately the Python standard library contains a number of modules devoted to its own language. By using these to parse a source file
+we can hold the source as an abstract syntax tree or AST. This will give us the freedom to transform the language as we like and additionally the only code we
+will need to write would be for the AST translations and an AST to source writer.
+
+There are some flaws to storing the program as an AST as this drops certain information.
+For example, the elif statement, meaning the same as an else if statement in other languages allows many tests without additional levels of nesting in source.
+When this construct is parsed it becomes an if statement within an else statement and can create large changes to the expected code and level of nesting. Information
+such as comments are also dropped from the representation. These seem to be reasonable compromises however and so this is the option we will use. It gives
+a lot of freedom, whilst being fast to write.
+
+Having made these decisions we can describe a solid design and implementation for the AST writer. The design is fairly simple.
+At the centre lies an abstract class called SourceWriter that any code wishing to write source may request. Derived from this
+is a very basic concrete source writer called BasicWriter. This class recursively writes out the tree in the
+most basic form possible. Every node that could exist in the tree has a method used to write itself to source, and these can be overridden by any
+other derived classes to change the look of that particular node. In addition to these methods there are some hooks to determine how
+the source looks as a whole. These affect things such as the level of indentation or the way in which a new statement begins.
+
+This makes the source writer easily extendable to create pretty printers, minifiers\footnote{Minification of a program involves shrinking its file size by removing as many unnecessary characters as possible. It is often used for interpreted languages such as JavaScript that need to be lightweight for transmission.}
+or, even at a later date if we choose to extend our implementation, a basic layout obfuscator. In fact we will also produce a PrettyWriter class derived from BasicWriter
+as an example, designed to produce readable code. PrettyWriter will alter the printing of a number of nodes, specifically it:
+
+\begin{itemize}
+\item Checks if docstrings span multiple lines and if so writes them as such.
+\item Writes function arguments on multiple lines when the list is expected to be complicated. Actually this looks for arguments with annotations and splits the entire function's argument list if one is found.
+\item Inserts blank lines between certain types of statements to separate blocks of code.
+\end{itemize}
+
+To illustrate, the following is a sample program passed through our implementation of BasicWriter and PrettyWriter. We can see a large difference between the source code
+returned by the two writers, one is much uglier than the other.
+
+Sample Program
+
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py}
+
+Output from BasicWriter
+
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py.basicformat}
+
+Output from PrettyWriter
+
+\lstinputlisting[basicstyle=\tiny]{../../example/example.py.prettyformat}
+
+All of these writers will be held in the writer package.
+
+\subsection{User Interface}
+
+The next important part to think about is the user interface. This tool would be difficult to use without one.
+
+Current tools such as pyobfuscate or BitBoost's obfuscator are automated. This means while a user does have a little control
+over what happens, they really just insert a file and are returned an unreadable one. We want to be able to effectively
+evaluate what our tool is doing to the source code, so we need control over what gets changed and which transformations are
+performed. Therefore this is not really an approach we can use.
+
+Knowing we have to be able to direct and control transformations, there are a few different ideas of how. In general, these fit into
+either solutions that involve us interactively looking through the AST and choosing how to transform or analyse certain
+nodes, or those that let us mark pieces of the code for obfuscation.
+
+There are methods already used in other tools that we could use to mark code. For example the doctest module in the standard
+library uses docstrings (programmatically accessible comments) to specify unit tests for the code. Another possibility would
+be to use empty decorators to mark functions or classes for transformation. These are usually used to transform the code in
+some way at run time, but could easily do nothing and be picked up as flags for the obfuscator.
+
+The trouble with these methods is that transformations would be restricted to single nodes that support either docstrings or
+decorators. For the fine control we need when evaluating the product, we will actually use an interactive explorer.
+Transformations or analysis may then be performed at which ever part of the code the user is currently pointing to.
+
+This brings a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
+Python contains tools to make both much easier. These come in the form of libraries such as the cmd library \cite{pycmd} for command
+interpreters or Tkinter \cite{pytkinter} for GUIs.
+
+In the interest of speed of development, and as user friendliness is not the main focus for us, we will use a command interface.
+More specifically we will implement an interactive interpreter designed to be similar to to a generic Unix shell.
+
+In our implementation, the standard Python command interface offering has been extended to make it easy to plug new commands in as
+objects, allowing easy extensions with new analytic techniques or new obfuscating transformations. Obviously the
+interface is worthless without actually plugging in some commands. Before we start to look at the obfuscation and analysis of code, the set of commands
+available from the interface is as follows:
+
+\paragraph{Help}
+
+This will list help for the program as a whole as well as individual commands. It is an essential tool for a user to find their way around a
+command based program such as this one.
+
+\paragraph{Quit}
+
+Used to leave the program. Also very necessary as this is not built in to the default interpreter.
+
+\paragraph{Status}
+
+This will send a message to all other commands asking them to relay their status if they have anything to contribute. It can be
+used to check the state of certain parts of the program.
+
+\paragraph{Parse}
+
+Actual parsing of Python source files is done using this command. It uses the Python library functions to do the parsing but also
+deals with problems like finding the files and handling incorrect syntax. Once a correct source file is parsed, the resulting AST
+is stored in memory for use by the other commands.
+
+\paragraph{Explore}
+
+This is used to explore an AST recovered by the parse command. It will always point to a particular node in the tree and allows
+inspection of any of the nodes properties. It is also possible to traverse the tree, moving between any of the current node's parents or
+children freely.
+
+\paragraph{Format}
+
+The integration point for the source writers. This can print either the whole abstract syntax tree or the subtree pointed to by
+explore. The printing style can also be changed between basic or pretty, and possibly other styles if the writers for these are created in future
+
+Where possible all of these commands implement auto-completion to guide the user and save time.
+
+The following is an example session:
+
+\begin{lstlisting}[language=obftool,basicstyle=\small]
+andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
+Welcome to this little obfuscation tool.
+If you're confused, type help!
+--) help
+
+Documented commands (type help <topic>):
+========================================
+help  quit  status  parse  explore  format
+
+
+--) help parse
+usage: parse file
+
+Parse a source file to an AST.
+
+positional arguments:
+  file  File to parse.
+
+--) parse 
+interactive    quickstart.py  thirdparty     writer         
+--) parse quickstart.py
+
+--) status
+Parsed tree: <_ast.Module object at 0x1bdab90> : quickstart.py
+Viewing node: Module
+
+--) explore
+Looking at: Module
+
+Fields:
+  body - Block of statements
+
+--) explore body
+Looking at: Block of statements
+
+--) explore
+Looking at: Block of statements
+
+Fields:
+  0 - Expr (line 7, col -1)
+  1 - ImportFrom (line 9, col 0)
+  2 - FunctionDef (line 11, col 0)
+  3 - If (line 19, col 0)
+
+--) explore 3
+Looking at: If (line 19, col 0)
+
+--) explore
+Looking at: If (line 19, col 0)
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) explore -a
+Looking at: If (line 19, col 0)
+
+Attributes:
+  lineno - 19
+  col_offset - 0
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) format -f
+if __name__ == '__main__':
+    go()
+
+--) quit
+\end{lstlisting}
+
+\section{Reordering Instructions}
+
+In the previous section we saw the basic blocks of the tool fall into place. The code
+is already set to read, inspect, and write out Python source. Now we can move
+on to fulfilment of the project aims; to analyse and obfuscate the code.
+
+The first technique we will seek to implement is the reordering of instructions. As it is required that
+any implemented obfuscating transformations have an accompanying analysis that can be used to (attempt to)
+reverse the modification, we will also try to implement this.
+
+\subsection{Aims}
+
+Usually a (well-written) program is ordered in such a way as to make it easy for the reader to follow.
+
+There are two parts of the layout we could look at here, the order of statements, and their grouping (i.e. blocks of statements
+separated, for example, by blank lines). More often than not, the grouping (in a well written program) indicates
+to the reader that all statements in a single group are aimed towards achieving a common goal.
+Knowing this, it is easier for a human reader to read the program with a higher level understanding
+of its function.
+
+Likewise, the ordering of statements in a program often guides a reader through a human thought process. There may
+be many other valid and equally correct orders for the statements, however the program will tend to be written in
+an order most easy for the programmer to follow. This in turn tends to make it easier for the reverse engineer to follow.
+
+Therefore we will attempt to break up these groups, splitting and reordering the statements as a whole.
+
+\subsection{Effects}
+
+As stated above, these tendencies are human in nature. To a machine, the layout (grouping) of instructions will not usually
+make a difference, these will generally be converted to an abstract syntax tree that ignores human semantics present in the
+layout, only recording the syntactic meaning of the program code.
+
+Therefore, to a machine, the grouping of program statements should not affect programatic analysis. Likewise the ordering of
+statements, if still correct, should not make much of an impact on programatic analysis of the code. We still have an
+equivalent program as we have not removed or added any extra steps into the code, only changed the order and layout.
+
+This means it is mainly human analysis and understanding we will be hindering by removing this information. However good
+our obfuscation is, depending on the particular code being obfuscated, a competent reverse engineer may well find it possible
+understand still, or even be able to re-order and group statements to be clearer to the human thought process. The positive token
+we take from the programatic analyser's blindness to these matters is that it can be quite difficult to perform
+the reverse obfusction automatically.
+
+\subsection{Implementation}
+
+We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
+grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. For example common expressions such as assignments are usually statements, or
+an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment and so are also statements.
+
+The current implementation for our obfuscation and analysis tool reads in program source to an AST. This allows us to analyse the code easily
+but also destroys information left in the layout of the code. This is not a problem when obfuscating as we want to remove as much information
+as we can when it is not important to the running of the program.
+
+For the analyser we have slightly more trouble in losing this information. For now we will take a similar route to the obfuscator and assume this
+doesn't matter as the program will probably be obfuscated already and lacking any meaning in its layout. In actual fact, the AST when created
+will still contain information about statements and line/column numbers. This could be used to recover the lost information, however as soon
+as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension.
+
+Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
+to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
+the other permutations of statments which have the same visible output. Once we have a method for this we can obfuscate or deobfuscate by our choice
+of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
+orderings hold the information will a a bridge to cross later on.
+
+Our approach to finding possible statement orderings will be for each node in the list to build a list of every other node in the list that that
+particular node is dependant on. More simply, if the effect of statement A could change the effect of statement B, then B depends on A. For internal
+data such as variable assignments this means if A changes a memory region R that B accesses at some point in the future, then B depends on A.
+
+Also we must look at statements that may perform external changes such as a print statement. An observer of the program would notice immediately
+a change in order of these. Therefore all statements capable of change the world external to the program must remain in order relative to each other.
+We can make sure of this by assuming any function with external effect depends on the IO function immediately previous to it.
+
+When working out possible permutations we can now just search for options that neither add nor remove dependencies between the instructions.
+
+\subsection{Looking for dependencies}
+
+In calculating dependencies, we will start with the simplest possible list of statements. From here we will expand our reasoning slowly until
+we can analyse a substantial portion of the Python language.
+
+\subsubsection{Simplest Case}
+
+Our simplest case would be one where none of the instructions depend on each other. We will ignore external output throughout as we already know
+all we need to do is keep any such functions in order. We allow only assignments here as possible statements, and those that bind constants to
+variables. The assignments should have no effect other than to add the constant into a new region of memory and assign the given name to
+reference this location. This should model a Python program if all identifiers on the left hand side of the assignment are simple names.
+(We also ignore the changes Python will make to certain data such as that returned by the \texttt{locals()} built-in function).
+
+An example:
+
+\begin{lstlisting}
+a = 1
+b = 2
+c = []
+c = 3
+\end{lstlisting}
+
+Here the instructions could move to any order. None of the assignments rely on the previous assignments of any other value to any other name. It's
+worth looking at the two assignments of the same variable, \texttt{c}. If we reversed the order of these two statements we would finish the
+statement list with either the local dictionary \texttt{\{a: 1, b: 2, c: []\}} or \texttt{\{a: 1, b: 2, c: 3\}}.
+
+In fact this difference does not matter. This change is internal to the program and so not visible to an observer. As we have not specified
+any future dependency on \texttt{c}, we can assume that nothing that can affect the observable behaviour of the program will use the value
+of \texttt{c} - meaning the program remains correct.
+
+\subsubsection{Slightly Harder}
+
+Now we allow assignments of values that can either be constant or other local names. We will restrict all of our names to local scope as
+we have not yet introduced the concept of scope to our model.
+
+An example:
+
+\begin{lstlisting}
+a = 1
+b = a
+c = a
+c = b
+\end{lstlisting}
+
+Now we can easily go through line by line and look at which names appear on the right of the assignment to gather a list of dependencies.
+
+TODO - CONTINUE FROM HERE!-------------------------------------------------------------
+
+Problem! What if we added one line to make:
+
+\begin{lstlisting}
+a = 1
+b = a
+d = e
+c = a
+c = b
+\end{lstlisting}
+
+Now we have a line that will cause error. 
+
+\section{Opaque Predicates}
+
+The second obfuscation technique we will implement will insert branches into the code that depend on
+some opaque predicate \cite{taxobftrans}. This is a predicate that we as the obfuscator know the value of,
+but an analyser will find it difficult to evaluate. The branches we will insert will jump either to our valid
+program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
+that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
+
+To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
+branches where we know a program will always take a certain path. The success of this analysis
+depends on both the strength of the analysis and the strength of the opaque predicate.
+
+\section{Relocate or Implement me - TODO}
+
+Both of the described transformations and their analysis will require careful testing. So far,
+this has been done using Python's doc test library to write unit tests inside the docstrings
+in each piece of code. It is likely a higher level approach will be more suitable later in
+the project, testing a program's validity before and after obfuscations as well as the validity
+of the analysis.
+
+\section{Evaluation}
+
+\subsection{How to Evaluate}
+
+Evaluation of the final product will be difficult, this is mainly due to the lack of similar tools.
+Comparison to other Python obfuscators is not viable as only the pyobfuscate tool is available to
+use. While this does perform obfuscation on Python source, it does not operate on the same version of
+the source or perform the same type of obfuscation. In fact most available obfuscators will deal with
+layout transformation rather than control flow.
+
+There are a few obfuscators that will deal with control flow obfuscation in other languages, for example
+the Kava tool for Java is discussed in detail elsewhere \cite{taxobftrans}. We could attempt to compare these
+tools with our own, however they tend to be written for much less flexible or dynamic languages than
+Python (and hence are easier analysable). Indeed, it is one of the intentions of this project to assess the
+extra difficulty a dynamic language such as Python adds when writing these tools, but to compare the final
+product to one of these existing tools from such a different base would be misleading.
+
+As well as comparing to similar tools, we have the option to assess an obfuscator's merit based on
+its ability to create output that withstands reverse engineering or analysis. In fact this should be
+a much better analysis of the product as we can say if the software is good at what it is designed to do, rather
+than whether it is just better at performing the same function as another tool.
+
+To aid in this form of evaluation we will need tools to analyse the obfuscated source code. There are plenty
+mentioned in the background section, however these tend to be designed to optimise code or detect possible bugs and so
+are not ideal.
+
+The solution proposed for this project is to write tools for analysis along side the tools for obfuscation.
+By doing this we can really target the analysis at detecting and reversing the particular transformations
+that our obfuscator implements. Hopefully this should not create a great deal of extra work as the analysis
+needed for reversing a transformation is often likely to be the same form of analysis performed to make that
+transformation in the first place, so the work is already done.
+
+Of course this is not a perfect solution. Ideally analytic tools would be written by someone else without
+knowledge of the specific obfuscator. This would move closer to representing a reverse-engineer or analytic
+tool in the real world, as hopefully neither would be able to ascertain the software used to perform the obfuscation
+or the specific techniques used on specific code locations. In theory this should give the analytic tool an
+advantage, lowering our expected potency for the obfuscator.
+
+Another problem caused by the same author writing both sides of a competing set of software is that the competition
+may not be so fierce as in the real world. Any design oversights in one half of the software will likely show up
+in the other, rather than being exploited as would hopefully be the case with two free thinking developers. As a real
+example, the Java decompiler Mocha will crash if it finds extra statements after a function has returned
+\cite{hosemocha}[p4]. The bytecode obfuscator HoseMocha uses this to prevent Mocha from decompiling programs. Had these two
+pieces of software been written by the same developer, one whose decompiler doesn't check for the unlikely case described,
+then it is probable that this case would never have been thought of for the obfuscator - and HoseMocha would never have
+been created.
+
+We do not have the option of contracting a separate developer to help with this evaluation. The best solution to mitigate the effect
+of this is to compare the development of the analysis tool to the available analytic tools discussed in the background section. Although
+these have different primary functions, at least some functionality will overlap and allow a loose comparison. From this it
+should be possible to determine if our analysis tool is sub-par or better than average and to judge the obfuscator
+accordingly.
+
+\subsection{What to Evaluate}
+
+We have looked at how we can evaluate the software, and we know the tools we will use to do so. What we don't know yet is
+the specific criteria that we will be evaluating. 
+
+As we already know, the aim of obfuscation is to confuse a human reader or a programmatic analysis. In measuring the effectiveness
+of a particular obfuscation we are actually attempting to quantify the additional confusion caused by it. This is not an easy task
+as confusion is very subjective to a particular viewer or program.
+
+Previous attempts to do this tend to use program complexity metrics to measure the impact of a particular obfuscation. Many fail to
+actually quantify transformation benefit, preferring instead to give a rough estimation, although recently there have been improvements in
+this area \cite{obfquant}.
+
+Although these metrics can be used during the obfuscating and analysis, they are unlikely to help with evaluation as we are
+not proposing any new transformations. Instead we are comparing the same transformation in an environment with looser rules than usual.
+In this case, complexity metrics will be very similar if not the same and so not helpful to us.
+
+A much more helpful approach will be to discuss freely (and using the metrics) the challenges faced in implementing these obfuscations
+in Python as well as breaking them. This can be compared to other languages and implementations. Finally the comparative performances
+of the obfuscator and analyser will be assessed on some example programs.
+
+\section{Conclusions and Future Work}
+
+TODO - this section, aaah
+
+\bibliographystyle{plain}
+\bibliography{final}
+
+\end{document}
