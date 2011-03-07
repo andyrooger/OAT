@@ -11,7 +11,6 @@
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \setcounter{secnumdepth}{0}
 
-
 % For title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
 
@@ -52,7 +51,18 @@ Herbert Wikliky
 
 \end{center}
 \end{titlepage}
-%\maketitle
+
+\begin{abstract}
+TODO write abstract!
+\end{abstract}
+
+\section*{Acknowledgements}
+
+TODO - write acknowledements - Hayley Hannam, Herbert Wikliky, Chris Hankin, Alex Lamaison
+
+\tableofcontents
+
+\clearpage
 
 \section{Introduction}
 
@@ -634,45 +644,9 @@ A much more helpful approach will be to discuss freely (and using the metrics) t
 in Python as well as breaking them. This can be compared to other languages and implementations. Finally the comparative performances
 of the obfuscator and analyser will be assessed on some example programs.
 
-\section{Plan of Work}
+\section{Conclusions and Future Work}
 
-The following is a proposed timetable of work for the remainder of the project. The period from the beginning of the project on Monday
-the 8th of November to current date is ignored. The chart starts after this report at week 1, beginning Monday the 14th
-of February. Week 19 begins on Monday the 20th of June.
-
-\newpsstyle{Exam}{fillstyle=vlines}
-\newpsstyle{Normal}{fillstyle=solid, fillcolor=white}
-\begin{PstGanttChart}[
-    ChartShowIntervals,
-    ChartUnitIntervalName={},
-    ]{6}{19}
-\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Final Report}]{0}{11}
-\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Obfuscation 1}]{0}{4}
-\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Obfuscation 2}]{4}{4}
-\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Fixes}]{8}{3}
-\PstGanttTask[TaskStyle=Normal,TaskInsideLabel={Finalisation}]{16}{3}
-\PstGanttTask[TaskStyle=Exam,TaskOutsideLabel={Exams}]{11}{5}
-\end{PstGanttChart}
-
-The first part of this chart to look to is the striped task referring to exams. At this point all work on the project will halt as there will be no
-resources spare to contribute. By the time we reach this, all work should be almost entirely finished.
-
-Obfuscation 1 and 2 are tasks that are yet to be decided but involve implementing 2 obfuscation techniques and 2 analytic techniques
-to combat them. The most likely choices for these two techniques will be those suggested in the Analysing and Obfuscating section, and
-they may be in any order.
-
-The fixes task is to allow bug fixing in the implementation before the exams arrive. In reality these are likely to be performed during
-the obfuscation 1 and 2 tasks. This is acceptable as when this work delays the obfuscation tasks, they will only drift into the fixes task
-which is being shortened anyway.
-
-By the time exams halt work, the final report is expected to be almost completed. The finalisation task therefore is just to
-clean up and fix any last minute issues (or gaping holes) in the report. It could also be used to finish the evaluation knowing that
-coding is finished. The presentation will be prepared during this time.
-
-Finally in the event that one or both obfuscation or analytic implementations are not completed, the programming should still stop
-by the time exams come. It is a high priority to have at least one of these running correctly, however a failure with strong reasoning
-will be interesting to the conclusion of the project as one of the goals is to assess the added difficulties of implementation in
-a dynamic language.
+TODO - this section, aaah
 
 \bibliographystyle{plain}
 \bibliography{final}
