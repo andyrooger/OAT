@@ -70,8 +70,8 @@ class FormatCommand(commandui.Command):
         except IOError:
             print("The file could not be written to.")
         else:
-            if filename == self._related_parsecmd.ast.file:
-                self._related_parsecmd.ast.modified = False
+            self._related_parsecmd.ast.file = filename
+            self._related_parsecmd.ast.modified = False
             print("Written to: " + filename)
 
 

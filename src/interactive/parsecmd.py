@@ -56,6 +56,8 @@ class ParseCommand(commandui.Command):
                 except pickle.PickleError:
                     print("The AST could not be saved.")
                     return False
+                else:
+                    print("The current AST has been saved to: " + self.ast._ast_file())
         else:
             try:
                 self.ast = ASTStorage(args.file, load=args.load)
@@ -71,6 +73,8 @@ class ParseCommand(commandui.Command):
             except AssertionError:
                 print("The AST and source files do not match. You must generate a new AST.")
                 return False
+            else:
+                print("Loaded AST for file: " + args.file)
 
     def autocomplete(self, before, arg, after):
         if len(before):
