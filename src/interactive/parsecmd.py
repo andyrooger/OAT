@@ -60,13 +60,16 @@ class ParseCommand(commandui.Command):
             try:
                 self.ast = ASTStorage(args.file, load=args.load)
             except IOError:
-                print("The specified file could not be read.")
+                print("The necessary files could not be read.")
                 return False
             except SyntaxError:
                 print("The file contains incorrect syntax, are you sure it is a Python file?")
                 return False
-            except TypeError:
+            except (TypeError, pickle.UnpickleError):
                 print("Could not use the data in the given file.")
+                return False
+            except AssertionError:
+                print("The AST and source files do not match. You must generate a new AST.")
                 return False
 
     def autocomplete(self, before, arg, after):
@@ -96,13 +99,16 @@ class ASTStorage:
             else:
                 self._parse(fname)
 
-    def _ast_file(self):
+    def _ast_file(self, fname=None):
         """Get the name of the potential AST storage file."""
 
-        if self.file.endswith(".py"):
-            return self.file[0:-3] + ".ast"
+        if fname == None:
+            fname = self.file
+
+        if fname.endswith(".py"):
+            return fname[0:-3] + ".ast"
         else:
-            return self.file + ".ast"
+            return fname + ".ast"
 
     def _parse(self, fname):
         """
@@ -131,7 +137,40 @@ class ASTStorage:
         self.modified = False
 
     def _load(self, fname):
-        """Load the given file's AST from disk."""
+        """
+        Load the given file's AST from disk.
+
+        Raises IOError if the ast or source files cannot be read.
+        Raises TypeError or pickle.UnpickleError if the AST file is incorrect
+        Raises AssertError if the file has changed.
+
+        """
+
+        # Could raise IOError
+        stored = None
+        with open(self._ast_file(fname), "rb") as file:
+            stored = pickle.load(file)
+
+        # TypeError
+        if not isinstance(stored, ASTStorage):
+            raise TypeError
+
+        source = None
+
+        # Could raise IOError
+        with open(fname, "r") as file:
+            source = file.read()
+
+        h = hashlib.sha224()
+        h.update(source.encode())
+
+        assert stored.filehash == h.hexdigest()
+
+        self.tree = stored.tree
+        self.file = stored.file
+        self.filehash = stored.filehash
+        self.modified = stored.modified
+        
 
     def save(self):
         """
