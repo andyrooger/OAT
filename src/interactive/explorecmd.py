@@ -146,10 +146,10 @@ class ExploreCommand(commandui.Command):
     def _ensure_node_sync(self):
         """Ensure the current node stack is in sync with the main tree."""
 
-        if self._related_parsecmd.parsed_tree == None:
+        if self._related_parsecmd.ast.tree == None:
             self.ast_parents = []
-        elif not hasattr(self, "ast_parents") or self.ast_top != self._related_parsecmd.parsed_tree:
-            self.ast_parents = [self._related_parsecmd.parsed_tree]
+        elif not hasattr(self, "ast_parents") or self.ast_top != self._related_parsecmd.ast.tree:
+            self.ast_parents = [self._related_parsecmd.ast.tree]
 
     def autocomplete(self, before, arg, after):
         if not arg.startswith("-"):
