@@ -8,6 +8,8 @@ from . import commandui
 from . import parsecmd
 from . import formatcmd
 from . import explorecmd
+from . import reordercmd
+from . import markcmd
 
 class SolidConsole(commandui.CommandUI):
     """Solid command class."""
@@ -18,7 +20,11 @@ class SolidConsole(commandui.CommandUI):
         parse = parsecmd.ParseCommand()
         explore = explorecmd.ExploreCommand(parse)
         format = formatcmd.FormatCommand(parse, explore)
+        reorder = reordercmd.ReorderCommand(parse, explore)
+        mark = markcmd.MarkCommand(parse, explore)
         self.add_command(parse)
         self.add_command(format)
         self.add_command(explore)
+        self.add_command(reorder)
+        self.add_command(mark)
 
