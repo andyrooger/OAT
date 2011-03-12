@@ -53,7 +53,7 @@ class ExploreCommand(commandui.Command):
         self._ensure_node_sync()
 
         if self.ast_current == None:
-            print("There is no AST to explore. Have you create one with the parse command?")
+            print("There is no AST to explore. Have you created one with the parse command?")
             return
 
         if args.field != None:
