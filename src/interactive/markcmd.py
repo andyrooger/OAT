@@ -14,7 +14,9 @@ class MarkCommand(commandui.Command):
         commandui.Command.__init__(self, "mark")
 
         self._opts.add_argument("-v", "--visible", choices=["invisible", "visible"],
-                                help="Is this a visible or invisible statement?")
+                                help="Is this a visible or invisible statement? (i.e. does it perform actions visible to the outside world?")
+        self._opts.add_argument("-b", "--breaks", choices=["yes", "no"],
+                                help="Can this statement break from a linear flow?")
 
         self._related_explorecmd = explorecmd
 
