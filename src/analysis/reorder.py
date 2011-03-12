@@ -54,8 +54,33 @@ class Reorderer:
     def permutations(self):
         """Generates all possible permutations."""
 
+        self.fill_markings() # In case
+        partitions = self.partition()
+
+        return self._permutations(self, partitions)
+
+    def _permutations(self, partitions : "As returned by partition()"):
+        """Does the actual generation for permutations."""
+
+        # Base, if there are no partitions left
+        if not partitions:
+            yield []
+        else:
+            head, *tail = partitions
+
+            # Recalculate everything for each permutation? Yes
+            # Difficult calculation? Hopefully not
+            # Do the bigger calculation lett
+
+            for remainder in self._permutations(tail):
+                for perm in self.part_permute(head):
+                    yield perm + remainder
+
+    def part_permute(self, part : "List of indices to statements"):
+        """Generate all the possible permutations for a single partition."""
+
         # Temporary until we have some useful functionality
-        yield list(range(0, len(self.statements)-1))
+        yield part
 
     def permute(self, perm):
         """Permute the statements with the given permutation. Does not affect the original statement list."""
@@ -75,7 +100,33 @@ class Reorderer:
                 best_perm = perm
                 best_score = score
 
-            
+    def partition(self):
+        """
+        Partition the statement list based on the breaking statements.
+
+        All the statements must be already marked.
+
+        You will receive a list of permutations.
+
+        """
+
+        begin_partition = 0
+        partitions = []
+
+        for i in range(len(self.statements)):
+            if self.statements[i]._markings['breaks'] == 'yes':
+                before = list(range(begin_partition, i-1))
+                if before:
+                    partitions.append(before)
+                partitions.append([i])
+                begin_partition = i+1
+
+        before = list(range(begin_partition, len(self.statements)))
+        if before:
+            partitions.append(before)
+
+        return partitions
+                
 
 
 def RandomValuer(self, statements, perm):
