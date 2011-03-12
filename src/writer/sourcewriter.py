@@ -35,7 +35,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__out = out
 
         self.__top_ast = top_ast
-        if not isinstance(self.__top_ast, ast.AST):
+        if not isinstance(self.__top_ast, ast.AST) and not isinstance(self.__top_ast, list):
             raise TypeError("The tree needs to begin with an AST node.")
 
         self.__indentation = []
@@ -72,6 +72,11 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         self.__character_level += len(s)
         self.__out.write(s)
+
+    def _write_list(self, s):
+        """Write a list assuming it is a list of statements. Should not be used willy nilly."""
+
+        self._write_block(s, indent=False)
 
     def _char_level(self, relative = True):
         """Get the absolute character level or relative to the indentation."""
@@ -433,6 +438,9 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
 
     import io
     out = io.StringIO()
+    if isinstance(tree, list):
+        # Hacky, but assume module will write things fine.
+        tree = ast.Module(tree)
     writer(tree, out).write()
     return out.getvalue()
 

@@ -53,7 +53,7 @@ class ParseCommand(commandui.Command):
                 except IOError:
                     print("The AST file could not be opened.")
                     return False
-                except pickle.PickleError:
+                except pickle.PicklingError:
                     print("The AST could not be saved.")
                     return False
                 else:
@@ -67,7 +67,7 @@ class ParseCommand(commandui.Command):
             except SyntaxError:
                 print("The file contains incorrect syntax, are you sure it is a Python file?")
                 return False
-            except (TypeError, pickle.UnpickleError):
+            except (TypeError, pickle.UnpicklingError):
                 print("Could not use the data in the given file.")
                 return False
             except AssertionError:
@@ -86,6 +86,8 @@ class ParseCommand(commandui.Command):
         """Show status for the current session."""
 
         print("Parsed tree: " + str(self.ast))
+        if self.ast.filehash != None:
+            print("Tree hash: " + self.ast.filehash)
 
 
 class ASTStorage:
@@ -95,7 +97,8 @@ class ASTStorage:
         self.tree = None
         self.file = None
         self.filehash = None
-        self.modified = False # Set to true when any editing done
+        self.modified = False # Set to true on modification of the AST
+        self.augmented = False # Set to true on addition of extra data
 
         if fname:
             if load:
@@ -139,13 +142,14 @@ class ASTStorage:
         self.file = fname
         self.filehash = h.hexdigest()
         self.modified = False
+        self.augmented = False
 
     def _load(self, fname):
         """
         Load the given file's AST from disk.
 
         Raises IOError if the ast or source files cannot be read.
-        Raises TypeError or pickle.UnpickleError if the AST file is incorrect
+        Raises TypeError or pickle.UnpicklingError if the AST file is incorrect
         Raises AssertError if the file has changed.
 
         """
@@ -173,8 +177,8 @@ class ASTStorage:
         self.tree = stored.tree
         self.file = stored.file
         self.filehash = stored.filehash
-        self.modified = stored.modified
-        
+        self.modified = False # We don't care what the file says
+        self.augmented = False
 
     def save(self):
         """
@@ -182,7 +186,7 @@ class ASTStorage:
 
         Raises AssertionError if the AST has changed since parsing the file.
         Raises IOError if the file could not be opened.
-        Raises pickle.PickleError if the tree could not be pickled.
+        Raises pickle.PicklingError if the tree could not be pickled.
 
         """
 
@@ -191,12 +195,21 @@ class ASTStorage:
         with open(self._ast_file(), "wb") as file:
             pickle.dump(self, file, 3)
 
+        self.augmented = False
+
     def __str__(self):
         if self.tree == None:
             return "None"
 
-        rep = self.file + " : " + self.filehash
+        rep = self.file
+        mods = []
         if self.modified:
-            rep += " (Modified)"
+            mods.append("Modified")
+        if self.augmented:
+            mods.append("Augmented")
+        if mods:
+            rep += " ("
+            rep += ", ".join(mods)
+            rep += ")"
 
         return rep

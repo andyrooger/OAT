@@ -3,6 +3,7 @@
 from writer import sourcewriter
 from writer import basicwriter
 from writer import prettywriter
+from util import pluginfinder
 
 modules = [globals()[mod] for mod in globals() if not mod.startswith("__")]
 
