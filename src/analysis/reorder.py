@@ -121,7 +121,7 @@ class Reorderer:
 
         for i in range(len(self.statements)):
             if self.statements[i]._markings['breaks'] == 'yes':
-                before = list(range(begin_partition, i-1))
+                before = list(range(begin_partition, i))
                 if before:
                     partitions.append(before)
                 partitions.append([i])
