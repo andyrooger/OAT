@@ -6,6 +6,12 @@ Contains code ready for reordering statements.
 import ast
 import random
 
+def RandomValuer(self, statements, perm):
+    """Give a random value, no matter the permutation."""
+
+    return random.uniform(0, 100)
+
+
 class Reorderer:
     """
     Performs calculation on a set of statements and eventually returns a generator for different permutations.
@@ -54,7 +60,7 @@ class Reorderer:
     def permutations(self):
         """Generates all possible permutations."""
 
-        self.fill_markings() # In case
+        #self.fill_markings() # In case
         partitions = self.partition()
 
         return self._permutations(self, partitions)
@@ -70,7 +76,7 @@ class Reorderer:
 
             # Recalculate everything for each permutation? Yes
             # Difficult calculation? Hopefully not
-            # Do the bigger calculation lett
+            # Do the bigger calculation less
 
             for remainder in self._permutations(tail):
                 for perm in self.part_permute(head):
@@ -129,7 +135,3 @@ class Reorderer:
                 
 
 
-def RandomValuer(self, statements, perm):
-    """Give a random value, no matter the permutation."""
-
-    return random.uniform(0, 100)
