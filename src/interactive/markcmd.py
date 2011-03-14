@@ -10,7 +10,7 @@ from . import commandui
 class MarkCommand(commandui.Command):
     """Mark AST nodes with extra information from the console."""
 
-    def __init__(self, explorecmd):
+    def __init__(self, parsecmd, explorecmd):
         commandui.Command.__init__(self, "mark")
 
         self._opts.add_argument("-v", "--visible", choices=["invisible", "visible"],
@@ -18,6 +18,7 @@ class MarkCommand(commandui.Command):
         self._opts.add_argument("-b", "--breaks", choices=["yes", "no"],
                                 help="Can this statement break from a linear flow?")
 
+        self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
 
     def run(self, args):
@@ -62,7 +63,6 @@ class MarkCommand(commandui.Command):
     def _update_markings(self, marks):
         """Update the current node's markings with the values in the marks dict."""
 
-
         node = self._related_explorecmd.ast_current
 
         if isinstance(node, list):
@@ -71,5 +71,9 @@ class MarkCommand(commandui.Command):
 
         if not hasattr(node, "_markings"):
             node._markings = {}
+            self._related_parsecmd.ast.augmented = True
         
         node._markings.update(marks)
+
+        if marks:
+            self._related_parsecmd.ast.augmented = True

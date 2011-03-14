@@ -15,7 +15,7 @@ from writer import prettywriter
 class ReorderCommand(commandui.Command):
     """Reorder statement blocks from the console."""
 
-    def __init__(self, explorecmd):
+    def __init__(self, parsecmd, explorecmd):
         commandui.Command.__init__(self, "reorder")
 
         self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
@@ -36,6 +36,7 @@ class ReorderCommand(commandui.Command):
         actions.add_argument("-b", "--best", action="store_const", const="best", dest="do",
                              help="Find the best permutation of these instructions according to the given valuer function. This is the default.")
 
+        self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
 
     def run(self, args):
@@ -127,7 +128,7 @@ class ReorderCommand(commandui.Command):
         cur = self._related_explorecmd.ast_current
         if hasattr(cur, "_fields") and "body" in cur._fields:
             cur.body = block
-            # TODO add modification notification
+            self._related_parsecmd.ast.modified = True
         else:
             raise TypeError
 
@@ -186,3 +187,5 @@ class ReorderCommand(commandui.Command):
                 elif how == "auto": pass
                     #stat._markings['visible'] = 
         # TODO
+
+        self._related_parsecmd.ast.augmented = True
