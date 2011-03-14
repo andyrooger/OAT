@@ -6,11 +6,15 @@ Contains code ready for reordering statements.
 import ast
 import random
 
-def RandomValuer(self, statements, perm):
+def RandomValuer(statements, perm):
     """Give a random value, no matter the permutation."""
 
     return random.uniform(0, 100)
 
+def FirstValuer(statements, perm):
+    """Give exactly the same value, no matter the permutation."""
+
+    return 1
 
 class Reorderer:
     """
@@ -44,26 +48,13 @@ class Reorderer:
 
         return True
 
-    def fill_markings(self, breaks=True, visible=False):
-        """Fill in unmarked unmarked statements with the given defaults."""
-
-        for stat in self.statements:
-            if not hasattr(stat, "_markings"):
-                stat._markings = {}
-
-            if not "breaks" in stat._markings:
-                stat._markings["breaks"] = breaks
-
-            if not "visible" in stat._markings:
-                stat._markings["visible"] = visible
-
     def permutations(self):
         """Generates all possible permutations."""
 
         #self.fill_markings() # In case
         partitions = self.partition()
 
-        return self._permutations(self, partitions)
+        return self._permutations(partitions)
 
     def _permutations(self, partitions : "As returned by partition()"):
         """Does the actual generation for permutations."""
@@ -105,6 +96,8 @@ class Reorderer:
             if score > best_score:
                 best_perm = perm
                 best_score = score
+
+        return best_perm
 
     def partition(self):
         """

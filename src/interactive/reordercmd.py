@@ -7,7 +7,10 @@ import ast
 
 from . import commandui
 
-import analysis.reorder
+from analysis import reorder
+
+from writer import sourcewriter
+from writer import prettywriter
 
 class ReorderCommand(commandui.Command):
     """Reorder statement blocks from the console."""
@@ -17,7 +20,7 @@ class ReorderCommand(commandui.Command):
 
         self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
                                 help="How to display statements, either by index, type or the full code.")
-        self._opts.add_argument("-v", "--valuer", nargs="?", choices=["random", "first"], default="random",
+        self._opts.add_argument("-v", "--valuer", choices=["random", "first"], default="random",
                                 help="Choose the valuer function.")
         self._opts.add_argument("-e", "--edit", action="store_true", default=False,
                                 help="Allow editing of the tree. This is disallowed by default.")
@@ -38,10 +41,6 @@ class ReorderCommand(commandui.Command):
     def run(self, args):
         """Reorder the body of statements for the current node."""
 
-        if args.mark != None:
-            self._mark_statements(args.mark, args.edit)
-            return
-
         # Get action
         do = "best" if args.do == None else args.do
 
@@ -58,10 +57,15 @@ class ReorderCommand(commandui.Command):
             return False
 
         try:
-            orderer = analysis.reorder.Reorderer(block)
+            orderer = reorder.Reorderer(block)
         except TypeError:
             print("The node's body was of unexpected type, I don't know what do do with this.")
             return False
+
+        # Before we try any of the other options but after we checked the block
+        if args.mark != None:
+            self._mark_statements(block, args.mark, args.edit)
+            return
 
         if do == "current":
             self._print_block(block, range(len(block)), args.display, True)
@@ -81,6 +85,34 @@ class ReorderCommand(commandui.Command):
                 print("---")
             return
 
+        if do == "permutations":
+            for perm in orderer.permutations():
+                self._print_block(block, perm, args.display)
+                try:
+                    print()
+                    input('Press enter to continue...')
+                except EOFError: pass
+                print()
+
+            print("There are no other permutations.")
+            return
+
+        if do == "best":
+            valuer = {
+                "random" : reorder.RandomValuer,
+                "first" : reorder.FirstValuer,
+            }[args.valuer]
+            perm = orderer.best_permutation(valuer)
+
+            self._print_block(block, perm, args.display)
+
+            print()
+            if args.edit:
+                self._set_block(orderer.permute(perm))
+                print("The node has been reordered.")
+            else:
+                print("This is the optimal chosen rearrangement. To write to the node see --edit.")
+
         print("Haven't got around to doing " + do + " yet") # TODO
 
 
@@ -90,6 +122,14 @@ class ReorderCommand(commandui.Command):
             return cur.body
         else:
             return None
+
+    def _set_block(self, block):
+        cur = self._related_explorecmd.ast_current
+        if hasattr(cur, "_fields") and "body" in cur._fields:
+            cur.body = block
+            # TODO add modification notification
+        else:
+            raise TypeError
 
     def _print_block(self, statements, perm, disp, markings=False):
         """Print a block of statements in a particular permutation."""
@@ -104,7 +144,8 @@ class ReorderCommand(commandui.Command):
                 if disp == "type":
                      print(str(i) + ": " + statements[i].__class__.__name__, end="")
                 elif disp == "code":
-                     print("Cannot print yet") # TODO
+                     print()
+                     sourcewriter.printSource(statements[i], prettywriter.PrettyWriter)
 
                 if markings:
                     try:
@@ -118,6 +159,30 @@ class ReorderCommand(commandui.Command):
                 if disp == "type" or markings:
                     print()
 
-    def _mark_statements(self, how, edit):
+    def _mark_statements(self, statements, how, edit):
         """Mark the statements that need it with the necessary markings for reordering."""
+
+        if not edit:
+            print("Need to enable tree editing to mark statements. (see --edit)")
+            return
+
+        for stat in statements:
+            if not hasattr(stat, "_markings"):
+                stat._markings = {}
+
+            if "breaks" not in stat._markings:
+                if how == "safe":
+                    stat._markings['breaks'] = "yes"
+                elif how == "default":
+                    stat._markings['breaks'] = "no"
+                elif how == "auto": pass
+                    #stat._markings['breaks'] = 
+
+            if "visible" not in stat._markings:
+                if how == "safe":
+                    stat._markings['visible'] = "visible"
+                elif how == "default":
+                    stat._markings['visible'] = "invisible"
+                elif how == "auto": pass
+                    #stat._markings['visible'] = 
         # TODO
