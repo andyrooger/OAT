@@ -86,7 +86,7 @@ class ParseCommand(commandui.Command):
         """Show status for the current session."""
 
         print("Parsed tree: " + str(self.ast))
-        if self.ast:
+        if self.ast.filehash != None:
             print("Tree hash: " + self.ast.filehash)
 
 
@@ -209,7 +209,7 @@ class ASTStorage:
             mods.append("Augmented")
         if mods:
             rep += " ("
-            ", ".join(mods)
+            rep += ", ".join(mods)
             rep += ")"
 
         return rep
