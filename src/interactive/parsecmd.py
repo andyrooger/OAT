@@ -86,6 +86,8 @@ class ParseCommand(commandui.Command):
         """Show status for the current session."""
 
         print("Parsed tree: " + str(self.ast))
+        if self.ast:
+            print("Tree hash: " + self.ast.filehash)
 
 
 class ASTStorage:
@@ -95,7 +97,8 @@ class ASTStorage:
         self.tree = None
         self.file = None
         self.filehash = None
-        self.modified = False # Set to true when any editing done
+        self.modified = False # Set to true on modification of the AST
+        self.augmented = False # Set to true on addition of extra data
 
         if fname:
             if load:
@@ -139,6 +142,7 @@ class ASTStorage:
         self.file = fname
         self.filehash = h.hexdigest()
         self.modified = False
+        self.augmented = False
 
     def _load(self, fname):
         """
@@ -173,8 +177,8 @@ class ASTStorage:
         self.tree = stored.tree
         self.file = stored.file
         self.filehash = stored.filehash
-        self.modified = stored.modified
-        
+        self.modified = False # We don't care what the file says
+        self.augmented = False
 
     def save(self):
         """
@@ -191,12 +195,21 @@ class ASTStorage:
         with open(self._ast_file(), "wb") as file:
             pickle.dump(self, file, 3)
 
+        self.augmented = False
+
     def __str__(self):
         if self.tree == None:
             return "None"
 
-        rep = self.file + " : " + self.filehash
+        rep = self.file
+        mods = []
         if self.modified:
-            rep += " (Modified)"
+            mods.append("Modified")
+        if self.augmented:
+            mods.append("Augmented")
+        if mods:
+            rep += " ("
+            ", ".join(mods)
+            rep += ")"
 
         return rep
