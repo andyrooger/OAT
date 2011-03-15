@@ -18,9 +18,9 @@ class MarkCommand(commandui.Command):
         self._opts.add_argument("-b", "--breaks", choices=["yes", "no"],
                                 help="Can this statement break from a linear flow?")
         self._opts.add_argument("-r", "--reads", nargs="+", metavar="var",
-                                help="Choose all the variables this node reads. Use (+|-)(g|n|l|u)variable to add or remove a global, nonlocal, local, or unknown variable.")
+                                help="Choose all the variables this node reads. Use a(g|n|l|u)-variable to add or r-variable to remove a global, nonlocal, local, or unknown variable.")
         self._opts.add_argument("-w", "--writes", nargs="+", metavar="var",
-                                help="Choose all the variables this node writes. Use (a|r)(g|n|l|u)variable to add or remove a global, nonlocal, local, or unknown variable.")
+                                help="Choose all the variables this node writes. Use a(g|n|l|u)-variable to add or r-variable to remove a global, nonlocal, local, or unknown variable.")
 
         self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
@@ -67,7 +67,7 @@ class MarkCommand(commandui.Command):
             return self._show_markings(self._get_markings(), "    ")
 
         for mark in markings:
-            print(indent + mark.title() + ": ", end="")
+            print(indent + mark + ": ", end="")
             if isinstance(markings[mark], dict):
                 print()
                 self._show_markings(markings[mark], indent+"    ")
@@ -97,7 +97,7 @@ class MarkCommand(commandui.Command):
         """
         Parse the function references from the command line.
 
-        Uses format (a|r)(g|n|l|u)variable.
+        Uses format (a(g|n|l|u)|r)-variable.
 
         """
 
@@ -105,45 +105,50 @@ class MarkCommand(commandui.Command):
         try:
             refs = self._get_markings()[mark].copy()
         except KeyError:
-            refs = {
-                "global": set(),
-                "nonlocal": set(),
-                "local": set(),
-                "unknown": set()
-            }
+            refs = {}
 
         for change in changes:
-            if len(change) < 3:
-                print("Unrecognised argument: " + change)
+            try:
+                action, var = change.split("-", 1)
+            except ValueError:
+                # Not enough parts (no '-')
+                print("Missing action: " + change)
                 continue
 
-            try:
-                category = {
-                    "g": "global",
-                    "n": "nonlocal",
-                    "l": "local",
-                    "u": "unknown",
-                }[change[1]]
-            except KeyError:
-                print("Unknown type: " + change[1] + " in " + change)
+            if not action:
+                raise ValueError("Change should not start with '-', EVER!")
+
+            if action[0] not in "ar":
+                print("Unrecognised action: " + action + " in " + change)
                 continue
 
-            try:
-                do = {
-                    "a" : refs[category].add,   # Categories are created with
-                    "r" : refs[category].remove # the original marking
-                }[change[0]]
-            except KeyError:
-                print("Invalid action: " + change[0] + " in " + change)
-                continue
+            if action[0] == "a":
+                if len(action) != 2:
+                    print("Missing type: " + action + " in " + change)
+                    continue
 
+                try:
+                    category = {
+                        "g": "global",
+                        "n": "nonlocal",
+                        "l": "local",
+                        "u": "unknown",
+                    }[action[1]]
+                except KeyError:
+                    print("Unknown type: " + action[1] + " in " + change)
+                    continue
 
-            variable = change[2:]
+                refs[var] = category
 
-            try:
-                do(variable)
-            except KeyError:
-                pass # Means we tried to remove a variable that didn't exist
-            
+            if action[0] == "r":
+                if len(action) != 1:
+                    print("Unrecognised action: " + action + " in " + change)
+                    continue
+
+                try:
+                    del refs[var]
+                except KeyError:
+                    print("Cannot remove non-existent variable: " + var + " in " + change)
+                    continue
 
         return refs
