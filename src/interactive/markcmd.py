@@ -59,15 +59,20 @@ class MarkCommand(commandui.Command):
         node = self._related_explorecmd.ast_current
         return node._markings if hasattr(node, "_markings") else {}
 
-    def _show_markings(self):
+    def _show_markings(self, markings=None, indent=""):
         """Print out the markings for the current node."""
 
-        markings = self._get_markings()
-
-        print("Markings for current node:")
+        if markings == None:
+            print("Markings for current node:")
+            return self._show_markings(self._get_markings(), "    ")
 
         for mark in markings:
-            print(mark.title() + ": " + str(markings[mark]))
+            print(indent + mark.title() + ": ", end="")
+            if isinstance(markings[mark], dict):
+                print()
+                self._show_markings(markings[mark], indent+"    ")
+            else:
+                print(markings[mark])
 
     def _update_markings(self, marks):
         """Update the current node's markings with the values in the marks dict."""
