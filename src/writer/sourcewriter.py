@@ -433,6 +433,9 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
 
     import io
     out = io.StringIO()
+    if isinstance(tree, list):
+        # Hacky, but assume module will write things fine.
+        tree = ast.Module(tree)
     writer(tree, out).write()
     return out.getvalue()
 
