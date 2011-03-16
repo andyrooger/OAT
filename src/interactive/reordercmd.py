@@ -34,7 +34,7 @@ class ReorderCommand(commandui.Command):
         actions.add_argument("-p", "--permutations", action="store_const", const="permutations", dest="do",
                              help="Show all possible permutations for the arguments. Used for debugging.")
         actions.add_argument("-b", "--best", action="store_const", const="best", dest="do",
-                             help="Find the best permutation of these instructions according to the given valuer function. This is the default.")
+                             help="Find the best permutation of these instructions according to the given valuer function. This is the default action.")
 
         self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
@@ -114,7 +114,7 @@ class ReorderCommand(commandui.Command):
             else:
                 print("This is the optimal chosen rearrangement. To write to the node see --edit.")
 
-        print("Haven't got around to doing " + do + " yet") # TODO
+        print("Haven't got around to doing " + do + " yet") # Shouldn't get here
 
 
     def _get_block(self):
@@ -187,5 +187,13 @@ class ReorderCommand(commandui.Command):
                 elif how == "auto": pass
                     #stat._markings['visible'] = 
         # TODO
+
+            if "reads" not in stat._markings:
+                stat._markings['reads'] = {}
+            if "writes" not in stat._markings:
+                stat._markings['writes'] = {}
+
+        print("Markings have been created, you will need to check over them yourself - especially the read and write references.")
+
 
         self._related_parsecmd.ast.augmented = True

@@ -39,9 +39,13 @@ class Reorderer:
 
         try:
             for stat in self.statements:
-                if not "breaks" in stat._markings:
+                if "breaks" not in stat._markings:
                     return False
-                if not "visible" in stat._markings:
+                if "visible" not in stat._markings:
+                    return False
+                if "reads" not in stat._markings:
+                    return False
+                if "writes" not in stat._markings:
                     return False
         except AttributeError:
             return False
