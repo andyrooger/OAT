@@ -130,161 +130,163 @@ class Reorderer:
 
         return partitions
 
+class AutoMarker:
+    """Tries to find correct markings for each node."""
 
-     def dependencies(self, node : "AST node to check dependencies for"):
+    def markings(self, node : "AST node to check for markings"):
         """
-        Check dependencies for some node in the AST in the form ([reads], [writes]).
+        Tries to calculate markings for some node in the AST in the form ([reads], [writes], visible, breaks).
 
         Raises TypeError if the AST node cannot be recognised.
 
         """
 
         try:
-            method = getattr(self, "_depend_" + node.__class__.__name__)
+            method = getattr(self, "_marks_" + node.__class__.__name__)
         except AttributeError as exc:
             raise TypeError("Unknown AST node") from exc
         else:
             return method(node)
 
-    def _depends_list(self, node):
-        """Find dependencies for a list of statements."""
+    def _marks_list(self, node):
+        """Find markings for a list of statements."""
 
-        return ([], []) # TODO
+        return ([], [], True, True) # TODO
 
-    def _depends_Module(self, node):
-        return self.dependencies(node.body)
+    def _marks_Module(self, node):
+        return self.marks(node.body)
 
-    def _depends_Interactive(self, node):
-        return self.dependencies(node.body)
+    def _marks_Interactive(self, node):
+        return self.marks(node.body)
 
-    def _depends_Expression(self, node):
-        return self.dependencies(node.body)
+    def _marks_Expression(self, node):
+        return self.marks(node.body)
 
-    def _depends_Suite(self, node): # TODO - check what this is
-        return self.dependencies(node)
+    def _marks_Suite(self, node): # TODO - check what this is
+        return self.marks(node.body)
 
     # stmt
-    def _depends_FunctionDef(self, node): raise NotImplementedError
-    def _depends_ClassDef(self, node): raise NotImplementedError
-    def _depends_Return(self, node): raise NotImplementedError
+    #def _marks_FunctionDef(self, node): raise NotImplementedError
+    #def _marks_ClassDef(self, node): raise NotImplementedError
+    #def _marks_Return(self, node): raise NotImplementedError
 
-    def _depends_Delete(self, node): raise NotImplementedError
-    def _depends_Assign(self, node): raise NotImplementedError
-    def _depends_AugAssign(self, node): raise NotImplementedError
+    #def _marks_Delete(self, node): raise NotImplementedError
+    #def _marks_Assign(self, node): raise NotImplementedError
+    #def _marks_AugAssign(self, node): raise NotImplementedError
 
-    def _depends_For(self, node): raise NotImplementedError
-    def _depends_While(self, node): raise NotImplementedError
-    def _depends_If(self, node): raise NotImplementedError
-    def _depends_With(self, node): raise NotImplementedError
+    #def _marks_For(self, node): raise NotImplementedError
+    #def _marks_While(self, node): raise NotImplementedError
+    #def _marks_If(self, node): raise NotImplementedError
+    #def _marks_With(self, node): raise NotImplementedError
 
-    def _depends_Raise(self, node): raise NotImplementedError
-    def _depends_TryExcept(self, node): raise NotImplementedError
-    def _depends_TryFinally(self, node): raise NotImplementedError
-    def _depends_Assert(self, node): raise NotImplementedError
+    #def _marks_Raise(self, node): raise NotImplementedError
+    #def _marks_TryExcept(self, node): raise NotImplementedError
+    #def _marks_TryFinally(self, node): raise NotImplementedError
+    #def _marks_Assert(self, node): raise NotImplementedError
 
-    def _depends_Import(self, node): raise NotImplementedError
-    def _depends_ImportFrom(self, node): raise NotImplementedError
+    #def _marks_Import(self, node): raise NotImplementedError
+    #def _marks_ImportFrom(self, node): raise NotImplementedError
 
-    def _depends_Global(self, node): raise NotImplementedError
-    def _depends_Nonlocal(self, node): raise NotImplementedError
-    def _depends_Expr(self, node): raise NotImplementedError
-    def _depends_Pass(self, node): raise NotImplementedError
-    def _depends_Break(self, node): raise NotImplementedError
-    def _depends_Continue(self, node): raise NotImplementedError
+    #def _marks_Global(self, node): raise NotImplementedError
+    #def _marks_Nonlocal(self, node): raise NotImplementedError
+    #def _marks_Expr(self, node): raise NotImplementedError
+    #def _marks_Pass(self, node): raise NotImplementedError
+    #def _marks_Break(self, node): raise NotImplementedError
+    #def _marks_Continue(self, node): raise NotImplementedError
 
     # expr
-    def _depends_BoolOp(self, node): raise NotImplementedError
-    def _depends_BinOp(self, node): raise NotImplementedError
-    def _depends_UnaryOp(self, node): raise NotImplementedError
-    def _depends_Lambda(self, node): raise NotImplementedError
-    def _depends_IfExp(self, node): raise NotImplementedError
-    def _depends_Dict(self, node): raise NotImplementedError
-    def _depends_Set(self, node): raise NotImplementedError
-    def _depends_ListComp(self, node): raise NotImplementedError
-    def _depends_SetComp(self, node): raise NotImplementedError
-    def _depends_DictComp(self, node): raise NotImplementedError
-    def _depends_GeneratorExp(self, node): raise NotImplementedError
+    #def _marks_BoolOp(self, node): raise NotImplementedError
+    #def _marks_BinOp(self, node): raise NotImplementedError
+    #def _marks_UnaryOp(self, node): raise NotImplementedError
+    #def _marks_Lambda(self, node): raise NotImplementedError
+    #def _marks_IfExp(self, node): raise NotImplementedError
+    #def _marks_Dict(self, node): raise NotImplementedError
+    #def _marks_Set(self, node): raise NotImplementedError
+    #def _marks_ListComp(self, node): raise NotImplementedError
+    #def _marks_SetComp(self, node): raise NotImplementedError
+    #def _marks_DictComp(self, node): raise NotImplementedError
+    #def _marks_GeneratorExp(self, node): raise NotImplementedError
 
-    def _depends_Yield(self, node): raise NotImplementedError
+    #def _marks_Yield(self, node): raise NotImplementedError
 
-    def _depends_Compare(self, node): raise NotImplementedError
-    def _depends_Call(self, node): raise NotImplementedError
-    def _depends_Num(self, node): raise NotImplementedError
-    def _depends_Str(self, node): raise NotImplementedError
-    def _depends_Bytes(self, node): raise NotImplementedError
-    def _depends_Ellipsis(self, node): raise NotImplementedError
+    #def _marks_Compare(self, node): raise NotImplementedError
+    #def _marks_Call(self, node): raise NotImplementedError
+    #def _marks_Num(self, node): raise NotImplementedError
+    #def _marks_Str(self, node): raise NotImplementedError
+    #def _marks_Bytes(self, node): raise NotImplementedError
+    #def _marks_Ellipsis(self, node): raise NotImplementedError
 
-    def _depends_Attribute(self, node): raise NotImplementedError
-    def _depends_Subscript(self, node): raise NotImplementedError
-    def _depends_Starred(self, node): raise NotImplementedError
-    def _depends_Name(self, node): raise NotImplementedError
-    def _depends_List(self, node): raise NotImplementedError
-    def _depends_Tuple(self, node): raise NotImplementedError
+    #def _marks_Attribute(self, node): raise NotImplementedError
+    #def _marks_Subscript(self, node): raise NotImplementedError
+    #def _marks_Starred(self, node): raise NotImplementedError
+    #def _marks_Name(self, node): raise NotImplementedError
+    #def _marks_List(self, node): raise NotImplementedError
+    #def _marks_Tuple(self, node): raise NotImplementedError
 
     # expr_context
-    def _depends_Load(self, node): raise NotImplementedError
-    def _depends_Store(self, node): raise NotImplementedError
-    def _depends_Del(self, node): raise NotImplementedError
-    def _depends_AugLoad(self, node): raise NotImplementedError
-    def _depends_AugStore(self, node): raise NotImplementedError
-    def _depends_Param(self, node): raise NotImplementedError
+    #def _marks_Load(self, node): raise NotImplementedError
+    #def _marks_Store(self, node): raise NotImplementedError
+    #def _marks_Del(self, node): raise NotImplementedError
+    #def _marks_AugLoad(self, node): raise NotImplementedError
+    #def _marks_AugStore(self, node): raise NotImplementedError
+    #def _marks_Param(self, node): raise NotImplementedError
 
     # slice
-    def _depends_Slice(self, node): raise NotImplementedError
-    def _depends_ExtSlice(self, node): raise NotImplementedError
-    def _depends_Index(self, node): raise NotImplementedError
+    #def _marks_Slice(self, node): raise NotImplementedError
+    #def _marks_ExtSlice(self, node): raise NotImplementedError
+    #def _marks_Index(self, node): raise NotImplementedError
 
     # boolop
-    def _depends_And(self, node): raise NotImplementedError
-    def _depends_Or(self, node): raise NotImplementedError
+    #def _marks_And(self, node): raise NotImplementedError
+    #def _marks_Or(self, node): raise NotImplementedError
 
     # operator
-    def _depends_Add(self, node): raise NotImplementedError
-    def _depends_Sub(self, node): raise NotImplementedError
-    def _depends_Mult(self, node): raise NotImplementedError
-    def _depends_Div(self, node): raise NotImplementedError
-    def _depends_Mod(self, node): raise NotImplementedError
-    def _depends_Pow(self, node): raise NotImplementedError
-    def _depends_LShift(self, node): raise NotImplementedError
-    def _depends_RShift(self, node): raise NotImplementedError
-    def _depends_BitOr(self, node): raise NotImplementedError
-    def _depends_BitXor(self, node): raise NotImplementedError
-    def _depends_BitAnd(self, node): raise NotImplementedError
-    def _depends_FloorDiv(self, node): raise NotImplementedError
+    #def _marks_Add(self, node): raise NotImplementedError
+    #def _marks_Sub(self, node): raise NotImplementedError
+    #def _marks_Mult(self, node): raise NotImplementedError
+    #def _marks_Div(self, node): raise NotImplementedError
+    #def _marks_Mod(self, node): raise NotImplementedError
+    #def _marks_Pow(self, node): raise NotImplementedError
+    #def _marks_LShift(self, node): raise NotImplementedError
+    #def _marks_RShift(self, node): raise NotImplementedError
+    #def _marks_BitOr(self, node): raise NotImplementedError
+    #def _marks_BitXor(self, node): raise NotImplementedError
+    #def _marks_BitAnd(self, node): raise NotImplementedError
+    #def _marks_FloorDiv(self, node): raise NotImplementedError
 
     # unaryop
-    def _depends_Invert(self, node): raise NotImplementedError
-    def _depends_Not(self, node): raise NotImplementedError
-    def _depends_UAdd(self, node): raise NotImplementedError
-    def _depends_USub(self, node): raise NotImplementedError
+    #def _marks_Invert(self, node): raise NotImplementedError
+    #def _marks_Not(self, node): raise NotImplementedError
+    #def _marks_UAdd(self, node): raise NotImplementedError
+    #def _marks_USub(self, node): raise NotImplementedError
 
     # cmpop
-    def _depends_Eq(self, node): raise NotImplementedError
-    def _depends_NotEq(self, node): raise NotImplementedError
-    def _depends_Lt(self, node): raise NotImplementedError
-    def _depends_LtE(self, node): raise NotImplementedError
-    def _depends_Gt(self, node): raise NotImplementedError
-    def _depends_GtE(self, node): raise NotImplementedError
-    def _depends_Is(self, node): raise NotImplementedError
-    def _depends_IsNot(self, node): raise NotImplementedError
-    def _depends_In(self, node): raise NotImplementedError
-    def _depends_NotIn(self, node): raise NotImplementedError
+    #def _marks_Eq(self, node): raise NotImplementedError
+    #def _marks_NotEq(self, node): raise NotImplementedError
+    #def _marks_Lt(self, node): raise NotImplementedError
+    #def _marks_LtE(self, node): raise NotImplementedError
+    #def _marks_Gt(self, node): raise NotImplementedError
+    #def _marks_GtE(self, node): raise NotImplementedError
+    #def _marks_Is(self, node): raise NotImplementedError
+    #def _marks_IsNot(self, node): raise NotImplementedError
+    #def _marks_In(self, node): raise NotImplementedError
+    #def _marks_NotIn(self, node): raise NotImplementedError
 
     # comprehension
-    def _depends_comprehension(self, node): raise NotImplementedError
+    #def _marks_comprehension(self, node): raise NotImplementedError
 
     # excepthandler
-    def _depends_ExceptHandler(self, node): raise NotImplementedError
+    #def _marks_ExceptHandler(self, node): raise NotImplementedError
 
     # arguments
-    def _depends_arguments(self, node): raise NotImplementedError
+    #def _marks_arguments(self, node): raise NotImplementedError
 
     # arg
-    def _depends_arg(self, node): raise NotImplementedError
+    #def _marks_arg(self, node): raise NotImplementedError
 
     # keyword
-    def _depends_keyword(self, node): raise NotImplementedError
+    #def _marks_keyword(self, node): raise NotImplementedError
 
     # alias
-    def _depends_alias(self, node): raise NotImplementedError
+    #def _marks_alias(self, node): raise NotImplementedError
 
