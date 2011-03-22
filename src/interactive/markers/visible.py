@@ -11,14 +11,14 @@ class Marker(markcmd.AbstractMarker):
 
     def parameters(self):
         return {
-            "choices": ["invisible", "visible"]
+            "choices": ["yes", "no"]
         }
 
     def update(self, node, arg):
         try:
             vis = {
-                "visible": True,
-                "invisible": False
+                "yes": True,
+                "no": False
             }[arg]
         except KeyError:
             return False # Unrecognised arg
