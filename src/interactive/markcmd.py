@@ -36,73 +36,82 @@ class MarkCommand(commandui.Command):
         self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
 
-    def run(self, args):
-        """Mark the current AST node with extra information."""
+    def _get_node(self):
+        """Get current node, print errors and return the node or None."""
 
         self._related_explorecmd._ensure_node_sync()
-
         node = self._related_explorecmd.ast_current
 
         if node == None:
             print("There is no AST to mark. Have you create one with the parse command?")
+            return None
+
+        if not isinstance(node, ast.AST):
+            print("This node does not support markings.")
+            return None
+
+        return node        
+
+    def run(self, args):
+        """Mark the current AST node with extra information."""
+
+        node = self._get_node()
+        if node == None:
             return False
 
-        newmarkings = vars(args)
-        newmarkings = {
-            mark: newmarkings[mark]
-            for mark in newmarkings
-            if newmarkings[mark] != None
-        }
+        params = vars(args)
+        emptyargs = True
+        for param in params:
+            if params[param] != None:
+                try:
+                    if self.marks[param].update(node, params[param]):
+                        emptyargs = False
+                        self._related_parsecmd.ast.augmented = True
+                except KeyError:
+                    pass # Unrecognised argument, don't expect this to happen
 
-        if "reads" in newmarkings:
-            newmarkings["reads"] = self.parseRefs(newmarkings["reads"], "reads")
-        if "writes" in newmarkings:
-            newmarkings["writes"] = self.parseRefs(newmarkings["writes"], "writes")
-
-        if newmarkings:
-            self._update_markings(newmarkings)
-        else:
+        if emptyargs:
             self._show_markings()
 
-    def _get_markings(self):
-        """Get the markings set on the current node."""
+#        newmarkings = {
+#            mark: newmarkings[mark]
+#            for mark in newmarkings
+#            if newmarkings[mark] != None
+#        }
 
-        node = self._related_explorecmd.ast_current
-        return node._markings if hasattr(node, "_markings") else {}
+#        if "reads" in newmarkings:
+#            newmarkings["reads"] = self.parseRefs(newmarkings["reads"], "reads")
+#        if "writes" in newmarkings:
+#            newmarkings["writes"] = self.parseRefs(newmarkings["writes"], "writes")
+#
+#        if newmarkings:
+#            self._update_markings(newmarkings)
+#        else:
+#            self._show_markings()
 
-    def _show_markings(self, markings=None, indent=""):
+    def _show_markings(self): #, markings=None, indent=""):
         """Print out the markings for the current node."""
 
-        if markings == None:
-            print("Markings for current node:")
-            return self._show_markings(self._get_markings(), "    ")
+        node = self._get_node()
 
-        for mark in markings:
-            print(indent + mark + ": ", end="")
-            if isinstance(markings[mark], dict):
-                print()
-                self._show_markings(markings[mark], indent+"    ")
-            else:
-                print(markings[mark])
-
-    def _update_markings(self, marks):
-        """Update the current node's markings with the values in the marks dict."""
-
-        node = self._related_explorecmd.ast_current
-
-        if isinstance(node, list):
-            print("This node does not support markings.")
+        if node == None:
             return False
 
-        if not hasattr(node, "_markings"):
-            node._markings = {}
-            self._related_parsecmd.ast.augmented = True
-        
-        node._markings.update(marks)
+        print("Markings for current node:")
+        for marker in self.marks:
+            self.marks[marker].show(node, "  " + marker.title() + " - ")
 
-        if marks:
-            self._related_parsecmd.ast.augmented = True
+#        if markings == None:
+#            print("Markings for current node:")
+#            return self._show_markings(self._get_markings(), "    ")
 
+#        for mark in markings:
+#            print(indent + mark + ": ", end="")
+#            if isinstance(markings[mark], dict):
+#                print()
+#                self._show_markings(markings[mark], indent+"    ")
+#            else:
+#                print(markings[mark])
 
     def parseRefs(self, changes, mark):
         """
@@ -173,17 +182,9 @@ class AbstractMarker(metaclass=abc.ABCMeta):
         """Get the necessary parameters for the argument parser."""
 
     @abc.abstractmethod
-    def addCommand(self, args):
-        """Add a command to the argument parser given for this marking."""
+    def update(self, node, arg):
+        """Update the markings based on the given arguments. Return whether successful."""
 
     @abc.abstractmethod
-    def marked(self, node):
-        """Returns whether or not a node has been marked."""
-
-    @abc.abstractmethod
-    def update(self, node, opts):
-        """Update the markings based on the given options."""
-
-    @abc.abstractmethod
-    def show(self, node):
-        """Print information about this type of marking."""
+    def show(self, node, title):
+        """Print information about this type of marking, beginning with title."""
