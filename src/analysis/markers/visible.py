@@ -5,11 +5,11 @@ Keeps track of visible markings on an ast node.
 
 from . import basic
 
-class VisibleMarker(BasicMarker):
+class VisibleMarker(basic.BasicMarker):
     """Marks and shows markings for node visibility."""
 
     def __init__(self, node):
-        BasicMarker.__init__(self, "visible", node)
+        basic.BasicMarker.__init__(self, "visible", node)
 
     def isVisible(self):
         """Check if the node is visible. Use safe default if unsure."""

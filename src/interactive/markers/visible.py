@@ -3,6 +3,7 @@ Marker plugin for visibility.
 
 """
 
+from analysis.markers import visible
 from .. import markcmd
 
 class Marker(markcmd.AbstractMarker):
@@ -13,15 +14,20 @@ class Marker(markcmd.AbstractMarker):
             "choices": ["invisible", "visible"]
         }
 
-    def addCommand(self, args):
-        """Add a command to the argument parser given for this marking."""
+    def update(self, node, arg):
+        try:
+            vis = {
+                "visible": True,
+                "invisible": False
+            }[arg]
+        except KeyError:
+            return False # Unrecognised arg
+        else:
+            marker = visible.VisibleMarker(node)
+            return marker.setVisible(vis)
 
-    def marked(self, node):
-        """Returns whether or not a node has been marked."""
+    def show(self, node, title):
+        marker = visible.VisibleMarker(node)
 
-    def update(self, node, opts):
-        """Update the markings based on the given options."""
-
-    def show(self, node):
-        """Print information about this type of marking."""
-
+        if marker.is_marked():
+            print(title + ("Yes" if marker.isVisible() else "No"))

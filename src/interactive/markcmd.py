@@ -73,22 +73,6 @@ class MarkCommand(commandui.Command):
         if emptyargs:
             self._show_markings()
 
-#        newmarkings = {
-#            mark: newmarkings[mark]
-#            for mark in newmarkings
-#            if newmarkings[mark] != None
-#        }
-
-#        if "reads" in newmarkings:
-#            newmarkings["reads"] = self.parseRefs(newmarkings["reads"], "reads")
-#        if "writes" in newmarkings:
-#            newmarkings["writes"] = self.parseRefs(newmarkings["writes"], "writes")
-#
-#        if newmarkings:
-#            self._update_markings(newmarkings)
-#        else:
-#            self._show_markings()
-
     def _show_markings(self): #, markings=None, indent=""):
         """Print out the markings for the current node."""
 
@@ -100,18 +84,6 @@ class MarkCommand(commandui.Command):
         print("Markings for current node:")
         for marker in self.marks:
             self.marks[marker].show(node, "  " + marker.title() + " - ")
-
-#        if markings == None:
-#            print("Markings for current node:")
-#            return self._show_markings(self._get_markings(), "    ")
-
-#        for mark in markings:
-#            print(indent + mark + ": ", end="")
-#            if isinstance(markings[mark], dict):
-#                print()
-#                self._show_markings(markings[mark], indent+"    ")
-#            else:
-#                print(markings[mark])
 
     def parseRefs(self, changes, mark):
         """

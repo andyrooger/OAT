@@ -23,7 +23,7 @@ class BasicMarker():
     def _get_markings(self, create : "Should we add markings if possible?" = False):
         """Get markings if the node has them, or None."""
 
-        if not self._supports_markings():
+        if not self.supports_markings():
             return None
 
         try:
@@ -41,7 +41,7 @@ class BasicMarker():
         marks = self._get_markings()
         return marks != None and self.mark in marks
 
-    def _get_mark(self, default=None)
+    def _get_mark(self, default=None):
         """Get the value of our marking, or the default."""
 
         marks = self._get_markings()
@@ -53,4 +53,4 @@ class BasicMarker():
     def _set_mark(self, val):
         """Set the value of our marking."""
 
-        self._get_markings(true)[self.mark] = val
+        self._get_markings(True)[self.mark] = val

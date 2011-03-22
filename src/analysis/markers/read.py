@@ -5,11 +5,11 @@ Keeps track of names this ast node reads.
 
 from . import basic
 
-class ReadMarker(BasicMarker):
+class ReadMarker(basic.BasicMarker):
     """Marks and shows markings for node reads."""
 
     def __init__(self, node):
-        BasicMarker.__init__(self, "reads", node)
+        basic.BasicMarker.__init__(self, "reads", node)
 
     def reads(self):
         """Get a dictionary of the variables the node reads. Use safe default if unsure."""
@@ -19,10 +19,7 @@ class ReadMarker(BasicMarker):
     def _add_variable(self, variable, type):
         """Add read variable to our node. Return whether we were successful."""
         
-        marks = self._get_markings(True)
-        if marks == None:
-            return False
-
+        marks = self.reads()
         marks[variable] = type
         return self._set_mark(marks)
     
@@ -50,10 +47,7 @@ class ReadMarker(BasicMarker):
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self._get_markings(True)
-        if marks == None:
-            return False
-
+        marks = self.reads()
         try:
             del marks[variable]
         except KeyError:

@@ -5,11 +5,11 @@ Keeps track of flow breakers on an ast node.
 
 from . import basic
 
-class BreakMarker(BasicMarker):
+class BreakMarker(basic.BasicMarker):
     """Marks and shows markings for flow breaking nodes."""
 
     def __init__(self, node):
-        BasicMarker.__init__(self, "breaks", node)
+        basic.BasicMarker.__init__(self, "breaks", node)
 
     def canBreak(self):
         """Check if the node can break from normal flow. Use safe default if unsure."""
@@ -24,3 +24,4 @@ class BreakMarker(BasicMarker):
             return True
 
         return False
+

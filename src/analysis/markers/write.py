@@ -5,11 +5,11 @@ Keeps track of names this ast node writes to.
 
 from . import basic
 
-class WriteMarker(BasicMarker):
+class WriteMarker(basic.BasicMarker):
     """Marks and shows markings for node writes."""
 
     def __init__(self, node):
-        BasicMarker.__init__(self, "writes", node)
+        basic.BasicMarker.__init__(self, "writes", node)
 
     def writes(self):
         """Get a dictionary of the variables the node writes. Use safe default if unsure."""
@@ -19,10 +19,7 @@ class WriteMarker(BasicMarker):
     def _add_variable(self, variable, type):
         """Add written variable to our node. Return whether we were successful."""
         
-        marks = self._get_markings(True)
-        if marks == None:
-            return False
-
+        marks = self.writes()
         marks[variable] = type
         return self._set_mark(marks)
     
@@ -50,9 +47,7 @@ class WriteMarker(BasicMarker):
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self._get_markings(True)
-        if marks == None:
-            return False
+        marks = self.writes()
 
         try:
             del marks[variable]
