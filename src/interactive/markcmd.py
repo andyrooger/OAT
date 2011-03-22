@@ -4,6 +4,9 @@ Mark AST nodes with extra information from the console.
 """
 
 import ast
+import abc
+from util import pluginfinder
+from . import markers
 
 from . import commandui
 
@@ -13,14 +16,22 @@ class MarkCommand(commandui.Command):
     def __init__(self, parsecmd, explorecmd):
         commandui.Command.__init__(self, "mark")
 
-        self._opts.add_argument("-v", "--visible", choices=["invisible", "visible"],
-                                help="Is this a visible or invisible statement? (i.e. does it perform actions visible to the outside world?")
-        self._opts.add_argument("-b", "--breaks", choices=["yes", "no"],
-                                help="Can this statement break from a linear flow?")
-        self._opts.add_argument("-r", "--reads", nargs="+", metavar="var",
-                                help="Choose all the variables this node reads. Use a(g|n|l|u)-variable to add or r-variable to remove a global, nonlocal, local, or unknown variable.")
-        self._opts.add_argument("-w", "--writes", nargs="+", metavar="var",
-                                help="Choose all the variables this node writes. Use a(g|n|l|u)-variable to add or r-variable to remove a global, nonlocal, local, or unknown variable.")
+        plugins = pluginfinder.PluginFinder(markers).getPlugins()
+        self.marks = {}
+
+        for plugin in plugins:
+            try:
+                marker = plugin.Marker()
+                if isinstance(marker, AbstractMarker):
+                    name = plugin.__name__.rsplit(".", 1)[-1]
+                    self.marks[name] = marker
+            except AttributeError:
+                pass # Not a valid plugin
+
+        for marker in self.marks:
+            self._opts.add_argument("-"+marker[0], "--"+marker,
+                                    help=self.marks[marker].__doc__,
+                                    **self.marks[marker].parameters())
 
         self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
@@ -152,3 +163,27 @@ class MarkCommand(commandui.Command):
                     continue
 
         return refs
+
+
+class AbstractMarker(metaclass=abc.ABCMeta):
+    """Base class for creating markers."""
+
+    @abc.abstractmethod
+    def parameters(self):
+        """Get the necessary parameters for the argument parser."""
+
+    @abc.abstractmethod
+    def addCommand(self, args):
+        """Add a command to the argument parser given for this marking."""
+
+    @abc.abstractmethod
+    def marked(self, node):
+        """Returns whether or not a node has been marked."""
+
+    @abc.abstractmethod
+    def update(self, node, opts):
+        """Update the markings based on the given options."""
+
+    @abc.abstractmethod
+    def show(self, node):
+        """Print information about this type of marking."""
