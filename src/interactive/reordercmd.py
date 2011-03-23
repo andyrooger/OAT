@@ -12,6 +12,11 @@ from analysis import reorder
 from writer import sourcewriter
 from writer import prettywriter
 
+from analysis.markers import breaks
+from analysis.markers import visible
+from analysis.markers import read
+from analysis.markers import write
+
 class ReorderCommand(commandui.Command):
     """Reorder statement blocks from the console."""
 
@@ -135,6 +140,7 @@ class ReorderCommand(commandui.Command):
     def _print_block(self, statements, perm, disp, markings=False):
         """Print a block of statements in a particular permutation."""
 
+
         if disp == "index":
             for i in perm:
                 print(str(i) + " - ", end="")
@@ -142,6 +148,9 @@ class ReorderCommand(commandui.Command):
 
         else:
             for i in perm:
+                break_marker = breaks.BreakMarker(statements[i])
+                vis_marker = visible.VisibleMarker(statements[i])
+
                 if disp == "type":
                      print(str(i) + ": " + statements[i].__class__.__name__, end="")
                 elif disp == "code":
@@ -149,13 +158,13 @@ class ReorderCommand(commandui.Command):
                      sourcewriter.printSource(statements[i], prettywriter.PrettyWriter)
 
                 if markings:
-                    try:
-                        print(" - Visible: " + statements[i]._markings['visible'], end=" ")
-                    except (KeyError, AttributeError):
+                    if vis_marker.is_marked():
+                        print(" - Visible: " + ("Yes" if vis_marker.isVisible() else "No"), end=" ")
+                    else:
                         print(" - Visible: ?", end=" ")
-                    try:
-                        print(" - Breaking: " + statements[i]._markings['breaks'], end=" ")
-                    except (KeyError, AttributeError):
+                    if break_marker.is_marked():
+                        print(" - Breaking: " + ("Yes" if break_marker.canBreak() else "No"), end=" ")
+                    else:
                         print(" - Breaking: ?", end=" ")
                 if disp == "type" or markings:
                     print()
@@ -168,30 +177,36 @@ class ReorderCommand(commandui.Command):
             return
 
         for stat in statements:
-            if not hasattr(stat, "_markings"):
-                stat._markings = {}
+            break_marker = breaks.BreakMarker(stat)
+            vis_marker = visible.VisibleMarker(stat)
+            read_marker = read.ReadMarker(stat)
+            write_marker = write.WriteMarker(stat)
 
-            if "breaks" not in stat._markings:
+            if not break_marker.is_marked():
                 if how == "safe":
-                    stat._markings['breaks'] = "yes"
+                    break_marker.addBreak("except")
+                    break_marker.addBreak("return")
+                    break_marker.addBreak("break")
+                    break_marker.addBreak("continue")
+                    break_marker.addBreak("yield")
                 elif how == "default":
-                    stat._markings['breaks'] = "no"
+                    break_marker.clearBreaks()
                 elif how == "auto": pass
                     #stat._markings['breaks'] = 
 
-            if "visible" not in stat._markings:
+            if not vis_marker.is_marked():
                 if how == "safe":
-                    stat._markings['visible'] = "visible"
+                    vis_marker.setVisible(True)
                 elif how == "default":
-                    stat._markings['visible'] = "invisible"
+                    vis_marker.setVisible(False)
                 elif how == "auto": pass
                     #stat._markings['visible'] = 
         # TODO
 
-            if "reads" not in stat._markings:
-                stat._markings['reads'] = {}
-            if "writes" not in stat._markings:
-                stat._markings['writes'] = {}
+            if not read_marker.is_marked():
+                read_marker.clear()
+            if not write_marker.is_marked():
+                write_marker.clear()
 
         print("Markings have been created, you will need to check over them yourself - especially the read and write references.")
 

@@ -25,6 +25,12 @@ class BreakMarker(basic.BasicMarker):
 
         return bool(breakers) # True if there are some
 
+    def clearBreaks(self):
+        """Clear all types of break."""
+
+        self._set_mark(set())
+        return True
+
     def addBreak(self, type):
         """Add a possible break from normal flow. Return whether we were successful."""
 

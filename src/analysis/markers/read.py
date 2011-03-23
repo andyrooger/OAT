@@ -22,7 +22,11 @@ class ReadMarker(basic.BasicMarker):
         marks = self.reads()
         marks[variable] = type
         return self._set_mark(marks)
-    
+
+    def clear(self):
+        """Clear the known variables."""
+
+        self._set_mark({})
 
     def addUnknown(self, variable):
         """Add a variable of unknown scope."""
