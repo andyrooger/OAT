@@ -7,27 +7,38 @@ from analysis.markers import breaks
 from .. import markcmd
 
 class Marker(markcmd.AbstractMarker):
-    """Can this statement break from a linear flow?"""
+    """How can this statement break from a linear flow? 'clear' clears the following type."""
 
     def parameters(self):
         return {
-            "choices": ["yes", "no"]
+            "nargs": "+",
+            "choices": ["except", "return", "break", "continue", "yield", "clear"],
+            "metavar": "TYPE"
         }
 
     def update(self, node, arg):
-        try:
-            br = {
-                "yes": True,
-                "no": False
-            }[arg]
-        except KeyError:
-            return False # Unrecognised arg
-        else:
-            marker = breaks.BreakMarker(node)
-            return marker.setBreaks(br)
+        success = False
+        clear = False
+
+        marker = breaks.BreakMarker(node)
+
+        for change in arg:
+            if change == "clear":
+                clear = True
+                continue
+            if clear:
+                success = marker.removeBreak(change) or success
+                clear = False
+            else:
+                success = marker.addBreak(change) or success
 
     def show(self, node, title):
         marker = breaks.BreakMarker(node)
 
         if marker.is_marked():
-            print(title + ("Yes" if marker.canBreak() else "No"))
+            print(title, end="")
+            if marker.canBreak():
+                breakers = list(marker.breakers())
+                print("Yes (" + ", ".join(breakers) + ")")
+            else:
+                print("No")

@@ -11,17 +11,47 @@ class BreakMarker(basic.BasicMarker):
     def __init__(self, node):
         basic.BasicMarker.__init__(self, "breaks", node)
 
+    def breakers(self):
+        """Grab a list of the types of breakers."""
+
+        return self._get_mark(set())
+
     def canBreak(self):
         """Check if the node can break from normal flow. Use safe default if unsure."""
 
-        return self._get_mark(True)
-
-    def setBreaks(self, breaks):
-        """Set whether this node can break from normal flow. Return whether we were successful."""
-
-        if self.supports_markings():
-            self._set_mark(breaks)
+        breakers = self._get_mark(None)
+        if breakers == None:
             return True
 
-        return False
+        return bool(breakers) # True if there are some
 
+    def addBreak(self, type):
+        """Add a possible break from normal flow. Return whether we were successful."""
+
+        if type not in ["except", "return", "break", "continue", "yield"]:
+            return False
+
+        if not self.supports_markings():
+            return False
+
+        breakers = self.breakers()
+        breakers.add(type)
+        self._set_mark(breakers)
+        return True
+
+    def removeBreak(self, type):
+        """Remove a break type from the possibilities. Return whether we were successful."""
+
+        if type not in ["except", "return", "break", "continue", "yield"]:
+            return False
+
+        if not self.supports_markings():
+            return False
+
+        breakers = self.breakers()
+        try:
+            breakers.remove(type)
+        except KeyError:
+            pass
+        self._set_mark(breakers)
+        return True
