@@ -144,43 +144,39 @@ class AutoMarker:
         result = {}
         for stmt in node.body:
             marks = self.resolve_marks(stmt, visible, breaks)
-            if visible and "visible" in marks:
+            if visible:
                 result["visible"] |= marks["visible"]
-            if breaks and "breaks" in marks:
+            if breaks:
                 result["breaks"].update(marks["breaks"])
 
         return result
 
     def _marks_Module(self, node, visible, breaks):
         marks = self.resolve_marks(node.body, visible, breaks).copy()
-        if breaks and "breaks" in marks:
+        if breaks and marks["breaks"]:
             # replace any break with an exception
-            if marks["breaks"]:
-                marks["breaks"] = {"except"}
+            marks["breaks"] = {"except"}
         return marks
 
     def _marks_Interactive(self, node, visible, breaks):
         marks = self.resolve_marks(node.body, visible, breaks).copy()
-        if breaks and "breaks" in marks:
+        if breaks and marks["breaks"]:
             # replace any break with an exception
-            if marks["breaks"]:
-                marks["breaks"] = {"except"}
+            marks["breaks"] = {"except"}
         return marks
 
     def _marks_Expression(self, node, visible, breaks):
         marks = self.resolve_marks(node.body, visible, breaks).copy()
-        if breaks and "breaks" in marks:
+        if breaks and marks["breaks"]:
             # replace any break with an exception
-            if marks["breaks"]:
-                marks["breaks"] = {"except"}
+            marks["breaks"] = {"except"}
         return marks
 
     def _marks_Suite(self, node, visible, breaks): # TODO - check what this is
         marks = self.resolve_marks(node.body, visible, breaks).copy()
-        if breaks and "breaks" in marks:
+        if breaks and marks["breaks"]:
             # replace any break with an exception
-            if marks["breaks"]:
-                marks["breaks"] = {"except"}
+            marks["breaks"] = {"except"}
         return marks
 
     # stmt
@@ -200,12 +196,37 @@ class AutoMarker:
                 pass # No breaks marking or particular breaks not found
             return marks
 
-    #def _marks_ClassDef(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Return(self, node, visible, breaks): raise NotImplementedError
+    def _marks_ClassDef(self, node, visible, breaks):
+        if node.decorator_list: # Translate for decorators
+            cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
+            name = ast.Name(node.name, ast.Load())
+            calls = name
+            for dec in node.decorator_list.reverse():
+                calls = ast.Call(dec, [calls], [], None, None)
+            return self.resolve_marks([cls, ast.Assign([name], calls)])
+        else:
+            return self.resolve_marks(node.body)
 
-    #def _marks_Delete(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Assign(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_AugAssign(self, node, visible, breaks): raise NotImplementedError
+
+    def _marks_Return(self, node, visible, breaks):
+        marks = set() if node.value == None else self.resolve_marks(node.value).copy()
+        if breaks:
+            marks["breaks"].add("return")
+        return marks
+
+    def _marks_Delete(self, node, visible, breaks):
+        marks = self.resolve_marks(node.targets, visible, breaks).copy()
+        if breaks: # possible NameError
+            marks["breaks"].add("except")
+        return marks
+
+    def _marks_Assign(self, node, visible, breaks):
+        # TODO - think about NamError or AttributError
+        return self.resolve_marks(node.targets + [node.value], visible, breaks)
+        
+    def _marks_AugAssign(self, node, visible, breaks):
+        trans = ast.Assign([node.target], ast.BinOp(node.target, node.op, node.value)) # Transform to a binary op
+        return self.resolve_marks(trans, visible, breaks)
 
     #def _marks_For(self, node, visible, breaks): raise NotImplementedError
     #def _marks_While(self, node, visible, breaks): raise NotImplementedError
