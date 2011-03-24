@@ -17,8 +17,8 @@ class AutoMarker:
                  res_order : "The resolution order for calculating markings.",
                  mark : "Should we mark the nodes as we work?" = True,
                  verbose = False,
-                 set_visible : "Function to set defaults on a visibility marker." = None,
-                 set_break : "Function to set defaults on a break marker." = None):
+                 def_visible : "Function to get defaults from a visibility marker." = None,
+                 def_break : "Function to get defaults from a break marker." = None):
         order_allowed = set(["mark", "calc", "user"])
 
         for res in res_order:
@@ -29,13 +29,13 @@ class AutoMarker:
 
         self.res_order = res_order
         self.verbose = verbose
-        self.set_visible = set_visible
-        self.set_breaks = set_breaks
+        self.def_visible = def_visible
+        self.def_breaks = def_breaks
 
-        if self.set_visible == None:
-            self.set_visible = (lambda m: m.setVisible(m.isVisible()))
-        if self.set_breaks == None:
-            self.set_breaks = (lambda m: m.setBreaks(m.breakers()))
+        if self.def_visible == None:
+            self.def_visible = (lambda m: return m.isVisible())
+        if self.def_breaks == None:
+            self.def_breaks = (lambda m: return m.breakers())
 
     def resolve_marks(self, node, visible = False, breaks = False):
         """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
@@ -131,17 +131,25 @@ class AutoMarker:
         result = {}
         if visible:
             m = analysis.markers.visible.VisibleMarker(node)
-            result["visible"] = self.set_visible(m)
+            result["visible"] = self.def_visible(m)
         if breaks:
             m = analysis.markers.breaks.BreakMarker(node)
-            result["breaks"] = self.set_breaks(m)
+            result["breaks"] = self.def_breaks(m)
 
         return result
 
     def _marks_list(self, node, visible, breaks):
         """Find markings for a list of statements."""
 
+        if not node.body:
+            return {}
+
         result = {}
+        if visible:
+            result["visible"] = False # Don't affect for loop
+        if breaks:
+            result["breaks"] = set()
+
         for stmt in node.body:
             marks = self.resolve_marks(stmt, visible, breaks)
             if visible:
@@ -183,55 +191,74 @@ class AutoMarker:
     def _marks_FunctionDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
             func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
-            name = ast.Name(node.name, ast.Load())
-            calls = name
+            assname = ast.Name(node.name, ast.Store())
+            calls = ast.Name(node.name, ast.Load())
             for dec in node.decorator_list.reverse():
                 calls = ast.Call(dec, [calls], [], None, None)
-            return self.resolve_marks([func, ast.Assign([name], calls)])
+            return self.resolve_marks([func, ast.Assign([assname], calls)])
         else:
             marks = self.resolve_marks(node.body, visible, breaks).copy()
-            try:
-                del marks["breaks"]["return"]
-                del marks["breaks"]["yield"]
-            except KeyError:
-                pass # No breaks marking or particular breaks not found
+            if breaks:
+                marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
             return marks
 
     def _marks_ClassDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
             cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
-            name = ast.Name(node.name, ast.Load())
-            calls = name
+            assname = ast.Name(node.name, ast.Store())
+            calls = ast.Name(node.name, ast.Load())
             for dec in node.decorator_list.reverse():
                 calls = ast.Call(dec, [calls], [], None, None)
-            return self.resolve_marks([cls, ast.Assign([name], calls)])
+            return self.resolve_marks([cls, ast.Assign([assname], calls)])
         else:
             return self.resolve_marks(node.body)
 
 
     def _marks_Return(self, node, visible, breaks):
-        marks = set() if node.value == None else self.resolve_marks(node.value).copy()
+        marks = {} if node.value == None else self.resolve_marks(node.value).copy()
         if breaks:
+            marks["breaks"] = marks["breaks"].copy()
             marks["breaks"].add("return")
         return marks
 
     def _marks_Delete(self, node, visible, breaks):
-        marks = self.resolve_marks(node.targets, visible, breaks).copy()
-        if breaks: # possible NameError
-            marks["breaks"].add("except")
+        marks = self.resolve_marks(node.targets, visible, breaks)
+        # NameError covered in ctx
         return marks
 
     def _marks_Assign(self, node, visible, breaks):
-        # TODO - think about NamError or AttributError
         return self.resolve_marks(node.targets + [node.value], visible, breaks)
         
     def _marks_AugAssign(self, node, visible, breaks):
         trans = ast.Assign([node.target], ast.BinOp(node.target, node.op, node.value)) # Transform to a binary op
         return self.resolve_marks(trans, visible, breaks)
 
-    #def _marks_For(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_While(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_If(self, node, visible, breaks): raise NotImplementedError
+    def _marks_For(self, node, visible, breaks):
+        #for-else has same vis/break as doing for then body of else
+        if node.orelse:
+            n_for = ast.For(node.target, node.iter, node.body, [])
+            return self.resolve_marks([n_for] + node.orelse, visible, breaks)
+        else:
+            # same vis/break as iter followed by body (break/continue) cannot be present in iter
+            marks = self.resolve_marks([node.iter] + node.body, visible, breaks).copy()
+            if breaks:
+                marks["breaks"] = {b for b in marks["breaks"] if b not in ["break", "continue"]}
+            return marks
+            
+
+    def _marks_While(self, node, visible, breaks):
+        # similar to for
+        if node.orelse:
+            n_while = ast.While(node.test, node.body, [])
+            return self.resolve_marks([n_while] + node.orelse, visible, breaks)
+        else:
+            # same vis/break as test followed by body (break/continue) cannot be present in test
+            marks = self.resolve_marks([node.test] + node.body, visible, breaks).copy()
+            if breaks:
+                marks["breaks"] = {b for b in marks["breaks"] if b not in ["break", "continue"]}
+            return marks
+    
+    #def _marks_If(self, node, visible, breaks):
     #def _marks_With(self, node, visible, breaks): raise NotImplementedError
 
     #def _marks_Raise(self, node, visible, breaks): raise NotImplementedError
