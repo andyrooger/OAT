@@ -192,6 +192,7 @@ class AutoMarker:
             marks = self.resolve_marks(node.body, visible, breaks).copy()
             try:
                 del marks["breaks"]["return"]
+                del marks["breaks"]["yield"]
             except KeyError:
                 pass # No breaks marking or particular breaks not found
             return marks
