@@ -138,6 +138,15 @@ class AutoMarker:
 
         return result
 
+    def _combine_marks(self, marks, addition, visible, breaks):
+        """Combine markings as the list would."""
+
+        if visible:
+            marks["visible"] |= addition["visible"]
+        if breaks:
+            marks["breaks"].update(addition["breaks"])
+        
+
     def _marks_list(self, node, visible, breaks):
         """Find markings for a list of statements."""
 
@@ -152,10 +161,7 @@ class AutoMarker:
 
         for stmt in node.body:
             marks = self.resolve_marks(stmt, visible, breaks)
-            if visible:
-                result["visible"] |= marks["visible"]
-            if breaks:
-                result["breaks"].update(marks["breaks"])
+            self._combine_marks(result, marks, visible, breaks)
 
         return result
 
@@ -197,10 +203,16 @@ class AutoMarker:
                 calls = ast.Call(dec, [calls], [], None, None)
             return self.resolve_marks([func, ast.Assign([assname], calls)])
         else:
-            marks = self.resolve_marks(node.body, visible, breaks).copy()
+            # Commented is for the function body, this is not executed when the function is defined
+            #marks = self.resolve_marks(node.body, visible, breaks).copy()
+            #if breaks:
+            #    marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
+            #return marks
+            result = {}
+            if visible:
+                result["visible"] = False
             if breaks:
-                marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
-            return marks
+                result["breaks"] = set()
 
     def _marks_ClassDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
@@ -234,7 +246,7 @@ class AutoMarker:
         return self.resolve_marks(trans, visible, breaks)
 
     def _marks_For(self, node, visible, breaks):
-        #for-else has same vis/break as doing for then body of else
+        # for-else has same vis/break as doing for then body of else
         if node.orelse:
             n_for = ast.For(node.target, node.iter, node.body, [])
             return self.resolve_marks([n_for] + node.orelse, visible, breaks)
@@ -289,8 +301,26 @@ class AutoMarker:
             marks["breaks"].add("except")
         return marks
 
-    #def _marks_TryExcept(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_TryFinally(self, node, visible, breaks): raise NotImplementedError
+    def _marks_TryExcept(self, node, visible, breaks):
+        # visible/break same as running body, running handlers, running else
+        # Will not catch anything unless the handler is straight except:
+        # This is because it is hard to match type for a name
+
+        # Look for straight except:
+        exc = False
+        for handler in node.handlers:
+            exc |= (handler.type == None)
+        marks = self.resolve_marks(node.body, visible, breaks).copy()
+        if breaks and exc:
+            marks["breaks"] = {b for b in marks["breaks"] if b != "except"}
+
+        others = self.resolve_marks(node.handlers + node.orelse, visible, breaks) # running all handlers and else
+        return self._combine_marks(marks, others, visible, breaks)
+
+    def _marks_TryFinally(self, node, visible, breaks):
+        # Same as running both try and finally body
+        return self.resolve_marks(node.body + node.finalbody, visible, breaks)
+
     #def _marks_Assert(self, node, visible, breaks): raise NotImplementedError
 
     #def _marks_Import(self, node, visible, breaks): raise NotImplementedError
