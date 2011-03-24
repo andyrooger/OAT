@@ -3,6 +3,8 @@ Contains code for auto-marking AST nodes.
 
 """
 
+import ast
+
 import analysis.markers.breaks
 import analysis.markers.visible
 from writer import sourcewriter
@@ -36,7 +38,7 @@ class AutoMarker:
             self.set_breaks = (lambda m: m.setBreaks(m.breakers()))
 
     def resolve_marks(self, node, visible = False, breaks = False):
-        """Resolve markings for a given node based on the given resolution order."""
+        """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
 
         result = {}
 
@@ -136,16 +138,68 @@ class AutoMarker:
 
         return result
 
-    #def _marks_list(self, node, visible, breaks):
-    #    """Find markings for a list of statements."""
+    def _marks_list(self, node, visible, breaks):
+        """Find markings for a list of statements."""
 
-    #def _marks_Module(self, node, visible, breaks):
-    #def _marks_Interactive(self, node, visible, breaks):
-    #def _marks_Expression(self, node, visible, breaks):
-    #def _marks_Suite(self, node, visible, breaks): # TODO - check what this is
+        result = {}
+        for stmt in node.body:
+            marks = self.resolve_marks(stmt, visible, breaks)
+            if visible and "visible" in marks:
+                result["visible"] |= marks["visible"]
+            if breaks and "breaks" in marks:
+                result["breaks"].update(marks["breaks"])
+
+        return result
+
+    def _marks_Module(self, node, visible, breaks):
+        marks = self.resolve_marks(node.body, visible, breaks).copy()
+        if breaks and "breaks" in marks:
+            # replace any break with an exception
+            if marks["breaks"]:
+                marks["breaks"] = {"except"}
+        return marks
+
+    def _marks_Interactive(self, node, visible, breaks):
+        marks = self.resolve_marks(node.body, visible, breaks).copy()
+        if breaks and "breaks" in marks:
+            # replace any break with an exception
+            if marks["breaks"]:
+                marks["breaks"] = {"except"}
+        return marks
+
+    def _marks_Expression(self, node, visible, breaks):
+        marks = self.resolve_marks(node.body, visible, breaks).copy()
+        if breaks and "breaks" in marks:
+            # replace any break with an exception
+            if marks["breaks"]:
+                marks["breaks"] = {"except"}
+        return marks
+
+    def _marks_Suite(self, node, visible, breaks): # TODO - check what this is
+        marks = self.resolve_marks(node.body, visible, breaks).copy()
+        if breaks and "breaks" in marks:
+            # replace any break with an exception
+            if marks["breaks"]:
+                marks["breaks"] = {"except"}
+        return marks
 
     # stmt
-    #def _marks_FunctionDef(self, node, visible, breaks): raise NotImplementedError
+    def _marks_FunctionDef(self, node, visible, breaks):
+        if node.decorator_list: # Translate for decorators
+            func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
+            name = ast.Name(node.name, ast.Load())
+            calls = name
+            for dec in node.decorator_list.reverse():
+                calls = ast.Call(dec, [calls], [], None, None)
+            return self.resolve_marks([func, ast.Assign([name], calls)])
+        else:
+            marks = self.resolve_marks(node.body, visible, breaks).copy()
+            try:
+                del marks["breaks"]["return"]
+            except KeyError:
+                pass # No breaks marking or particular breaks not found
+            return marks
+
     #def _marks_ClassDef(self, node, visible, breaks): raise NotImplementedError
     #def _marks_Return(self, node, visible, breaks): raise NotImplementedError
 
