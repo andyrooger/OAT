@@ -31,6 +31,16 @@ class BreakMarker(basic.BasicMarker):
         self._set_mark(set())
         return True
 
+    def setBreaks(self, breaks):
+        """Replace our breaks with the set of breaks."""
+
+        success = False
+
+        self.clearBreaks()
+        for b in breaks:
+            if self.addBreak(b):
+                success = True
+
     def addBreak(self, type):
         """Add a possible break from normal flow. Return whether we were successful."""
 
