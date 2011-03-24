@@ -258,10 +258,37 @@ class AutoMarker:
                 marks["breaks"] = {b for b in marks["breaks"] if b not in ["break", "continue"]}
             return marks
     
-    #def _marks_If(self, node, visible, breaks):
-    #def _marks_With(self, node, visible, breaks): raise NotImplementedError
+    def _marks_If(self, node, visible, breaks):
+        return self.resolve_marks([node.test] + node.body + node.orelse, visible, breaks)
 
-    #def _marks_Raise(self, node, visible, breaks): raise NotImplementedError
+    def _marks_With(self, node, visible, breaks):
+        # TODO - think about calls made, should be:
+        # Evaluate node.context_expr for now I call this e
+        # evaluate e.__enter__() - assign this value to name after 'as' if given
+        # try:
+        #     Execute node.body
+        # except Exception as ex:
+        #     if e.__exit__(details of ex) == False: raise ex
+        # else:
+        #     e.__exit__(None, None, None)
+        #
+        # We could assume same as evaluating ctx expression and executing body
+        # but we will be safe
+        return {}
+
+    def _marks_Raise(self, node, visible, breaks):
+        # Same as evaluating the exceptions and raising
+        stmts = []
+        if node.exc:
+            stmts.append(node.exc)
+        if node.cause:
+            stmts.append(node.cause)
+        marks = self.resolve_marks(stmts, visible, breaks).copy()
+        if breaks:
+            marks["breaks"] = marks["breaks"].copy()
+            marks["breaks"].add("except")
+        return marks
+
     #def _marks_TryExcept(self, node, visible, breaks): raise NotImplementedError
     #def _marks_TryFinally(self, node, visible, breaks): raise NotImplementedError
     #def _marks_Assert(self, node, visible, breaks): raise NotImplementedError
