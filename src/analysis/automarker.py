@@ -247,7 +247,7 @@ class AutoMarker:
 
     def _marks_Assign(self, node, visible, breaks):
         return self.resolve_group(node.targets + [node.value], visible, breaks)
-        
+
     def _marks_AugAssign(self, node, visible, breaks):
         trans = ast.Assign([node.target], ast.BinOp(node.target, node.op, node.value)) # Transform to a binary op
         return self.resolve_marks(trans, visible, breaks)
@@ -428,21 +428,68 @@ class AutoMarker:
         # TODO - check we do not have similar problems for list/set/dict comp
         return {}
 
-    #def _marks_Yield(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Yield(self, node, visible, breaks):
+        # PEP 0342 describes yield expression.
+        # Not mentioned to be accepted but experimentation tells me it probably was.
+        results = self._base_marks(visible, marks)
+        if breaks:
+            results["breaks"].add("except")
+            results["breaks"].add("yield")
+        if node.value == None:
+            return results
+        else:
+            v_marks = self.resolve_marks(node.value, visible, breaks)
+            return self._combine_marks(results, v_marks, visible, breaks)
 
-    #def _marks_Compare(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Call(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Num(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Str(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Bytes(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Ellipsis(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Compare(self, node, visible, breaks):
+        results = self.resolve_group([node.left] + node.comparators, visible, breaks)
+        if breaks:
+            results["breaks"].add("except")
 
-    #def _marks_Attribute(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Subscript(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Starred(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Name(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_List(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Tuple(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Call(self, node, visible, breaks):
+        # No idea what we'd be calling
+        # TODO - think harder
+        return {}
+
+    def _marks_Num(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+
+    def _marks_Str(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+
+    def _marks_Bytes(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+
+    def _marks_Ellipsis(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+
+    def _marks_Attribute(self, node, visible, breaks):
+        # Eval node.value
+        # Now we treat like a search for a simple name in node.value
+        return self.resolve_group({node.value, node.ctx}, visible, breaks)
+
+    def _marks_Subscript(self, node, visible, breaks):
+        # Similar to above
+        return self.resolve_group({node.value, node.slice, node.ctx}, visible, breaks)
+
+    def _marks_Starred(self, node, visible, breaks):
+        return self.resolve_group({node.value, node.ctx}, visible, breaks)
+
+    def _marks_Name(self, node, visible, breaks):
+        return self.resolve_marks(node.ctx, visible, breaks)
+
+    def _marks_List(self, node, visible, breaks):
+        # Normal ctx stuff plus think about unpacking
+        marks = self.resolve_group(node.elts + [node.ctx], visible, breaks)
+        if breaks and isinstance(node.ctx, ast.Store):
+            marks["breaks"].add("except")
+        return marks
+
+    def _marks_Tuple(self, node, visible, breaks):
+        marks = self.resolve_group(node.elts + [node.ctx], visible, breaks)
+        if breaks and isinstance(node.ctx, ast.Store):
+            marks["breaks"].add("except")
+        return marks
 
     # expr_context
     #def _marks_Load(self, node, visible, breaks): raise NotImplementedError
