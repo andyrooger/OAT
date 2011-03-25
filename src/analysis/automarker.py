@@ -466,10 +466,12 @@ class AutoMarker:
     def _marks_Attribute(self, node, visible, breaks):
         # Eval node.value
         # Now we treat like a search for a simple name in node.value
+        # TODO - store and denied?
         return self.resolve_group({node.value, node.ctx}, visible, breaks)
 
     def _marks_Subscript(self, node, visible, breaks):
         # Similar to above
+        # TODO - store and denied?
         return self.resolve_group({node.value, node.slice, node.ctx}, visible, breaks)
 
     def _marks_Starred(self, node, visible, breaks):
@@ -492,17 +494,49 @@ class AutoMarker:
         return marks
 
     # expr_context
-    #def _marks_Load(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Store(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Del(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_AugLoad(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_AugStore(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Param(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Load(self, node, visible, breaks):
+        marks = self._base_marks(visible, breaks)
+        if breaks:
+            marks["breaks"].add("except") # if not found
+        return marks
+
+    def _marks_Store(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+        # TODO - think about storing to a class and being denied
+
+    def _marks_Del(self, node, visible, breaks):
+        marks = self._base_marks(visible, breaks)
+        if breaks:
+            marks["breaks"].add("except") # if not found
+        return marks
+
+    def _marks_AugLoad(self, node, visible, breaks):
+        return {} # Don't appear to be used, so don't know
+
+    def _marks_AugStore(self, node, visible, breaks):
+        return {} # Don't appear to be used, so don't know
+
+    def _marks_Param(self, node, visible, breaks):
+        return {} # Apparently used by a in 'def f(a): pass'
+                  # Seems to not be though
 
     # slice
-    #def _marks_Slice(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_ExtSlice(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Index(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Slice(self, node, visible, breaks):
+        # Context dealt with in Subscript
+        m = set()
+        if node.lower != None:
+            m.add(node.lower)
+        if node.upper != None:
+            m.add(node.upper)
+        if node.step != None:
+            m.add(node.step)
+        return self.resolve_group(m, visible, breaks)
+
+    def _marks_ExtSlice(self, node, visible, breaks):
+        return self.resolve_group(node.dims, visible, breaks)
+
+    def _marks_Index(self, node, visible, breaks):
+        return self.resolve_marks(node.value, visible, breaks)
 
     # boolop
     #def _marks_And(self, node, visible, breaks): raise NotImplementedError
