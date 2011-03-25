@@ -390,14 +390,43 @@ class AutoMarker:
             marks["breaks"].add("except")
         return marks
 
-    #def _marks_Lambda(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_IfExp(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Dict(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Set(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_ListComp(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_SetComp(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_DictComp(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_GeneratorExp(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Lambda(self, node, visible, breaks):
+        # Doesn't run it, just defines it.
+        return self._base_marks(visible, breaks)
+
+    def _marks_IfExp(self, node, visible, breaks):
+        return self.resolve_group({node.test, node.body, node.orelse}, visible, breaks)
+
+    def _marks_Dict(self, node, visible, breaks):
+        return self.resolve_group(node.keys + node.values, visible, breaks)
+
+    def _marks_Set(self, node, visible, breaks):
+        return self.resolve_group(node.elts, visible, breaks)
+
+    def _marks_ListComp(self, node, visible, breaks):
+        return self.resolve_group([node.elt] + node.generators, visible, breaks)
+
+    def _marks_SetComp(self, node, visible, breaks):
+        return self.resolve_group([node.elt] + node.generators, visible, breaks)
+
+    def _marks_DictComp(self, node, visible, breaks):
+        return self.resolve_group([node.key, node.value] + node.generators, visible, breaks)
+
+    def _marks_GeneratorExp(self, node, visible, breaks):
+        # Turns from: (node.elt, node.generators)
+        #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
+        # To:
+        # def __gen(exp):
+        #     for x1 in exp:
+        #         if b1:
+        #             for x2 in g2:
+        #                 if b2:
+        #                     yield node.elt - (expression possibly uses x1, x2)
+        # g = __gen(iter(g1))
+        # del __gen
+        # Too difficult, say we don't know
+        # TODO - check we do not have similar problems for list/set/dict comp
+        return {}
 
     #def _marks_Yield(self, node, visible, breaks): raise NotImplementedError
 
