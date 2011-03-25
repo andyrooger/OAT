@@ -138,6 +138,17 @@ class AutoMarker:
 
         return result
 
+    def _base_marks(self, visible, breaks):
+        """Get a new dictionary containing the most basic set of markings possible."""
+
+        result = {}
+        if visible:
+            result["visible"] = False
+        if breaks:
+            result["breaks"] = set()
+        return result
+        
+
     def _combine_marks(self, marks, addition, visible, breaks):
         """Combine markings as the list would."""
 
@@ -153,11 +164,7 @@ class AutoMarker:
         if not node.body:
             return {}
 
-        result = {}
-        if visible:
-            result["visible"] = False # Don't affect for loop
-        if breaks:
-            result["breaks"] = set()
+        result = self._base_marks(visible, breaks) # Don't affect for loop
 
         for stmt in node.body:
             marks = self.resolve_marks(stmt, visible, breaks)
@@ -208,11 +215,7 @@ class AutoMarker:
             #if breaks:
             #    marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
             #return marks
-            result = {}
-            if visible:
-                result["visible"] = False
-            if breaks:
-                result["breaks"] = set()
+            return self._base_marks(visible, breaks)
 
     def _marks_ClassDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
@@ -227,7 +230,7 @@ class AutoMarker:
 
 
     def _marks_Return(self, node, visible, breaks):
-        marks = {} if node.value == None else self.resolve_marks(node.value).copy()
+        marks = self._base_marks(visible, breaks) if node.value == None else self.resolve_marks(node.value).copy()
         if breaks:
             marks["breaks"] = marks["breaks"].copy()
             marks["breaks"].add("return")
@@ -256,7 +259,6 @@ class AutoMarker:
             if breaks:
                 marks["breaks"] = {b for b in marks["breaks"] if b not in ["break", "continue"]}
             return marks
-            
 
     def _marks_While(self, node, visible, breaks):
         # similar to for
@@ -286,7 +288,7 @@ class AutoMarker:
         #
         # We could assume same as evaluating ctx expression and executing body
         # but we will be safe
-        return {}
+        return {} # For don't know
 
     def _marks_Raise(self, node, visible, breaks):
         # Same as evaluating the exceptions and raising
@@ -321,17 +323,48 @@ class AutoMarker:
         # Same as running both try and finally body
         return self.resolve_marks(node.body + node.finalbody, visible, breaks)
 
-    #def _marks_Assert(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Assert(self, node, visible, breaks):
+        # Eval test and msg, raise exception
+        marks = self.resolve_marks([node.test, node.msg], visible, breaks).copy()
+        if breaks:
+            marks["breaks"] = marks["breaks"].copy()
+            marks["breaks"].add("except")
+        return marks
 
-    #def _marks_Import(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_ImportFrom(self, node, visible, breaks): raise NotImplementedError
+    def _marks_Import(self, node, visible, breaks):
+        return {} # Can do anything we could import!
+        # TODO - Check imported module?
 
-    #def _marks_Global(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Nonlocal(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Expr(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Pass(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Break(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Continue(self, node, visible, breaks): raise NotImplementedError
+    def _marks_ImportFrom(self, node, visible, breaks):
+        return {} # Again we have no idea!
+        # TODO - Check imported module?
+
+    def _marks_Global(self, node, visible, breaks):
+        # Any exceptions are thrown at parsing. Not runtime.
+        return self._base_marks(visible, breaks)
+
+    def _marks_Nonlocal(self, node, visible, breaks):
+        # Any exceptions are thrown at parsing. Not runtime.
+        return self._base_marks(visible, breaks)
+        
+
+    def _marks_Expr(self, node, visible, breaks):
+        return self.resolve_marks(node.value, visible, breaks)
+
+    def _marks_Pass(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
+
+    def _marks_Break(self, node, visible, breaks):
+        marks = self._base_marks(visible, breaks)
+        if breaks:
+            marks["breaks"].add("break")
+        return marks
+
+    def _marks_Continue(self, node, visible, breaks):
+        marks = self._base_marks(visible, breaks)
+        if breaks:
+            marks["breaks"].add("continue")
+        return marks
 
     # expr
     #def _marks_BoolOp(self, node, visible, breaks): raise NotImplementedError
