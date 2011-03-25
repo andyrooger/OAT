@@ -96,13 +96,11 @@ class AutoMarker:
     def _combine_marks(self, marks, addition, visible, breaks):
         """Modify marks to account for having also performed an execution resulting with the marks in addition."""
 
-        if marks == None:
-            marks = self._base_marks()
-
         if visible:
             marks["visible"] |= addition["visible"]
         if breaks:
             marks["breaks"].update(addition["breaks"])
+        return marks
 
 #########################################
 # Resolution Methods                    #
@@ -218,7 +216,10 @@ class AutoMarker:
             #if breaks:
             #    marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
             #return marks
-            return self._base_marks(visible, breaks)
+            if node.returns == None:
+                return self._base_marks(visible, breaks)
+            else:
+                return self.resolve_group({node.returns, node.args}, visible, breaks)
 
     def _marks_ClassDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
@@ -229,7 +230,13 @@ class AutoMarker:
                 calls = ast.Call(dec, [calls], [], None, None)
             return self.resolve_marks([cls, ast.Assign([assname], calls)], visible, breaks)
         else:
-            return self.resolve_marks(node.body)
+            # Evaluates body as annotations
+            possibles = [node.body] + node.bases + node.keywords
+            if node.starargs != None:
+                possibles.append(node.starargs)
+            if node.kwargs != None:
+                possibles.append(node.kwargs)
+            return self.resolve_group(possibles, visible, breaks)
 
     def _marks_Return(self, node, visible, breaks):
         if node.value == None:
@@ -263,6 +270,7 @@ class AutoMarker:
             if breaks:
                 marks["breaks"].remove("break")
                 marks["breaks"].remove("continue")
+                marks["breaks"].add("except") # in case iter is not iterable
             return marks
 
     def _marks_While(self, node, visible, breaks):
@@ -391,8 +399,8 @@ class AutoMarker:
         return marks
 
     def _marks_Lambda(self, node, visible, breaks):
-        # Doesn't run it, just defines it.
-        return self._base_marks(visible, breaks)
+        # Doesn't run it, just defines it. Eval args.
+        return self.resolve_marks(node.args, visible, breaks)
 
     def _marks_IfExp(self, node, visible, breaks):
         return self.resolve_group({node.test, node.body, node.orelse}, visible, breaks)
@@ -538,6 +546,10 @@ class AutoMarker:
     def _marks_Index(self, node, visible, breaks):
         return self.resolve_marks(node.value, visible, breaks)
 
+# These binary operators are not currently used by me
+#  - the boolop or binop nodes already covered it
+#  - TODO - Sort this out, maybe?
+
     # boolop
     #def _marks_And(self, node, visible, breaks): raise NotImplementedError
     #def _marks_Or(self, node, visible, breaks): raise NotImplementedError
@@ -555,6 +567,8 @@ class AutoMarker:
     #def _marks_BitXor(self, node, visible, breaks): raise NotImplementedError
     #def _marks_BitAnd(self, node, visible, breaks): raise NotImplementedError
     #def _marks_FloorDiv(self, node, visible, breaks): raise NotImplementedError
+
+# Same with unary and comparisons
 
     # unaryop
     #def _marks_Invert(self, node, visible, breaks): raise NotImplementedError
@@ -574,23 +588,45 @@ class AutoMarker:
     #def _marks_In(self, node, visible, breaks): raise NotImplementedError
     #def _marks_NotIn(self, node, visible, breaks): raise NotImplementedError
 
+
     # comprehension
-    #def _marks_comprehension(self, node, visible, breaks): raise NotImplementedError
+    def _marks_comprehension(self, node, visible, breaks):
+        marks = self.resolve_group([node.target, node.iter] + node.ifs, visible, breaks)
+        if breaks:
+            marks["breaks"].add("except") # for non-iterable iter 
+        return marks
 
     # excepthandler
-    #def _marks_ExceptHandler(self, node, visible, breaks): raise NotImplementedError
+    def _marks_ExceptHandler(self, node, visible, breaks):
+        marks = self.resolve_group(node.body, visible, breaks)
+        if node.type != None:
+            t_marks = self.resolve_marks(node.type, visible, breaks)
+            self._combine_marks(marks, t_marks, visible, breaks)
+        return marks
 
     # arguments
-    #def _marks_arguments(self, node, visible, breaks): raise NotImplementedError
+    def _marks_arguments(self, node, visible, breaks):
+        possibles = node.args + node.kwonlyargs + node.defaults + node.kw_defaults
+        if node.varargannotation != None:
+            possibles.append(node.varargannotation)
+        if node.kwargannotation != None:
+            possibles.append(node.kwargannotation)
+        return self.resolve_group(possibles, visible, breaks)
 
     # arg
-    #def _marks_arg(self, node, visible, breaks): raise NotImplementedError
+    def _marks_arg(self, node, visible, breaks):
+        if node.annotation:
+            return self.resolve_marks(node.annotation, visible, breaks)
+        else:
+            return self._base_marks(visible, breaks)
 
     # keyword
-    #def _marks_keyword(self, node, visible, breaks): raise NotImplementedError
+    def _marks_keyword(self, node, visible, breaks):
+        return self.resolve_marks(node.value, visible, breaks)
 
     # alias
-    #def _marks_alias(self, node, visible, breaks): raise NotImplementedError
+    def _marks_alias(self, node, visible, breaks):
+        return self._base_marks(visible, breaks)
 
 
 class UserStop(Exception): pass
