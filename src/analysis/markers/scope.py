@@ -19,7 +19,7 @@ class ScopeMarker(basic.BasicMarker):
     def _add_variable(self, variable, type):
         """Add variable scope to our node. Return whether we were successful."""
         
-        marks = self.reads()
+        marks = self.scopes()
         marks[variable] = type
         return self._set_mark(marks)
 
@@ -46,7 +46,7 @@ class ScopeMarker(basic.BasicMarker):
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self.reads()
+        marks = self.scopes()
         try:
             del marks[variable]
         except KeyError:

@@ -54,3 +54,4 @@ class BasicMarker():
         """Set the value of our marking."""
 
         self._get_markings(True)[self.mark] = val
+        return True

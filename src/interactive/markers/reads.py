@@ -24,7 +24,7 @@ class Marker(markcmd.AbstractMarker):
 
         if marker.is_marked():
             vars = marker.reads()
-            print(title + ":" + ("" if vars else " Empty"))
+            print(title + ("" if vars else "Empty"))
 
             for var in vars:
                 print("   - " + var)
