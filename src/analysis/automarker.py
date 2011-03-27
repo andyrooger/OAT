@@ -16,7 +16,7 @@ class AutoMarker:
     def __init__(self,
                  res_order : "The resolution order for calculating markings.",
                  mark : "Should we mark the nodes as we work?" = True,
-                 verbose = False,
+                 review : "Function to review mark choices." = (lambda n, r: True),
                  def_visible : "Function to get defaults from a visibility marker." = None,
                  def_break : "Function to get defaults from a break marker." = None):
         order_allowed = set(["mark", "calc", "user"])
@@ -28,7 +28,8 @@ class AutoMarker:
                 raise ValueError("Method " + res + " is invalid or specified too many times.")
 
         self.res_order = res_order
-        self.verbose = verbose
+        self.mark = mark
+        self.review = review
         self.def_visible = def_visible
         self.def_breaks = def_breaks
 
@@ -65,6 +66,9 @@ class AutoMarker:
                 "default": self.default_marks
             }[res](node, visible, breaks)
             result.update(remainder) # should only contain as yet unmarked values
+
+        if not self.review(node, result):
+            raise UserStop
 
         if self.mark:
             if visible:
