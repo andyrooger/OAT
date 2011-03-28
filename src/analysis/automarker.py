@@ -18,7 +18,7 @@ class AutoMarker:
                  mark : "Should we mark the nodes as we work?" = True,
                  review : "Function to review mark choices." = (lambda n, r: True),
                  def_visible : "Function to get defaults for visibility." = None,
-                 def_break : "Function to get defaults for breaks." = None):
+                 def_breaks : "Function to get defaults for breaks." = None):
         order_allowed = set(["mark", "calc", "user"])
 
         for res in res_order:
@@ -50,13 +50,15 @@ class AutoMarker:
         """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
 
         result = {}
+        want_visible = visible
+        want_breaks = breaks
 
         for res in self.res_order + ["default"]:
-            if visible and "visible" in result:
-                visible = False
-            if breaks and "breaks" in result:
-                breaks = False
-            if not visible and not breaks: # done
+            if want_visible and "visible" in result:
+                want_visible = False
+            if want_breaks and "breaks" in result:
+                want_breaks = False
+            if not want_visible and not want_breaks: # done
                 break
 
             remainder = {
@@ -64,7 +66,7 @@ class AutoMarker:
                 "calc": self.calculate_marks,
                 "user": self.user_marks,
                 "default": self.default_marks
-            }[res](node, visible, breaks)
+            }[res](node, want_visible, want_breaks)
             result.update(remainder) # should only contain as yet unmarked values
 
         if not self.review(node, result):
@@ -81,7 +83,7 @@ class AutoMarker:
     def resolve_group(self, nodes, visible = False, breaks = False):
         """Resolve each of the nodes in the set. Avoids pretending they are a new node."""
 
-        result = self._base_marks()
+        result = self._base_marks(visible, breaks)
         for node in nodes:
             n_marks = self.resolve_marks(node, visible, breaks)
             self._combine_marks(result, n_marks, visible, breaks)
@@ -165,9 +167,9 @@ class AutoMarker:
 
         result = {}
         if visible:
-            result["visible"] = self.def_visible(node)
+            result["visible"] = self.def_visible()
         if breaks:
-            result["breaks"] = self.def_breaks(node)
+            result["breaks"] = self.def_breaks()
 
         return result
 
@@ -221,7 +223,7 @@ class AutoMarker:
             if node.returns == None:
                 return self._base_marks(visible, breaks)
             else:
-                return self.resolve_group({node.returns, node.args}, visible, breaks)
+                return self.resolve_group([node.returns, node.args], visible, breaks)
 
     def _marks_ClassDef(self, node, visible, breaks):
         if node.decorator_list: # Translate for decorators
@@ -265,10 +267,10 @@ class AutoMarker:
         # for-else has same vis/break as doing for then body of else
         if node.orelse:
             n_for = ast.For(node.target, node.iter, node.body, [])
-            return self.resolve_group({n_for, node.orelse}, visible, breaks)
+            return self.resolve_group([n_for, node.orelse], visible, breaks)
         else:
             # same vis/break as iter followed by body (break/continue) cannot be present in iter
-            marks = self.resolve_group({node.iter, node.body}, visible, breaks)
+            marks = self.resolve_group([node.iter, node.body], visible, breaks)
             if breaks:
                 marks["breaks"].remove("break")
                 marks["breaks"].remove("continue")
@@ -279,17 +281,17 @@ class AutoMarker:
         # similar to for
         if node.orelse:
             n_while = ast.While(node.test, node.body, [])
-            return self.resolve_group({n_while, node.orelse}, visible, breaks)
+            return self.resolve_group([n_while, node.orelse], visible, breaks)
         else:
             # same vis/break as test followed by body (break/continue) cannot be present in test
-            marks = self.resolve_group({node.test, node.body}, visible, breaks)
+            marks = self.resolve_group([node.test, node.body], visible, breaks)
             if breaks:
                 marks["breaks"].remove("break")
                 marks["breaks"].remove("continue")
             return marks
     
     def _marks_If(self, node, visible, breaks):
-        return self.resolve_group({node.test, node.body, node.orelse}, visible, breaks)
+        return self.resolve_group([node.test, node.body, node.orelse], visible, breaks)
 
     def _marks_With(self, node, visible, breaks):
         # TODO - think about calls made, should be:
@@ -308,11 +310,11 @@ class AutoMarker:
 
     def _marks_Raise(self, node, visible, breaks):
         # Same as evaluating the exceptions and raising
-        stmts = set()
+        stmts = []
         if node.exc:
-            stmts.add(node.exc)
+            stmts.append(node.exc)
         if node.cause:
-            stmts.add(node.cause)
+            stmts.append(node.cause)
         marks = self.resolve_group(stmts, visible, breaks)
         if breaks:
             marks["breaks"].add("except")
@@ -337,11 +339,11 @@ class AutoMarker:
 
     def _marks_TryFinally(self, node, visible, breaks):
         # Same as running both try and finally body
-        return self.resolve_group({node.body, node.finalbody}, visible, breaks)
+        return self.resolve_group([node.body, node.finalbody], visible, breaks)
 
     def _marks_Assert(self, node, visible, breaks):
         # Eval test and msg, raise exception
-        marks = self.resolve_group({node.test, node.msg}, visible, breaks)
+        marks = self.resolve_group([node.test, node.msg], visible, breaks)
         if breaks:
             marks["breaks"].add("except")
         return marks
@@ -388,7 +390,7 @@ class AutoMarker:
 
     def _marks_BinOp(self, node, visible, breaks):
         # As above with extra exception
-        marks = self.resolve_group({node.left, node.right}, visible, breaks)
+        marks = self.resolve_group([node.left, node.right], visible, breaks)
         if breaks:
             marks["breaks"].add("except")
         return marks
@@ -405,7 +407,7 @@ class AutoMarker:
         return self.resolve_marks(node.args, visible, breaks)
 
     def _marks_IfExp(self, node, visible, breaks):
-        return self.resolve_group({node.test, node.body, node.orelse}, visible, breaks)
+        return self.resolve_group([node.test, node.body, node.orelse], visible, breaks)
 
     def _marks_Dict(self, node, visible, breaks):
         return self.resolve_group(node.keys + node.values, visible, breaks)
@@ -455,6 +457,7 @@ class AutoMarker:
         results = self.resolve_group([node.left] + node.comparators, visible, breaks)
         if breaks:
             results["breaks"].add("except")
+        return results
 
     def _marks_Call(self, node, visible, breaks):
         # No idea what we'd be calling
@@ -477,15 +480,15 @@ class AutoMarker:
         # Eval node.value
         # Now we treat like a search for a simple name in node.value
         # TODO - store and denied?
-        return self.resolve_group({node.value, node.ctx}, visible, breaks)
+        return self.resolve_group([node.value, node.ctx], visible, breaks)
 
     def _marks_Subscript(self, node, visible, breaks):
         # Similar to above
         # TODO - store and denied?
-        return self.resolve_group({node.value, node.slice, node.ctx}, visible, breaks)
+        return self.resolve_group([node.value, node.slice, node.ctx], visible, breaks)
 
     def _marks_Starred(self, node, visible, breaks):
-        return self.resolve_group({node.value, node.ctx}, visible, breaks)
+        return self.resolve_group([node.value, node.ctx], visible, breaks)
 
     def _marks_Name(self, node, visible, breaks):
         return self.resolve_marks(node.ctx, visible, breaks)
@@ -533,13 +536,13 @@ class AutoMarker:
     # slice
     def _marks_Slice(self, node, visible, breaks):
         # Context dealt with in Subscript
-        m = set()
+        m = []
         if node.lower != None:
-            m.add(node.lower)
+            m.append(node.lower)
         if node.upper != None:
-            m.add(node.upper)
+            m.append(node.upper)
         if node.step != None:
-            m.add(node.step)
+            m.append(node.step)
         return self.resolve_group(m, visible, breaks)
 
     def _marks_ExtSlice(self, node, visible, breaks):

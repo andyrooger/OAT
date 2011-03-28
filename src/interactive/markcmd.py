@@ -5,9 +5,11 @@ Mark AST nodes with extra information from the console.
 
 import ast
 import abc
-from util import pluginfinder
-from . import markers
 
+from util import pluginfinder
+from analysis import automarker
+
+from . import markers
 from . import commandui
 
 class MarkCommand(commandui.Command):
@@ -27,6 +29,9 @@ class MarkCommand(commandui.Command):
                     self.marks[name] = marker
             except AttributeError:
                 pass # Not a valid plugin
+
+        self._opts.add_argument("-a", "--auto", choices=["mark", "calc", "user"], nargs="*", metavar="METHOD",
+                                help="Auto-mark this node and those needed to resolve its markings. It will use the given resolution order.")
 
         for marker in self.marks:
             self._opts.add_argument("-"+marker[0], "--"+marker,
@@ -65,7 +70,9 @@ class MarkCommand(commandui.Command):
             if params[p] != None and p in self.marks: # Has to be valid
                 trans[p] = self.marks[p].translate(node, params[p])
 
-        if trans:
+        if params["auto"] != None:
+            self._auto_update(node, params["auto"], trans)
+        elif trans:
             self._manual_update(node, trans)
         else:
             self._show_markings(node)
@@ -74,6 +81,23 @@ class MarkCommand(commandui.Command):
         for t in trans:
             if self.marks[t].update(node, trans[t]):
                 self._related_parsecmd.ast.augmented = True
+
+    def _auto_update(self, node, res, trans):
+        defaults = {}
+        if "visible" in trans:
+            defaults["def_visible"] = (lambda: trans["visible"])
+        if "breaks" in trans:
+            defaults["def_breaks"] = (lambda: trans["breaks"])
+
+        try:
+            marker = automarker.AutoMarker(res, mark=True, **defaults)
+        except ValueError as exc:
+            print(str(exc))
+        else:
+            try:
+                marker.resolve_marks(node, visible = True, breaks = True)
+            except automarker.UserStop:
+                pass
 
     def _show_markings(self, node):
         """Print out the markings for the given node."""
