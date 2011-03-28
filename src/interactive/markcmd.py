@@ -60,24 +60,23 @@ class MarkCommand(commandui.Command):
             return False
 
         params = vars(args)
-        emptyargs = True
-        for param in params:
-            if params[param] != None and param in self.marks: # Has to be valid
-                emptyargs = False
-                trans = self.marks[param].translate(node, params[param])
-                if self.marks[param].update(node, trans):
-                    self._related_parsecmd.ast.augmented = True
+        trans = {}
+        for p in params:
+            if params[p] != None and p in self.marks: # Has to be valid
+                trans[p] = self.marks[p].translate(node, params[p])
 
-        if emptyargs:
-            self._show_markings()
+        if trans:
+            self._manual_update(node, trans)
+        else:
+            self._show_markings(node)
 
-    def _show_markings(self): #, markings=None, indent=""):
-        """Print out the markings for the current node."""
+    def _manual_update(self, node, trans):
+        for t in trans:
+            if self.marks[t].update(node, trans[t]):
+                self._related_parsecmd.ast.augmented = True
 
-        node = self._get_node()
-
-        if node == None:
-            return False
+    def _show_markings(self, node):
+        """Print out the markings for the given node."""
 
         print("Markings for current node:")
         for marker in self.marks:

@@ -17,8 +17,8 @@ class AutoMarker:
                  res_order : "The resolution order for calculating markings.",
                  mark : "Should we mark the nodes as we work?" = True,
                  review : "Function to review mark choices." = (lambda n, r: True),
-                 def_visible : "Function to get defaults from a visibility marker." = None,
-                 def_break : "Function to get defaults from a break marker." = None):
+                 def_visible : "Function to get defaults for visibility." = None,
+                 def_break : "Function to get defaults for breaks." = None):
         order_allowed = set(["mark", "calc", "user"])
 
         for res in res_order:
@@ -34,9 +34,9 @@ class AutoMarker:
         self.def_breaks = def_breaks
 
         if self.def_visible == None:
-            self.def_visible = (lambda m: return m.isVisible())
+            self.def_visible = (lambda: analysis.markers.visible.VisibleMarker().duplicate())
         if self.def_breaks == None:
-            self.def_breaks = (lambda m: return m.breakers())
+            self.def_breaks = (lambda: analysis.markers.breaks.BreakMarker().duplicate())
 
 ########################################################
 # Resolution functions                                 #
@@ -72,9 +72,9 @@ class AutoMarker:
 
         if self.mark:
             if visible:
-                analysis.markers.visible.VisibleMarker(node).setVisible(result["visible"])
+                analysis.markers.visible.VisibleMarker(node).set_mark(result["visible"])
             if breaks:
-                analysis.markers.breaks.BreakMarker(node).setBreaks(result["breaks"])
+                analysis.markers.breaks.BreakMarker(node).set_mark(result["breaks"])
 
         return result
 
@@ -119,11 +119,11 @@ class AutoMarker:
         if visible:
             marker = analysis.markers.visible.VisibleMarker(node)
             if marker.is_marked():
-                result["visible"] = marker.isVisible()
+                result["visible"] = marker.get_mark()
         if breaks:
             marker = analysis.markers.breaks.BreakMarker(node)
             if marker.is_marked():
-                result["breaks"] = marker.breakers()
+                result["breaks"] = marker.get_mark()
 
         return result
 
@@ -165,11 +165,9 @@ class AutoMarker:
 
         result = {}
         if visible:
-            m = analysis.markers.visible.VisibleMarker(node)
-            result["visible"] = self.def_visible(m)
+            result["visible"] = self.def_visible(node)
         if breaks:
-            m = analysis.markers.breaks.BreakMarker(node)
-            result["breaks"] = self.def_breaks(m)
+            result["breaks"] = self.def_breaks(node)
 
         return result
 
