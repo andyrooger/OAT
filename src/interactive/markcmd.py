@@ -35,6 +35,8 @@ class MarkCommand(commandui.Command):
 
         self._opts.add_argument("-a", "--auto", choices=["mark", "calc", "user"], nargs="*", metavar="METHOD",
                                 help="Auto-mark this node and those needed to resolve its markings. It will use the given resolution order.")
+        self._opts.add_argument("--review", action="store_true", default=False,
+                                help="Review each set of markings before they are made permanent on a node. This is only valid for auto-marking.")
 
         for marker in self.marks:
             self._opts.add_argument("-"+marker[0], "--"+marker,
@@ -74,7 +76,7 @@ class MarkCommand(commandui.Command):
                 trans[p] = (lambda n=node, a=params[p], m=self.marks[p]: m.translate(n, a))
 
         if params["auto"] != None:
-            self._auto_update(node, params["auto"], trans)
+            self._auto_update(node, params["auto"], params["review"], trans)
         elif trans:
             self._manual_update(node, trans)
         else:
@@ -85,16 +87,19 @@ class MarkCommand(commandui.Command):
             if self.marks[t].update(node, trans[t]()):
                 self._related_parsecmd.ast.augmented = True
 
-    def _auto_update(self, node, res, trans):
+    def _auto_update(self, node, res, review, trans):
         try:
-            marker = automarker.AutoMarker(res, mark=True, user=self._ask_specific, defaults=trans)
+            if review:
+                marker = automarker.AutoMarker(res, mark=True, user=self._ask_specific, review=self._review_marks, defaults=trans)
+            else:
+                marker = automarker.AutoMarker(res, mark=True, user=self._ask_specific, defaults=trans)
         except ValueError as exc:
             print(str(exc))
         else:
             try:
                 marker.resolve_marks(node) # By default all markings
             except automarker.UserStop:
-                pass
+                print("The auto-marking process was interrupted.")
 
     def _show_markings(self, node):
         """Print out the markings for the given node."""
@@ -131,10 +136,7 @@ class MarkCommand(commandui.Command):
             print()
 
             if ans == "p":
-                print("Type: " + node.__class__.__name__)
-                if hasattr(node, "_attributes") and node._attributes:
-                    # Assume attributes will always be lineno, col_offset
-                    print("Location: line " + str(node.lineno) + " column " + str(node.col_offset))
+                self._node_information(node)
             elif ans == "s":
                 sourcewriter.printSource(node, prettywriter.PrettyWriter)
             elif ans == "i":
@@ -142,6 +144,35 @@ class MarkCommand(commandui.Command):
             elif ans == "f":
                 raise automarker.UserStop
 
+    def _node_information(self, node):
+        """Display information about a node."""
+
+        print("Type: " + node.__class__.__name__)
+        if hasattr(node, "_attributes") and node._attributes:
+            # Assume attributes will always be lineno, col_offset
+            print("Location: line " + str(node.lineno) + " column " + str(node.col_offset))
+
+
+    def _review_marks(self, node, markings):
+        """Let the user review the markings and approve or disapprove them."""
+
+        print()
+        print("Current node:")
+        self._node_information(node)
+        print()
+        print("Generated markings: ")
+
+        # Create a dummy node with the markings already set to show
+        class DummyAST(ast.AST): pass
+        d_node = DummyAST()
+        d_node._markings = markings
+        self._show_markings(d_node)
+        print()
+
+        print("Are these markings acceptable?")
+        ans = input("Press enter for yes or type anything else for no: ")
+
+        return not ans
 
 class AbstractMarker(metaclass=abc.ABCMeta):
     """Base class for creating markers."""

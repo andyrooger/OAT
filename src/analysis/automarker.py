@@ -15,7 +15,7 @@ class AutoMarker:
                  res_order : "The resolution order for calculating markings.",
                  mark : "Should we mark the nodes as we work?" = True,
                  user : "Function to allow users to manually select markings." = (lambda node, needed: {}),
-                 review : "Function to review mark choices." = (lambda n, r: True),
+                 review : "Function to review mark choices." = (lambda n, m: True),
                  defaults : "Dictionary of functions to get defaults for each marking." = {}):
         order_allowed = set(["mark", "calc", "user"])
 
