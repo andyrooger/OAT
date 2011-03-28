@@ -16,6 +16,7 @@ from analysis.markers import breaks
 from analysis.markers import visible
 from analysis.markers import read
 from analysis.markers import write
+from analysis.markers import scope
 
 class ReorderCommand(commandui.Command):
     """Reorder statement blocks from the console."""
@@ -32,8 +33,6 @@ class ReorderCommand(commandui.Command):
         actions = self._opts.add_mutually_exclusive_group()
         actions.add_argument("-c", "--current", action="store_const", const="current", dest="do",
                              help="Check if this node can be reordered and print it's current state if so.")
-        actions.add_argument("-m", "--mark", nargs="?", choices=["safe", "default", "auto"], const="default",
-                             help="Make sure all necessary markings exist. Missing markings will be replaced by either safe defaults, common defaults, or intelligent guesses.")
         actions.add_argument("-s", "--split", action="store_const", const="split", dest="do",
                              help="Show statement list partitions. Used for debugging.")
         actions.add_argument("-p", "--permutations", action="store_const", const="permutations", dest="do",
@@ -59,7 +58,7 @@ class ReorderCommand(commandui.Command):
         block = self._get_block()
 
         if block == None:
-            print("This node has no body to reorder.")
+            print("This node is not reorderable.")
             return False
 
         try:
@@ -67,11 +66,6 @@ class ReorderCommand(commandui.Command):
         except TypeError:
             print("The node's body was of unexpected type, I don't know what do do with this.")
             return False
-
-        # Before we try any of the other options but after we checked the block
-        if args.mark != None:
-            self._mark_statements(block, args.mark, args.edit)
-            return
 
         if do == "current":
             self._print_block(block, range(len(block)), args.display, True)
@@ -119,27 +113,28 @@ class ReorderCommand(commandui.Command):
             else:
                 print("This is the optimal chosen rearrangement. To write to the node see --edit.")
 
-        print("Haven't got around to doing " + do + " yet") # Shouldn't get here
+        print("The action, " + do + ", has not been implemented yet.") # Shouldn't get here
 
 
     def _get_block(self):
         cur = self._related_explorecmd.ast_current
-        if hasattr(cur, "_fields") and "body" in cur._fields:
-            return cur.body
-        else:
+        if not isinstance(cur, list):
             return None
+        for stmt in cur:
+            if not isinstance(stmt, ast.stmt):
+                return None
+        return cur
 
     def _set_block(self, block):
         cur = self._related_explorecmd.ast_current
-        if hasattr(cur, "_fields") and "body" in cur._fields:
-            cur.body = block
+        if isinstance(cur, list):
+            cur[:] = block
             self._related_parsecmd.ast.modified = True
         else:
             raise TypeError
 
     def _print_block(self, statements, perm, disp, markings=False):
         """Print a block of statements in a particular permutation."""
-
 
         if disp == "index":
             for i in perm:
@@ -148,9 +143,6 @@ class ReorderCommand(commandui.Command):
 
         else:
             for i in perm:
-                break_marker = breaks.BreakMarker(statements[i])
-                vis_marker = visible.VisibleMarker(statements[i])
-
                 if disp == "type":
                      print(str(i) + ": " + statements[i].__class__.__name__, end="")
                 elif disp == "code":
@@ -158,57 +150,13 @@ class ReorderCommand(commandui.Command):
                      sourcewriter.printSource(statements[i], prettywriter.PrettyWriter)
 
                 if markings:
-                    if vis_marker.is_marked():
-                        print(" - Visible: " + ("Yes" if vis_marker.isVisible() else "No"), end=" ")
+                    complete_markings = reorder.Reorderer([statements[i]]).check_markings()
+
+                    if complete_markings:
+                        print(" - Completely marked")
                     else:
-                        print(" - Visible: ?", end=" ")
-                    if break_marker.is_marked():
-                        print(" - Breaking: " + ("Yes" if break_marker.canBreak() else "No"), end=" ")
-                    else:
-                        print(" - Breaking: ?", end=" ")
+                        print(" - Not marked")
                 if disp == "type" or markings:
                     print()
-
-    def _mark_statements(self, statements, how, edit):
-        """Mark the statements that need it with the necessary markings for reordering."""
-
-        if not edit:
-            print("Need to enable tree editing to mark statements. (see --edit)")
-            return
-
-        for stat in statements:
-            break_marker = breaks.BreakMarker(stat)
-            vis_marker = visible.VisibleMarker(stat)
-            read_marker = read.ReadMarker(stat)
-            write_marker = write.WriteMarker(stat)
-
-            if not break_marker.is_marked():
-                if how == "safe":
-                    break_marker.addBreak("except")
-                    break_marker.addBreak("return")
-                    break_marker.addBreak("break")
-                    break_marker.addBreak("continue")
-                    break_marker.addBreak("yield")
-                elif how == "default":
-                    break_marker.clearBreaks()
-                elif how == "auto": pass
-                    #stat._markings['breaks'] = 
-
-            if not vis_marker.is_marked():
-                if how == "safe":
-                    vis_marker.setVisible(True)
-                elif how == "default":
-                    vis_marker.setVisible(False)
-                elif how == "auto": pass
-                    #stat._markings['visible'] = 
-        # TODO
-
-            if not read_marker.is_marked():
-                read_marker.clear()
-            if not write_marker.is_marked():
-                write_marker.clear()
-
-        print("Markings have been created, you will need to check over them yourself - especially the read and write references.")
-
 
         self._related_parsecmd.ast.augmented = True

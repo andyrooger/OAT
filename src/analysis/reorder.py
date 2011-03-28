@@ -6,6 +6,12 @@ Contains code ready for reordering statements.
 import ast
 import random
 
+from .markers import visible
+from .markers import breaks
+from .markers import read
+from .markers import write
+from .markers import scope
+
 def RandomValuer(statements, perm):
     """Give a random value, no matter the permutation."""
 
@@ -37,18 +43,17 @@ class Reorderer:
     def check_markings(self):
         """Check if all statements have the correct markings."""
 
-        try:
-            for stat in self.statements:
-                if "breaks" not in stat._markings:
-                    return False
-                if "visible" not in stat._markings:
-                    return False
-                if "reads" not in stat._markings:
-                    return False
-                if "writes" not in stat._markings:
-                    return False
-        except AttributeError:
-            return False
+        for stat in self.statements:
+            if not breaks.BreakMarker(stat).is_marked():
+                return False
+            if not visible.VisibleMarker(stat).is_marked():
+                return False
+            if not read.ReadMarker(stat).is_marked():
+                return False
+            if not write.WriteMarker(stat).is_marked():
+                return False
+            if not scope.ScopeMarker(stat).is_marked():
+                return False
 
         return True
 
@@ -116,7 +121,7 @@ class Reorderer:
         partitions = []
 
         for i in range(len(self.statements)):
-            if self.statements[i]._markings['breaks'] == 'yes':
+            if breaks.BreakMarker(self.statements[i]).canBreak():
                 before = list(range(begin_partition, i))
                 if before:
                     partitions.append(before)

@@ -56,9 +56,9 @@ class MarkCommand(commandui.Command):
             print("There is no AST to mark. Have you create one with the parse command?")
             return None
 
-        if not isinstance(node, ast.AST):
-            print("This node does not support markings.")
-            return None
+        #if not isinstance(node, ast.AST):
+        #    print("This node does not support markings.")
+        #    return None
 
         return node        
 
@@ -83,11 +83,15 @@ class MarkCommand(commandui.Command):
             self._show_markings(node)
 
     def _manual_update(self, node, trans):
-        for t in trans:
-            if self.marks[t].update(node, trans[t]()):
-                self._related_parsecmd.ast.augmented = True
+        # From our setup we shouldn't cause exceptions
+        to_mark = set(trans.keys())
+        marker = automarker.AutoMarker([], mark=True, defaults=trans)
+        m = marker.resolve_marks(node, needed=to_mark)
+        self._show_dummy_markings(m)
+        self._related_parsecmd.ast.augmented = True
 
     def _auto_update(self, node, res, review, trans):
+        self._related_parsecmd.ast.augmented = True
         try:
             if review:
                 marker = automarker.AutoMarker(res, mark=True, user=self._ask_specific, review=self._review_marks, defaults=trans)
@@ -97,7 +101,8 @@ class MarkCommand(commandui.Command):
             print(str(exc))
         else:
             try:
-                marker.resolve_marks(node) # By default all markings
+                m = marker.resolve_marks(node) # By default all markings
+                self._show_dummy_markings(m)
             except automarker.UserStop:
                 print("The auto-marking process was interrupted.")
 
@@ -105,8 +110,22 @@ class MarkCommand(commandui.Command):
         """Print out the markings for the given node."""
 
         print("Markings for current node:")
-        for marker in self.marks:
-            self.marks[marker].show(node, "  " + marker.title() + " - ")
+
+        if isinstance(node, ast.AST):
+            for marker in self.marks:
+                self.marks[marker].show(node, "  " + marker.title() + " - ")
+        else:
+            print("  This node does not support markings.")
+            return None
+
+    def _show_dummy_markings(self, markings):
+        # Create a dummy node with the markings already set to show
+        class DummyAST(ast.AST): pass
+        d_node = DummyAST()
+        d_node._markings = markings
+        self._show_markings(d_node)
+        
+
 
     def _ask_specific(self, node, needed):
         """Ask the user about specific markings for a specific node."""
@@ -162,11 +181,7 @@ class MarkCommand(commandui.Command):
         print()
         print("Generated markings: ")
 
-        # Create a dummy node with the markings already set to show
-        class DummyAST(ast.AST): pass
-        d_node = DummyAST()
-        d_node._markings = markings
-        self._show_markings(d_node)
+        self._show_dummy_markings(markings)
         print()
 
         print("Are these markings acceptable?")
