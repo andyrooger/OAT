@@ -114,20 +114,28 @@ class MarkCommand(commandui.Command):
     def _ask_user(self, question, node):
         """Print a problem and ask the user to fix it, print it or ignore it."""
 
-        print(question)
-
         while True:
             print()
+            print(question)
+            print()
             print("Would you like to:")
-            print("p) Print more information. This could be large.")
-            print("i) Ignore the problem. Allow other mechanisms to fix it.")
+            print("p) Print more information.")
+            print("s) Print source for the node in question. This could be large.") 
+            print("i) Ignore the problem. Allow other methods of mark resolution.")
             print("f) Stop and fix the problem.")
 
             ans = ""
-            while ans not in ["p", "i", "f"]:
+            while ans not in ["p", "s", "i", "f"]:
                 ans = input("Choose an option: ")
 
+            print()
+
             if ans == "p":
+                print("Type: " + node.__class__.__name__)
+                if hasattr(node, "_attributes") and node._attributes:
+                    # Assume attributes will always be lineno, col_offset
+                    print("Location: line " + str(node.lineno) + " column " + str(node.col_offset))
+            elif ans == "s":
                 sourcewriter.printSource(node, prettywriter.PrettyWriter)
             elif ans == "i":
                 return
