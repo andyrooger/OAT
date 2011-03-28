@@ -68,7 +68,7 @@ class MarkCommand(commandui.Command):
         trans = {}
         for p in params:
             if params[p] != None and p in self.marks: # Has to be valid
-                trans[p] = self.marks[p].translate(node, params[p])
+                trans[p] = (lambda n=node, a=params[p], m=self.marks[p]: m.translate(n, a))
 
         if params["auto"] != None:
             self._auto_update(node, params["auto"], trans)
@@ -79,23 +79,17 @@ class MarkCommand(commandui.Command):
 
     def _manual_update(self, node, trans):
         for t in trans:
-            if self.marks[t].update(node, trans[t]):
+            if self.marks[t].update(node, trans[t]()):
                 self._related_parsecmd.ast.augmented = True
 
     def _auto_update(self, node, res, trans):
-        defaults = {}
-        if "visible" in trans:
-            defaults["def_visible"] = (lambda: trans["visible"])
-        if "breaks" in trans:
-            defaults["def_breaks"] = (lambda: trans["breaks"])
-
         try:
-            marker = automarker.AutoMarker(res, mark=True, **defaults)
+            marker = automarker.AutoMarker(res, mark=True, defaults=trans)
         except ValueError as exc:
             print(str(exc))
         else:
             try:
-                marker.resolve_marks(node, visible = True, breaks = True)
+                marker.resolve_marks(node) # By default all markings
             except automarker.UserStop:
                 pass
 
