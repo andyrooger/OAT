@@ -12,6 +12,9 @@ from analysis import automarker
 from . import markers
 from . import commandui
 
+from writer import sourcewriter
+from writer import prettywriter
+
 class MarkCommand(commandui.Command):
     """Mark AST nodes with extra information from the console."""
 
@@ -84,7 +87,7 @@ class MarkCommand(commandui.Command):
 
     def _auto_update(self, node, res, trans):
         try:
-            marker = automarker.AutoMarker(res, mark=True, defaults=trans)
+            marker = automarker.AutoMarker(res, mark=True, user=self._ask_specific, defaults=trans)
         except ValueError as exc:
             print(str(exc))
         else:
@@ -99,6 +102,37 @@ class MarkCommand(commandui.Command):
         print("Markings for current node:")
         for marker in self.marks:
             self.marks[marker].show(node, "  " + marker.title() + " - ")
+
+    def _ask_specific(self, node, needed):
+        """Ask the user about specific markings for a specific node."""
+
+        for n in needed:
+            self._ask_user("We are missing the marking: " + n, node)
+
+        return {}
+
+    def _ask_user(self, question, node):
+        """Print a problem and ask the user to fix it, print it or ignore it."""
+
+        print(question)
+
+        while True:
+            print()
+            print("Would you like to:")
+            print("p) Print more information. This could be large.")
+            print("i) Ignore the problem. Allow other mechanisms to fix it.")
+            print("f) Stop and fix the problem.")
+
+            ans = ""
+            while ans not in ["p", "i", "f"]:
+                ans = input("Choose an option: ")
+
+            if ans == "p":
+                sourcewriter.printSource(node, prettywriter.PrettyWriter)
+            elif ans == "i":
+                return
+            elif ans == "f":
+                raise automarker.UserStop
 
 
 class AbstractMarker(metaclass=abc.ABCMeta):

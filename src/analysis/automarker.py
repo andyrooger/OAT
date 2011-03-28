@@ -7,8 +7,6 @@ import ast
 
 import analysis.markers.breaks
 import analysis.markers.visible
-from writer import sourcewriter
-from writer import prettywriter
 
 class AutoMarker:
     """Tries to find correct markings for each node."""
@@ -16,6 +14,7 @@ class AutoMarker:
     def __init__(self,
                  res_order : "The resolution order for calculating markings.",
                  mark : "Should we mark the nodes as we work?" = True,
+                 user : "Function to allow users to manually select markings." = (lambda node, needed: {}),
                  review : "Function to review mark choices." = (lambda n, r: True),
                  defaults : "Dictionary of functions to get defaults for each marking." = {}):
         order_allowed = set(["mark", "calc", "user"])
@@ -26,6 +25,7 @@ class AutoMarker:
             except KeyError:
                 raise ValueError("Method " + res + " is invalid or specified too many times.")
 
+        self.user_marks = user
         self.res_order = res_order
         self.mark = mark
         self.review = review
@@ -130,36 +130,8 @@ class AutoMarker:
 
         return result
 
-    def user_marks(self, node, needed):
-        """Ask the user for input on the current situation."""
-
-        for n in needed:
-            self._ask_user("We are missing the marking: " + n, node)
-
-        return {}
-
-    def _ask_user(self, question, node):
-        """Print a problem and ask the user to fix it, print it or ignore it."""
-
-        print(question)
-
-        while True:
-            print()
-            print("Would you like to:")
-            print("p) Print more information. This could be large.")
-            print("i) Ignore the problem. Allow other mechanisms to fix it.")
-            print("f) Stop and fix the problem.")
-
-            ans = ""
-            while ans not in ["p", "i", "f"]:
-                ans = input("Choose an option: ")
-
-            if ans == "p":
-                sourcewriter.printSource(node, prettywriter.PrettyWriter)
-            elif ans == "i":
-                return
-            elif ans == "f":
-                raise UserStop
+    # Defined in the __init__
+    # def user_marks(self, node, needed):
 
     def default_marks(self, node, needed):
         """Get the default values for markings on the current node."""
