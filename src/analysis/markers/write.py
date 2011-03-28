@@ -8,33 +8,31 @@ from . import basic
 class WriteMarker(basic.BasicMarker):
     """Marks and shows markings for node writes."""
 
-    def __init__(self, node):
+    def __init__(self, node = None):
         basic.BasicMarker.__init__(self, "writes", node)
 
-    def writes(self):
-        """Get a dictionary of the variables the node writes. Use safe default if unsure."""
+    def get_default(self):
+        """Get the default value for this marking."""
 
-        return self._get_mark(set())
+        return set()
+
+    def duplicate(self):
+        return self.get_mark().copy()
 
     def addVariable(self, variable):
         """Add written variable to our node. Return whether we were successful."""
         
-        marks = self.writes()
+        marks = self.get_mark()
         marks.add(variable)
-        return self._set_mark(marks)
-
-    def clear(self):
-        """Clear the known variables."""
-
-        self._set_mark(set())
+        return self.set_mark(marks)
 
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self.writes()
+        marks = self.get_mark()
         try:
             marks.remove(variable)
         except KeyError:
             pass
 
-        return self._set_mark(marks)
+        return self.set_mark(marks)

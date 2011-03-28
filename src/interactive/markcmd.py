@@ -62,13 +62,11 @@ class MarkCommand(commandui.Command):
         params = vars(args)
         emptyargs = True
         for param in params:
-            if params[param] != None:
-                try:
-                    if self.marks[param].update(node, params[param]):
-                        emptyargs = False
-                        self._related_parsecmd.ast.augmented = True
-                except KeyError:
-                    pass # Unrecognised argument, don't expect this to happen
+            if params[param] != None and param in self.marks: # Has to be valid
+                emptyargs = False
+                trans = self.marks[param].translate(node, params[param])
+                if self.marks[param].update(node, trans):
+                    self._related_parsecmd.ast.augmented = True
 
         if emptyargs:
             self._show_markings()
@@ -85,66 +83,6 @@ class MarkCommand(commandui.Command):
         for marker in self.marks:
             self.marks[marker].show(node, "  " + marker.title() + " - ")
 
-    def parseRefs(self, changes, mark):
-        """
-        Parse the function references from the command line.
-
-        Uses format (a(g|n|l|u)|r)-variable.
-
-        """
-
-        self._related_explorecmd._ensure_node_sync()
-        try:
-            refs = self._get_markings()[mark].copy()
-        except KeyError:
-            refs = {}
-
-        for change in changes:
-            try:
-                action, var = change.split("-", 1)
-            except ValueError:
-                # Not enough parts (no '-')
-                print("Missing action: " + change)
-                continue
-
-            if not action:
-                raise ValueError("Change should not start with '-', EVER!")
-
-            if action[0] not in "ar":
-                print("Unrecognised action: " + action + " in " + change)
-                continue
-
-            if action[0] == "a":
-                if len(action) != 2:
-                    print("Missing type: " + action + " in " + change)
-                    continue
-
-                try:
-                    category = {
-                        "g": "global",
-                        "n": "nonlocal",
-                        "l": "local",
-                        "u": "unknown",
-                    }[action[1]]
-                except KeyError:
-                    print("Unknown type: " + action[1] + " in " + change)
-                    continue
-
-                refs[var] = category
-
-            if action[0] == "r":
-                if len(action) != 1:
-                    print("Unrecognised action: " + action + " in " + change)
-                    continue
-
-                try:
-                    del refs[var]
-                except KeyError:
-                    print("Cannot remove non-existent variable: " + var + " in " + change)
-                    continue
-
-        return refs
-
 
 class AbstractMarker(metaclass=abc.ABCMeta):
     """Base class for creating markers."""
@@ -154,8 +92,12 @@ class AbstractMarker(metaclass=abc.ABCMeta):
         """Get the necessary parameters for the argument parser."""
 
     @abc.abstractmethod
-    def update(self, node, arg):
-        """Update the markings based on the given arguments. Return whether successful."""
+    def translate(self, node, arg):
+        """Translate the argument into a representation of the new markings."""
+
+    @abc.abstractmethod
+    def update(self, node, trans):
+        """Update the markings based on the given translation. Return whether successful."""
 
     @abc.abstractmethod
     def show(self, node, title):

@@ -14,17 +14,22 @@ class Marker(markcmd.AbstractMarker):
             "choices": ["yes", "no"]
         }
 
-    def update(self, node, arg):
+    def translate(self, node, arg):
         try:
             vis = {
                 "yes": True,
                 "no": False
             }[arg]
         except KeyError:
-            return False # Unrecognised arg
+            return visible # Unrecognised arg
         else:
             marker = visible.VisibleMarker(node)
-            return marker.setVisible(vis)
+            marker.detach()
+            marker.setVisible(vis)
+            return marker.get_mark()
+
+    def update(self, node, trans):
+        visible.VisibleMarker(node).set_mark(trans)
 
     def show(self, node, title):
         marker = visible.VisibleMarker(node)

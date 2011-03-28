@@ -8,33 +8,31 @@ from . import basic
 class ReadMarker(basic.BasicMarker):
     """Marks and shows markings for node reads."""
 
-    def __init__(self, node):
+    def __init__(self, node = None):
         basic.BasicMarker.__init__(self, "reads", node)
 
-    def reads(self):
-        """Get a dictionary of the variables the node reads. Use safe default if unsure."""
+    def get_default(self):
+        """Get the default value for this marking."""
 
-        return self._get_mark(set())
+        return set()
+
+    def duplicate(self):
+        return self.get_mark().copy()
 
     def addVariable(self, variable):
         """Add read variable to our node. Return whether we were successful."""
         
-        marks = self.reads()
+        marks = self.get_mark()
         marks.add(variable)
-        return self._set_mark(marks)
-
-    def clear(self):
-        """Clear the known variables."""
-
-        self._set_mark(set())
+        return self.set_mark(marks)
 
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self.reads()
+        marks = self.get_mark()
         try:
             marks.remove(variable)
         except KeyError:
             pass
 
-        return self._set_mark(marks)
+        return self.set_mark(marks)

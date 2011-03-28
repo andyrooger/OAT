@@ -15,15 +15,20 @@ class Marker(markcmd.AbstractMarker):
             "metavar": "VAR"
         }
 
-    def update(self, node, arg):
+    def translate(self, node, arg):
         marker = write.WriteMarker(node)
-        return self._alter_vars(marker, arg)
+        marker.detach()
+        self._alter_vars(marker, arg)
+        return marker.get_mark()
+
+    def update(self, node, trans):
+        return write.WriteMarker(node).set_mark(trans)
 
     def show(self, node, title):
         marker = write.WriteMarker(node)
 
         if marker.is_marked():
-            vars = marker.writes()
+            vars = marker.get_mark()
             print(title + ("" if vars else "Empty"))
 
             for var in vars:
@@ -31,7 +36,7 @@ class Marker(markcmd.AbstractMarker):
 
     def _alter_vars(self, marker, changes):
         """
-        Parse the function references from the command line and alter the current node.
+        Parse the function references from the command line and alter the current marker.
 
         Returns whether the alteration was successful.
 

@@ -16,11 +16,12 @@ class Marker(markcmd.AbstractMarker):
             "metavar": "TYPE"
         }
 
-    def update(self, node, arg):
+    def translate(self, node, arg):
         success = False
         clear = False
 
         marker = breaks.BreakMarker(node)
+        marker.detach()
 
         for change in arg:
             if change == "clear":
@@ -32,13 +33,18 @@ class Marker(markcmd.AbstractMarker):
             else:
                 success = marker.addBreak(change) or success
 
+        return marker.get_mark()
+
+    def update(self, node, trans):
+        return breaks.BreakMarker(node).set_mark(trans)
+
     def show(self, node, title):
         marker = breaks.BreakMarker(node)
 
         if marker.is_marked():
             print(title, end="")
             if marker.canBreak():
-                breakers = list(marker.breakers())
+                breakers = list(marker.get_mark())
                 print("Yes (" + ", ".join(breakers) + ")")
             else:
                 print("No")

@@ -8,25 +8,23 @@ from . import basic
 class ScopeMarker(basic.BasicMarker):
     """Marks and shows markings for node's variable scope."""
 
-    def __init__(self, node):
+    def __init__(self, node = None):
         basic.BasicMarker.__init__(self, "scope", node)
 
-    def scopes(self):
-        """Get a dictionary of the scope of variables the node accesses. Use safe default if unsure."""
+    def get_default(self):
+        """Get the default value for this marking."""
 
-        return self._get_mark({})
+        return {}
+
+    def duplicate(self):
+        return self.get_mark().copy()
 
     def _add_variable(self, variable, type):
         """Add variable scope to our node. Return whether we were successful."""
         
-        marks = self.scopes()
+        marks = self.get_mark()
         marks[variable] = type
-        return self._set_mark(marks)
-
-    def clear(self):
-        """Clear the known variables."""
-
-        self._set_mark({})
+        return self.set_mark(marks)
 
     def addLocal(self, variable):
         """Add a local variable."""
@@ -46,15 +44,15 @@ class ScopeMarker(basic.BasicMarker):
     def remove(self, variable):
         """Remove a variable from the set."""
 
-        marks = self.scopes()
+        marks = self.get_mark()
         try:
             del marks[variable]
         except KeyError:
             pass
 
-        return self._set_mark(marks)
+        return self.set_mark(marks)
 
     def getScope(self, variable):
         """Get the scope for a variable."""
 
-        return self.scopes().get(variable, "unknown")
+        return self.get_mark().get(variable, "unknown")
