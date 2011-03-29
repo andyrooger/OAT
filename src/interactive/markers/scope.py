@@ -7,7 +7,7 @@ from analysis.markers import scope
 from .. import markcmd
 
 class Marker(markcmd.AbstractMarker):
-    """Choose all the variables this node reads. Use (g|n|l|r)-varname to add a global, nonlocal or local or remove a variable."""
+    """Choose a scope for a specific name, no longer used. It's usually difficult to determine scope until we hit the edge of a scope."""
 
     def parameters(self):
         return {
