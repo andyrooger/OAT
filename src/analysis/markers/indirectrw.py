@@ -26,7 +26,7 @@ class IndirectRWMarker(basic.BasicMarker):
         try:
             return m[(name, scope)]
         except KeyError:
-            return (None, None)
+            return (False, False)
 
     def _add_variable(self, name, scope, *, read=None, write=None):
         """Add variable ref to our node. Return whether we were successful."""
@@ -38,14 +38,6 @@ class IndirectRWMarker(basic.BasicMarker):
         if write != None:
             p_w = write
         marks[(name, scope)] = (p_r, p_w)
-        return self.set_mark(marks)
-
-    def removeName(self, name, scope):
-        marks = self.get_mark()
-        try:
-            del marks[(name, scope)]
-        except KeyError:
-            pass
         return self.set_mark(marks)
 
     def addFree(self, name, **kwargs):
