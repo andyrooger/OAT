@@ -7,6 +7,9 @@ import ast
 
 import analysis.markers.breaks
 import analysis.markers.visible
+import analysis.markers.read
+import analysis.markers.write
+import analysis.markers.indirectrw
 
 class AutoMarker:
     """Tries to find correct markings for each node."""
@@ -35,6 +38,12 @@ class AutoMarker:
             self.defaults["visible"] = (lambda: analysis.markers.visible.VisibleMarker().duplicate())
         if "breaks" not in self.defaults:
             self.defaults["breaks"] = (lambda: analysis.markers.breaks.BreakMarker().duplicate())
+        if "reads" not in self.defaults:
+            self.defaults["reads"] = (lambda: analysis.markers.read.ReadMarker().duplicate())
+        if "writes" not in self.defaults:
+            self.defaults["writes"] = (lambda: analysis.markers.write.WriteMarker().duplicate())
+        if "indirectrw" not in self.defaults:
+            self.defaults["indirectrw"] = (lambda: analysis.markers.indirectrw.IndirectRWMarker().duplicate())
 
 ########################################################
 # Resolution functions                                 #
@@ -44,7 +53,7 @@ class AutoMarker:
 # - Should never alter return value from resolve_marks #
 ########################################################
 
-    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks"}):
+    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks", "reads", "writes", "indirectrw"}):
         """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
 
         result = {}
@@ -72,6 +81,12 @@ class AutoMarker:
                 analysis.markers.visible.VisibleMarker(node).set_mark(result["visible"])
             if "breaks" in needed:
                 analysis.markers.breaks.BreakMarker(node).set_mark(result["breaks"])
+            if "reads" in needed:
+                analysis.markers.read.ReadMarker(node).set_mark(result["reads"])
+            if "writes" in needed:
+                analysis.markers.write.WriteMarker(node).set_mark(result["writes"])
+            if "indirectrw" in needed:
+                analysis.markers.indirectrw.IndirectRWMarker(node).set_mark(result["indirectrw"])
 
         return result
 
@@ -89,7 +104,10 @@ class AutoMarker:
 
         full_defs = {
             "visible": False,
-            "breaks": set()
+            "breaks": set(),
+            "reads": set(),
+            "writes": set(),
+            "indirectrw": {}
         }
 
         try:
@@ -100,12 +118,20 @@ class AutoMarker:
     def _combine_marks(self, marks, addition, needed):
         """Modify marks to account for having also performed an execution resulting with the marks in addition."""
 
-
         for n in needed:
             if n == "visible":
                 marks["visible"] |= addition["visible"]
             elif n == "breaks":
                 marks["breaks"].update(addition["breaks"])
+            elif n == "reads":
+                marks["reads"].update(addition["reads"])
+            elif n == "writes":
+                marks["writes"].update(addition["writes"])
+            elif n == "indirectrw":
+                for ns in addition["indirectrw"]:
+                    nr, nw = marks["indirectrw"].get(ns, (False, False))
+                    r, w = addition["indirectrw"][ns]
+                    marks["indirectrw"][ns] = (nr or r, nw or w)
         return marks
 
 #########################################
@@ -119,7 +145,10 @@ class AutoMarker:
 
         types = {
             "visible": analysis.markers.visible.VisibleMarker,
-            "breaks": analysis.markers.breaks.BreakMarker
+            "breaks": analysis.markers.breaks.BreakMarker,
+            "reads": analysis.markers.read.ReadMarker,
+            "writes": analysis.markers.write.WriteMarker,
+            "indirectrw": analysis.markers.indirectrw.IndirectRWMarker,
         }
 
         result = {}
@@ -140,6 +169,12 @@ class AutoMarker:
 
     def calculate_marks(self, node, needed):
         """Calculate markings for the given mark types on node."""
+
+        # Assume we don't know about reads/writes/indirectrw
+        needed = needed.copy()
+        needed.discard("reads")
+        needed.discard("write")
+        needed.discard("indirectrw")
 
         try:
             method = getattr(self, "_marks_" + node.__class__.__name__)
