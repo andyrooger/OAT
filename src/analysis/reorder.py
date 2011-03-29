@@ -10,7 +10,7 @@ from .markers import visible
 from .markers import breaks
 from .markers import read
 from .markers import write
-from .markers import scope
+from .markers import indirectrw
 
 def RandomValuer(statements, perm):
     """Give a random value, no matter the permutation."""
@@ -52,7 +52,7 @@ class Reorderer:
                 return False
             if not write.WriteMarker(stat).is_marked():
                 return False
-            if not scope.ScopeMarker(stat).is_marked():
+            if not indirectrw.IndirectRWMarker(stat).is_marked():
                 return False
 
         return True
