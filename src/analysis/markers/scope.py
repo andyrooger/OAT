@@ -1,12 +1,12 @@
 """
-Keeps track of scopes of variables this ast node accesses.
+Keeps track of scopes markings inside this node.
 
 """
 
 from . import basic
 
 class ScopeMarker(basic.BasicMarker):
-    """Marks and shows markings for node's variable scope."""
+    """Marks and shows markings for node's scope modifiers."""
 
     def __init__(self, node = None):
         basic.BasicMarker.__init__(self, "scope", node)
@@ -25,11 +25,6 @@ class ScopeMarker(basic.BasicMarker):
         marks = self.get_mark()
         marks[variable] = type
         return self.set_mark(marks)
-
-    def addLocal(self, variable):
-        """Add a local variable."""
-
-        return self._add_variable(variable, "local")
 
     def addNonlocal(self, variable):
         """Add a non-local variable."""
@@ -55,4 +50,4 @@ class ScopeMarker(basic.BasicMarker):
     def getScope(self, variable):
         """Get the scope for a variable."""
 
-        return self.get_mark().get(variable, "unknown")
+        return self.get_mark().get(variable, None)

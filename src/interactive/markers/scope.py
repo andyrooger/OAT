@@ -7,7 +7,7 @@ from analysis.markers import scope
 from .. import markcmd
 
 class Marker(markcmd.AbstractMarker):
-    """Choose a scope for a specific name, no longer used. It's usually difficult to determine scope until we hit the edge of a scope."""
+    """Add or remove a scope modifier that this node contains. Use (g|n|r)-name to add a global or local modifier or remove one from name."""
 
     def parameters(self):
         return {
@@ -33,6 +33,7 @@ class Marker(markcmd.AbstractMarker):
             print(title + ("" if vars else "Empty"))
 
             for var in vars:
+
                 print("   - " + var + " (" + vars[var] + ")")
 
     def _alter_vars(self, marker, changes):
@@ -41,7 +42,7 @@ class Marker(markcmd.AbstractMarker):
 
         Returns whether the alteration was successful.
 
-        Uses format (g|n|l|r)-varname.
+        Uses format (g|n|r)-varname.
 
         """
 
@@ -60,7 +61,6 @@ class Marker(markcmd.AbstractMarker):
 
             try:
                 act = {
-                    "l": marker.addLocal,
                     "n": marker.addNonlocal,
                     "g": marker.addGlobal,
                     "r": marker.remove
