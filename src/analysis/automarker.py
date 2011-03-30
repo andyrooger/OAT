@@ -173,465 +173,330 @@ class AutoMarker:
         # Assume we don't know about reads/writes/indirectrw
         needed = needed.copy()
         needed.discard("reads")
-        needed.discard("write")
+        needed.discard("writes")
         needed.discard("indirectrw")
 
+        # Lists are always treated the same, we hard code it!
+        if isinstance(node, list):
+            marks = self._base_marks(needed)
+            for stmt in node:
+                other = self.resolve_marks(stmt, needed)
+                self._combine_marks(marks, other, needed)
+            return marks
+
         try:
-            method = getattr(self, "_marks_" + node.__class__.__name__)
-        except AttributeError as exc:
+            act = MARK_CALCULATION[node.__class__.__name__]
+        except KeyError:
             return {}
         else:
-            return method(node, needed)
+            if hasattr(act, "__call__"):
+                return self._calc_dict(act(node), node, needed)
+            elif isinstance(act, dict):
+                return self._calc_dict(act, node, needed)
+            elif isinstance(act, list):
+                marks = self._base_marks(needed)
+                for a in act:
+                    other = self._calc_dict(a, node, needed)
+                    self._combine_marks(marks, other, needed)
+                return marks
+            else:
+                return {} # Don't know what to do
 
-##############################################################
-# Individual node calculations                               #
-# - Each is a specific calculation of markings for one node. #
-# - Only creates the answers it is sure of                   #
-##############################################################
+    def _calc_dict(self, act, node, needed):
+        if "transform" in act:
+            new_node = act["transform"](node)
+            if new_node != None:
+                return self.resolve_marks(new_node, needed)
 
-    def _marks_list(self, node, needed):
-        return self.resolve_group(node, needed)
+        if "known" in act:
+            needed = needed.intersection(act["known"])
+        elif "unknown" in act:
+            needed = needed.difference(act["unknown"])
 
-    def _marks_Module(self, node, needed):
-       # Could replace breaks with exception, but exception is at parse time
-        return self.resolve_marks(node.body, needed)
+        marks = self._base_marks(needed)
 
-    def _marks_Interactive(self, node, needed):
-        return self.resolve_marks(node.body, needed)
+        if "local" in act:
+            for field in act["local"]:
+                if hasattr(node, field):
+                    sub = getattr(node, field)
+                    if sub != None:
+                        other = self.resolve_marks(sub, needed)
+                        self._combine_marks(marks, other, needed)
 
-    def _marks_Expression(self, node, needed):
-        return self.resolve_marks(node.body, needed)
+        if "localg" in act:
+            for field in act["localg"]:
+                if hasattr(node, field):
+                    sub = getattr(node, field)
+                    for s in sub:
+                        other = self.resolve_marks(s, needed)
+                        self._combine_marks(marks, other, needed)
 
-    def _marks_Suite(self, node, visible, breaks): # TODO - check what this is
-        return self.resolve_marks(node.body, needed)
+        if "rem_break" in act and "breaks" in needed:
+            marks["breaks"].difference_update(act["rem_break"])
+
+        if "add_break" in act and "breaks" in needed:
+            marks["breaks"].update(act["add_break"])
+
+        return marks
+
+################################################
+# Helping functions for auto-mark calculation. #
+################################################
+
+def _trans_func_decorators(node):
+    """
+    Convert a func with decorators into its equivalent code, i.e.
+
+    @dec1
+    @dec2
+    def f(): pass
+
+    -->
+
+    def f(): pass
+    f = dec2(dec1(f))
+
+    """
+
+    if not node.decorator_list:
+        return None
+
+    func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
+    assname = ast.Name(node.name, ast.Store())
+    calls = ast.Name(node.name, ast.Load())
+    for dec in node.decorator_list.reverse():
+        calls = ast.Call(dec, [calls], [], None, None)
+    return [func, ast.Assign([assname], calls)]
+
+def _trans_class_decorators(node):
+    """
+    Convert a class with decorators into its equivalent code, i.e.
+
+    @dec1
+    @dec2
+    class C: pass
+
+    -->
+
+    class C: pass
+    C = dec2(dec1(C))
+
+    """
+
+    if not node.decorator_list: # Translate for decorators
+        return None
+
+    cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
+    assname = ast.Name(node.name, ast.Store())
+    calls = ast.Name(node.name, ast.Load())
+    for dec in node.decorator_list.reverse():
+        calls = ast.Call(dec, [calls], [], None, None)
+    return [cls, ast.Assign([assname], calls)]
+
+
+def _trans_aug_assign(node):
+    """Convert an augmented assign into a normal assignment of the operation to the target."""
+
+    calc = ast.BinOp(node.target, node.op, node.value) # Transform to a binary op
+    return ast.Assign([node.target], calc)
+
+def _try_except_dict(node):
+    # visible/break same as running body, running handlers, running else
+    # Will not catch anything unless the handler is straight except:
+    # This is because it is hard to match type for a name
+
+    d = {"local": {"body"}}
+
+    for handler in node.handlers:
+        if handler.type == None:
+            d["rem_break"] = {"except"}
+            break
+
+    return [d, {"localg": {"handlers"}, "local": {"orelse"}}]
+
+def _unpack_dict(self, node, needed):
+    # Normal ctx stuff plus think about unpacking
+    d = {"localg": {"elts"}, "local": {"ctx"}}
+    if isinstance(node.ctx, ast.Store):
+        d["add_break"] = {"except"}
+    return d
+
+###################################
+# Actual mark calculation methods #
+###################################
+
+MARK_CALCULATION = {
+    "Module": {"local": {"body"}},
+    "Interactive": {"local": {"body"}},
+    "Expression": {"local": {"body"}},
+    "Suite": {"local": {"body"}},
 
     # stmt
-    def _marks_FunctionDef(self, node, needed):
-        if node.decorator_list: # Translate for decorators
-            func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
-            assname = ast.Name(node.name, ast.Store())
-            calls = ast.Name(node.name, ast.Load())
-            for dec in node.decorator_list.reverse():
-                calls = ast.Call(dec, [calls], [], None, None)
-            return self.resolve_marks([func, ast.Assign([assname], calls)], needed)
-        else:
-            # Commented is for the function body, this is not executed when the function is defined
-            #marks = self.resolve_marks(node.body, visible, breaks).copy()
-            #if breaks:
-            #    marks["breaks"] = {b for b in marks["breaks"] if b not in ["return", "yield"]}
-            #return marks
-            if node.returns == None:
-                return self._base_marks(needed)
-            else:
-                return self.resolve_group([node.returns, node.args], needed)
+    "FunctionDef": {"transform": _trans_func_decorators, "local": {"returns", "args"}},
+    "ClassDef": {"transform": _trans_class_decorators, "local": {"body", "starargs", "kwargs"}, "localg": {"bases", "keywords"}}, # Evaluates body as annotations
+    "Return": {"local": {"value"}, "add_break": {"return"}},
 
-    def _marks_ClassDef(self, node, needed):
-        if node.decorator_list: # Translate for decorators
-            cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
-            assname = ast.Name(node.name, ast.Store())
-            calls = ast.Name(node.name, ast.Load())
-            for dec in node.decorator_list.reverse():
-                calls = ast.Call(dec, [calls], [], None, None)
-            return self.resolve_marks([cls, ast.Assign([assname], calls)], needed)
-        else:
-            # Evaluates body as annotations
-            possibles = [node.body] + node.bases + node.keywords
-            if node.starargs != None:
-                possibles.append(node.starargs)
-            if node.kwargs != None:
-                possibles.append(node.kwargs)
-            return self.resolve_group(possibles, needed)
+    "Delete": {"localg": {"targets"}}, # NameError covered in ctx
+    "Assign": {"localg": {"targets"}, "local": {"value"}},
+    "AugAssign": {"transform": _trans_aug_assign},
 
-    def _marks_Return(self, node, needed):
-        if node.value == None:
-            marks = self._base_marks(needed)
-        else:
-            marks = self.resolve_marks(node.value, needed).copy()
-        if "breaks" in needed:
-            marks["breaks"] = marks["breaks"].copy()
-            marks["breaks"].add("return")
-        return marks
+    "For": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],
+    "While": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],
+    "If": {"local": {"test", "body", "orelse"}},
 
-    def _marks_Delete(self, node, needed):
-        return self.resolve_group(node.targets, needed)
-        # NameError covered in ctx
+    # TODO - think about calls made, should be:
+    # Evaluate node.context_expr for now I call this e
+    # evaluate e.__enter__() - assign this value to name after 'as' if given
+    # try:
+    #     Execute node.body
+    # except Exception as ex:
+    #     if e.__exit__(details of ex) == False: raise ex
+    # else:
+    #     e.__exit__(None, None, None)
+    #
+    # We could assume same as evaluating ctx expression and executing body
+    # but we will be safe
+    "With": {"known": {}},
 
-    def _marks_Assign(self, node, needed):
-        return self.resolve_group(node.targets + [node.value], needed)
+    "Raise": {"local": {"exc", "cause"}, "add_break": {"except"}}, # Same as evaluating the exceptions and raising
+    "TryExcept": _try_except_dict,
+    "TryFinally": {"local": {"body", "finalbody"}}, # Same as running both try and finally body
+    "Assert": {"local": {"test", "msg"}, "add_break": {"except"}}, # Eval test and msg, raise exception
 
-    def _marks_AugAssign(self, node, needed):
-        trans = ast.Assign([node.target], ast.BinOp(node.target, node.op, node.value)) # Transform to a binary op
-        return self.resolve_marks(trans, needed)
+    "Import": {"known": set()}, # Can do anything we could import! # TODO - Check imported module?
+    "ImportFrom": {"known": set()}, # Again we have no idea! # TODO - Check imported module?
 
-    def _marks_For(self, node, needed):
-        # for-else has same vis/break as doing for then body of else
-        if node.orelse:
-            n_for = ast.For(node.target, node.iter, node.body, [])
-            return self.resolve_group([n_for, node.orelse], needed)
-        else:
-            # same vis/break as iter followed by body (break/continue) cannot be present in iter
-            marks = self.resolve_group([node.iter, node.body], needed)
-            if "breaks" in needed:
-                marks["breaks"].remove("break")
-                marks["breaks"].remove("continue")
-                marks["breaks"].add("except") # in case iter is not iterable
-            return marks
-
-    def _marks_While(self, node, needed):
-        # similar to for
-        if node.orelse:
-            n_while = ast.While(node.test, node.body, [])
-            return self.resolve_group([n_while, node.orelse], needed)
-        else:
-            # same vis/break as test followed by body (break/continue) cannot be present in test
-            marks = self.resolve_group([node.test, node.body], needed)
-            if "breaks" in needed:
-                marks["breaks"].remove("break")
-                marks["breaks"].remove("continue")
-            return marks
-    
-    def _marks_If(self, node, needed):
-        return self.resolve_group([node.test, node.body, node.orelse], needed)
-
-    def _marks_With(self, node, needed):
-        # TODO - think about calls made, should be:
-        # Evaluate node.context_expr for now I call this e
-        # evaluate e.__enter__() - assign this value to name after 'as' if given
-        # try:
-        #     Execute node.body
-        # except Exception as ex:
-        #     if e.__exit__(details of ex) == False: raise ex
-        # else:
-        #     e.__exit__(None, None, None)
-        #
-        # We could assume same as evaluating ctx expression and executing body
-        # but we will be safe
-        return {} # For don't know
-
-    def _marks_Raise(self, node, needed):
-        # Same as evaluating the exceptions and raising
-        stmts = []
-        if node.exc:
-            stmts.append(node.exc)
-        if node.cause:
-            stmts.append(node.cause)
-        marks = self.resolve_group(stmts, needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except")
-        return marks
-
-    def _marks_TryExcept(self, node, needed):
-        # visible/break same as running body, running handlers, running else
-        # Will not catch anything unless the handler is straight except:
-        # This is because it is hard to match type for a name
-
-        # Look for straight except:
-        exc = False
-        for handler in node.handlers:
-            exc |= (handler.type == None)
-        marks = self.resolve_marks(node.body, needed).copy()
-        if "breaks" in needed and exc:
-            marks["breaks"] = marks["breaks"].copy()
-            marks["breaks"].remove("except")
-
-        others = self.resolve_group(node.handlers + [node.orelse], needed) # running all handlers and else
-        return self._combine_marks(marks, others, needed)
-
-    def _marks_TryFinally(self, node, needed):
-        # Same as running both try and finally body
-        return self.resolve_group([node.body, node.finalbody], needed)
-
-    def _marks_Assert(self, node, needed):
-        # Eval test and msg, raise exception
-        marks = self.resolve_group([node.test, node.msg], needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except")
-        return marks
-
-    def _marks_Import(self, node, needed):
-        return {} # Can do anything we could import!
-        # TODO - Check imported module?
-
-    def _marks_ImportFrom(self, node, needed):
-        return {} # Again we have no idea!
-        # TODO - Check imported module?
-
-    def _marks_Global(self, node, needed):
-        # Any exceptions are thrown at parsing. Not runtime.
-        return self._base_marks(needed)
-
-    def _marks_Nonlocal(self, node, needed):
-        # Any exceptions are thrown at parsing. Not runtime.
-        return self._base_marks(needed)
-        
-
-    def _marks_Expr(self, node, needed):
-        return self.resolve_marks(node.value, needed)
-
-    def _marks_Pass(self, node, needed):
-        return self._base_marks(needed)
-
-    def _marks_Break(self, node, needed):
-        marks = self._base_marks(needed)
-        if "breaks" in needed:
-            marks["breaks"].add("break")
-        return marks
-
-    def _marks_Continue(self, node, needed):
-        marks = self._base_marks(needed)
-        if "breaks" in needed:
-            marks["breaks"].add("continue")
-        return marks
+    "Global": {}, # Any exceptions are thrown at parsing. Not runtime.
+    "Nonlocal": {}, # Any exceptions are thrown at parsing. Not runtime.
+    "Expr": {"local": {"value"}},
+    "Pass": {},
+    "Break": {"add_break": {"break"}},
+    "Continue": {"add_break": {"continue"}},
 
     # expr
-    def _marks_BoolOp(self, node, needed):
-        # Don't see that boolop can throw exceptions, it doesn't care about type etc
-        return self.resolve_group(node.values, needed)
+    "BoolOp": {"localg": {"values"}}, # Don't see that boolop can throw exceptions, it doesn't care about type etc
+    "BinOp": {"local": {"left", "right"}, "add_break": {"except"}}, # As above with extra exception
+    "UnaryOp": {"local": {"operand"}, "add_break": {"except"}},
+    "Lambda": {"local": {"args"}}, # Doesn't run it, just defines it. Eval args.
+    "IfExp": {"local": {"test", "body", "orelse"}},
+    "Dict": {"localg": {"keys", "values"}},
+    "Set": {"localg": {"elts"}},
+    "ListComp": {"local": {"elt"}, "localg": {"generators"}},
+    "SetComp": {"local": {"elt"}, "localg": {"generators"}},
+    "DictComp": {"local": {"key", "value"}, "localg": {"generators"}},
 
-    def _marks_BinOp(self, node, needed):
-        # As above with extra exception
-        marks = self.resolve_group([node.left, node.right], needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except")
-        return marks
+    # Turns from: (node.elt, node.generators)
+    #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
+    # To:
+    # def __gen(exp):
+    #     for x1 in exp:
+    #         if b1:
+    #             for x2 in g2:
+    #                 if b2:
+    #                     yield node.elt - (expression possibly uses x1, x2)
+    # g = __gen(iter(g1))
+    # del __gen
+    # Too difficult, say we don't know
+    # TODO - check we do not have similar problems for list/set/dict comp
+    "GeneratorExp": {"known": set()},
 
-    def _marks_UnaryOp(self, node, needed):
-        marks = self.resolve_marks(node.operand, needed).copy()
-        if "breaks" in needed:
-            marks["breaks"] = marks["breaks"].copy()
-            marks["breaks"].add("except")
-        return marks
+    # PEP 0342 describes yield expression.
+    # Not mentioned to be accepted but experimentation tells me it probably was.
+    "Yield": {"local": {"value"}, "add_break": {"except", "yield"}},
 
-    def _marks_Lambda(self, node, needed):
-        # Doesn't run it, just defines it. Eval args.
-        return self.resolve_marks(node.args, needed)
+    "Compare": {"local": {"left"}, "localg": {"comparators"}, "add_break": {"except"}},
+    "Call": {"known": set()}, # No idea what we'd be calling # TODO - think harder
+    "Num": {},
+    "Str": {},
+    "Bytes": {},
+    "Ellipsis": {},
 
-    def _marks_IfExp(self, node, needed):
-        return self.resolve_group([node.test, node.body, node.orelse], needed)
+    # Eval node.value
+    # Now we treat like a search for a simple name in node.value
+    # TODO - store and denied?
+    "Attribute": {"local": {"value", "ctx"}},
 
-    def _marks_Dict(self, node, needed):
-        return self.resolve_group(node.keys + node.values, needed)
+    # Similar to above
+    # TODO - store and denied?
+    "Subscript": {"local": {"value", "slice", "ctx"}},
 
-    def _marks_Set(self, node, needed):
-        return self.resolve_group(node.elts, needed)
-
-    def _marks_ListComp(self, node, needed):
-        return self.resolve_group([node.elt] + node.generators, needed)
-
-    def _marks_SetComp(self, node, needed):
-        return self.resolve_group([node.elt] + node.generators, needed)
-
-    def _marks_DictComp(self, node, needed):
-        return self.resolve_group([node.key, node.value] + node.generators, needed)
-
-    def _marks_GeneratorExp(self, node, needed):
-        # Turns from: (node.elt, node.generators)
-        #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
-        # To:
-        # def __gen(exp):
-        #     for x1 in exp:
-        #         if b1:
-        #             for x2 in g2:
-        #                 if b2:
-        #                     yield node.elt - (expression possibly uses x1, x2)
-        # g = __gen(iter(g1))
-        # del __gen
-        # Too difficult, say we don't know
-        # TODO - check we do not have similar problems for list/set/dict comp
-        return {}
-
-    def _marks_Yield(self, node, needed):
-        # PEP 0342 describes yield expression.
-        # Not mentioned to be accepted but experimentation tells me it probably was.
-        results = self._base_marks(needed)
-        if "breaks" in needed:
-            results["breaks"].add("except")
-            results["breaks"].add("yield")
-        if node.value == None:
-            return results
-        else:
-            v_marks = self.resolve_marks(node.value, needed)
-            return self._combine_marks(results, v_marks, needed)
-
-    def _marks_Compare(self, node, needed):
-        results = self.resolve_group([node.left] + node.comparators, needed)
-        if "breaks" in needed:
-            results["breaks"].add("except")
-        return results
-
-    def _marks_Call(self, node, needed):
-        # No idea what we'd be calling
-        # TODO - think harder
-        return {}
-
-    def _marks_Num(self, node, needed):
-        return self._base_marks(needed)
-
-    def _marks_Str(self, node, needed):
-        return self._base_marks(needed)
-
-    def _marks_Bytes(self, node, needed):
-        return self._base_marks(needed)
-
-    def _marks_Ellipsis(self, node, needed):
-        return self._base_marks(needed)
-
-    def _marks_Attribute(self, node, needed):
-        # Eval node.value
-        # Now we treat like a search for a simple name in node.value
-        # TODO - store and denied?
-        return self.resolve_group([node.value, node.ctx], needed)
-
-    def _marks_Subscript(self, node, needed):
-        # Similar to above
-        # TODO - store and denied?
-        return self.resolve_group([node.value, node.slice, node.ctx], needed)
-
-    def _marks_Starred(self, node, needed):
-        return self.resolve_group([node.value, node.ctx], needed)
-
-    def _marks_Name(self, node, needed):
-        return self.resolve_marks(node.ctx, needed)
-
-    def _marks_List(self, node, needed):
-        # Normal ctx stuff plus think about unpacking
-        marks = self.resolve_group(node.elts + [node.ctx], needed)
-        if "breaks" in needed and isinstance(node.ctx, ast.Store):
-            marks["breaks"].add("except")
-        return marks
-
-    def _marks_Tuple(self, node, needed):
-        marks = self.resolve_group(node.elts + [node.ctx], needed)
-        if "breaks" in needed and isinstance(node.ctx, ast.Store):
-            marks["breaks"].add("except")
-        return marks
+    "Starred": {"local": {"value", "ctx"}},
+    "Name": {"local": {"ctx"}},
+    "List": _unpack_dict,
+    "Tuple": _unpack_dict,
 
     # expr_context
-    def _marks_Load(self, node, needed):
-        marks = self._base_marks(needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except") # if not found
-        return marks
-
-    def _marks_Store(self, node, needed):
-        return self._base_marks(needed)
-        # TODO - think about storing to a class and being denied
-
-    def _marks_Del(self, node, needed):
-        marks = self._base_marks(needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except") # if not found
-        return marks
-
-    def _marks_AugLoad(self, node, needed):
-        return {} # Don't appear to be used, so don't know
-
-    def _marks_AugStore(self, node, needed):
-        return {} # Don't appear to be used, so don't know
-
-    def _marks_Param(self, node, needed):
-        return {} # Apparently used by a in 'def f(a): pass'
-                  # Seems to not be though
+    "Load": {"add_break": {"except"}}, # if not found
+    "Store": {}, # TODO - think about storing to a class and being denied
+    "Del": {"add_break": {"except"}}, # if not found
+    "AugLoad": {"known": set()}, # Don't appear to be used, so don't know
+    "AugStore": {"known": set()}, # Don't appear to be used, so don't know
+    "Param": {"known": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
 
     # slice
-    def _marks_Slice(self, node, needed):
-        # Context dealt with in Subscript
-        m = []
-        if node.lower != None:
-            m.append(node.lower)
-        if node.upper != None:
-            m.append(node.upper)
-        if node.step != None:
-            m.append(node.step)
-        return self.resolve_group(m, needed)
-
-    def _marks_ExtSlice(self, node, needed):
-        return self.resolve_group(node.dims, needed)
-
-    def _marks_Index(self, node, needed):
-        return self.resolve_marks(node.value, needed)
+    "Slice": {"local": {"lower", "upper", "step"}},
+    "ExtSlice": {"local": {"dims"}},
+    "Index": {"local": {"value"}},
 
 # These binary operators are not currently used by me
 #  - the boolop or binop nodes already covered it
 #  - TODO - Sort this out, maybe?
 
     # boolop
-    #def _marks_And(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Or(self, node, visible, breaks): raise NotImplementedError
+    "And": None,
+    "Or": None,
 
     # operator
-    #def _marks_Add(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Sub(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Mult(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Div(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Mod(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Pow(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_LShift(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_RShift(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_BitOr(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_BitXor(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_BitAnd(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_FloorDiv(self, node, visible, breaks): raise NotImplementedError
+    "Add": None,
+    "Sub": None,
+    "Mult": None,
+    "Div": None,
+    "Mod": None,
+    "Pow": None,
+    "LShift": None,
+    "RShift": None,
+    "BitOr": None,
+    "BitXor": None,
+    "BitAnd": None,
+    "FloorDiv": None,
 
 # Same with unary and comparisons
 
     # unaryop
-    #def _marks_Invert(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Not(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_UAdd(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_USub(self, node, visible, breaks): raise NotImplementedError
+    "Invert": None,
+    "Not": None,
+    "UAdd": None,
+    "USub": None,
 
     # cmpop
-    #def _marks_Eq(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_NotEq(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Lt(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_LtE(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Gt(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_GtE(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_Is(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_IsNot(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_In(self, node, visible, breaks): raise NotImplementedError
-    #def _marks_NotIn(self, node, visible, breaks): raise NotImplementedError
-
+    "Eq": None,
+    "NotEq": None,
+    "Lt": None,
+    "LtE": None,
+    "Gt": None,
+    "GtE": None,
+    "Is": None,
+    "IsNot": None,
+    "In": None,
+    "NotIn": None,
 
     # comprehension
-    def _marks_comprehension(self, node, needed):
-        marks = self.resolve_group([node.target, node.iter] + node.ifs, needed)
-        if "breaks" in needed:
-            marks["breaks"].add("except") # for non-iterable iter 
-        return marks
+    "comprehension": {"local": {"target", "iter"}, "localg": {"ifs"}, "add_break": {"except"}}, # for non-iterable iter 
 
     # excepthandler
-    def _marks_ExceptHandler(self, node, needed):
-        marks = self.resolve_group(node.body, needed)
-        if node.type != None:
-            t_marks = self.resolve_marks(node.type, needed)
-            self._combine_marks(marks, t_marks, needed)
-        return marks
+    "ExceptHandler": {"local": {"type", "body"}},
 
     # arguments
-    def _marks_arguments(self, node, needed):
-        possibles = node.args + node.kwonlyargs + node.defaults + node.kw_defaults
-        if node.varargannotation != None:
-            possibles.append(node.varargannotation)
-        if node.kwargannotation != None:
-            possibles.append(node.kwargannotation)
-        return self.resolve_group(possibles, needed)
+    "arguments": {"localg": {"args", "kwonlyargs", "defaults", "kw_defaults"}, "local": {"varargannotation", "kwargannotation"}},
 
     # arg
-    def _marks_arg(self, node, needed):
-        if node.annotation:
-            return self.resolve_marks(node.annotation, needed)
-        else:
-            return self._base_marks(needed)
+    "arg": {"local": {"annotation"}},
 
     # keyword
-    def _marks_keyword(self, node, needed):
-        return self.resolve_marks(node.value, needed)
+    "keyword": {"local": {"value"}},
 
     # alias
-    def _marks_alias(self, node, needed):
-        return self._base_marks(needed)
-
+    "alias": {},
+}
 
 class UserStop(Exception): pass
