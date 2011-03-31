@@ -90,15 +90,6 @@ class AutoMarker:
 
         return result
 
-    def resolve_group(self, nodes, needed):
-        """Resolve each of the nodes in the set. Avoids pretending they are a new node."""
-
-        result = self._base_marks(needed)
-        for node in nodes:
-            n_marks = self.resolve_marks(node, needed)
-            self._combine_marks(result, n_marks, needed)
-        return result
-
     def _base_marks(self, needed):
         """Get a new dictionary containing the markings for an empty list of nodes."""
 
@@ -118,20 +109,63 @@ class AutoMarker:
     def _combine_marks(self, marks, addition, needed):
         """Modify marks to account for having also performed an execution resulting with the marks in addition."""
 
+        # These may not have all the markings in needed
         for n in needed:
             if n == "visible":
-                marks["visible"] |= addition["visible"]
+                if marks.get("visible", False) or addition.get("visible", False): # If either exists and is true
+                    marks["visible"] = True
+                elif "visible" in marks and "visible" in addition: # If both exist
+                    marks["visible"] = marks["visible"] or addition["visible"]
+                else: # Otherwise we don't know
+                    try: del marks["visible"]
+                    except KeyError: pass
             elif n == "breaks":
-                marks["breaks"].update(addition["breaks"])
+                if "breaks" in marks and "breaks" in addition: # Both exist
+                    marks["breaks"].update(addition["breaks"])
+                else: # Otherwise don't know
+                    try: del marks["breaks"]
+                    except KeyError: pass
             elif n == "reads":
-                marks["reads"].update(addition["reads"])
+                if "reads" in marks and "reads" in addition:
+                    marks["reads"].update(addition["reads"])
+                else:
+                    try: del marks["reads"]
+                    except KeyError: pass
             elif n == "writes":
-                marks["writes"].update(addition["writes"])
+                if "writes" in marks and "writes" in addition:
+                    marks["writes"].update(addition["writes"])
+                else:
+                    try: del marks["writes"]
+                    except KeyError: pass
             elif n == "indirectrw":
-                for ns in addition["indirectrw"]:
-                    nr, nw = marks["indirectrw"].get(ns, (False, False))
-                    r, w = addition["indirectrw"][ns]
-                    marks["indirectrw"][ns] = (nr or r, nw or w)
+                if "indirectrw" in marks and "indirectrw" in addition:
+                    for ns in addition["indirectrw"]:
+                        nr, nw = marks["indirectrw"].get(ns, (False, False))
+                        r, w = addition["indirectrw"][ns]
+                        marks["indirectrw"][ns] = (nr or r, nw or w)
+                else:
+                    try: del marks["indirectrw"]
+                    except KeyError: pass
+        return marks
+
+    def _possible_marks(self, marks, needed):
+        """Convert these marks to say that they were only a possibility."""
+
+        #visible, breaks, reads stay the same
+        # if possibly writes, convert to reads and writes the same var
+        if "writes" in marks and "reads" in needed:
+            reads = marks.get("reads", set())
+            reads.union_update(marks["writes"])
+            marks["reads"] = reads
+
+        # same sort of thing for indirectrw
+        if "indirectrw" in marks:
+            for ns in marks["indirectrw"]:
+                r, w = marks["indirectrw"][ns]
+                if w:
+                    r = True
+                marks["indirectrw"][ns] = (r, w)
+
         return marks
 
 #########################################
@@ -172,8 +206,6 @@ class AutoMarker:
 
         # Assume we don't know about reads/writes/indirectrw
         needed = needed.copy()
-        needed.discard("reads")
-        needed.discard("writes")
         needed.discard("indirectrw")
 
         # Lists are always treated the same, we hard code it!
@@ -189,10 +221,16 @@ class AutoMarker:
         except KeyError:
             return {}
         else:
+            return self._dispatch_calc_dict(act, node, needed)
+
+    def _dispatch_calc_dict(self, act, node, needed):
             if hasattr(act, "__call__"):
-                return self._calc_dict(act(node), node, needed)
+                return self._dispatch_calc_dict(act(node), node, needed)
             elif isinstance(act, dict):
                 return self._calc_dict(act, node, needed)
+            elif isinstance(act, tuple):
+                marks = self._dispatch_calc_dict(act[0], node, needed)
+                return self._possible_marks(marks, needed)
             elif isinstance(act, list):
                 marks = self._base_marks(needed)
                 for a in act:
@@ -236,6 +274,20 @@ class AutoMarker:
 
         if "add_break" in act and "breaks" in needed:
             marks["breaks"].update(act["add_break"])
+
+        if "add_reads" in act and "reads" in needed:
+            for field in act["add_reads"]:
+                if hasattr(node, field):
+                    var = getattr(node, field)
+                    if var != None:
+                        marks["reads"].add(var)
+
+        if "add_writes" in act and "writes" in needed:
+            for field in act["add_writes"]:
+                if hasattr(node, field):
+                    var = getattr(node, field)
+                    if var != None:
+                        marks["writes"].add(var)
 
         return marks
 
@@ -312,14 +364,26 @@ def _try_except_dict(node):
             d["rem_break"] = {"except"}
             break
 
-    return [d, {"localg": {"handlers"}, "local": {"orelse"}}]
+    return [d, ({"localg": {"handlers"}, "local": {"orelse"}},)]
 
-def _unpack_dict(self, node, needed):
-    # Normal ctx stuff plus think about unpacking
-    d = {"localg": {"elts"}, "local": {"ctx"}}
-    if isinstance(node.ctx, ast.Store):
-        d["add_break"] = {"except"}
-    return d
+def _ctx_aware(map, default):
+    """
+    Returns a function that can generate an action value to peform default and any of the actions in map.
+
+    The lookup in map is done by taking the class of node.ctx as a key. If it is found,
+    we return default followed by the found value, otherwise we just return default.
+
+    """
+
+    def ctx(node):
+        try:
+            lookup = map[node.ctx.__class__.__name__]
+        except KeyError:
+            return default
+        else:
+            [default, lookup]
+            
+    return ctx
 
 ###################################
 # Actual mark calculation methods #
@@ -333,16 +397,18 @@ MARK_CALCULATION = {
 
     # stmt
     "FunctionDef": {"transform": _trans_func_decorators, "local": {"returns", "args"}},
-    "ClassDef": {"transform": _trans_class_decorators, "local": {"body", "starargs", "kwargs"}, "localg": {"bases", "keywords"}}, # Evaluates body as annotations
+    "ClassDef": [
+        {"transform": _trans_class_decorators, "local": {"starargs", "kwargs"}, "localg": {"bases", "keywords"}},
+        {"local": {"body"}, "known": {"breaks", "visible"}}], # Evaluates body only for breaks/visible
     "Return": {"local": {"value"}, "add_break": {"return"}},
 
     "Delete": {"localg": {"targets"}}, # NameError covered in ctx
     "Assign": {"localg": {"targets"}, "local": {"value"}},
     "AugAssign": {"transform": _trans_aug_assign},
 
-    "For": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],
-    "While": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],
-    "If": {"local": {"test", "body", "orelse"}},
+    "For": ([{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],),
+    "While": ([{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],),
+    "If": [{"local": {"test"}}, ({"local": {"body", "orelse"}},)],
 
     # TODO - think about calls made, should be:
     # Evaluate node.context_expr for now I call this e
@@ -363,27 +429,29 @@ MARK_CALCULATION = {
     "TryFinally": {"local": {"body", "finalbody"}}, # Same as running both try and finally body
     "Assert": {"local": {"test", "msg"}, "add_break": {"except"}}, # Eval test and msg, raise exception
 
-    "Import": {"known": set()}, # Can do anything we could import! # TODO - Check imported module?
+    "Import": {"known": {"writes", "reads"}, "localg": {"names"}}, # Can do anything we could import! # TODO - Check imported module?
     "ImportFrom": {"known": set()}, # Again we have no idea! # TODO - Check imported module?
 
+    # These do not read or write anything!
     "Global": {}, # Any exceptions are thrown at parsing. Not runtime.
     "Nonlocal": {}, # Any exceptions are thrown at parsing. Not runtime.
+
     "Expr": {"local": {"value"}},
     "Pass": {},
     "Break": {"add_break": {"break"}},
     "Continue": {"add_break": {"continue"}},
 
     # expr
-    "BoolOp": {"localg": {"values"}}, # Don't see that boolop can throw exceptions, it doesn't care about type etc
+    "BoolOp": ({"localg": {"values"}},), # Don't see that boolop can throw exceptions, it doesn't care about type etc. Also it's only a possibility that later exprs will be evaluated
     "BinOp": {"local": {"left", "right"}, "add_break": {"except"}}, # As above with extra exception
     "UnaryOp": {"local": {"operand"}, "add_break": {"except"}},
     "Lambda": {"local": {"args"}}, # Doesn't run it, just defines it. Eval args.
-    "IfExp": {"local": {"test", "body", "orelse"}},
+    "IfExp": [{"local": {"test"}}, ({"local": {"body", "orelse"}},)],
     "Dict": {"localg": {"keys", "values"}},
     "Set": {"localg": {"elts"}},
-    "ListComp": {"local": {"elt"}, "localg": {"generators"}},
-    "SetComp": {"local": {"elt"}, "localg": {"generators"}},
-    "DictComp": {"local": {"key", "value"}, "localg": {"generators"}},
+    "ListComp": {"local": {"elt"}, "localg": {"generators"}, "unknown": {"reads", "writes"}}, # We know everything is executed but in what scope?
+    "SetComp": {"local": {"elt"}, "localg": {"generators"}, "unknown": {"reads", "writes"}}, # ditto
+    "DictComp": {"local": {"key", "value"}, "localg": {"generators"}, "unknown": {"reads", "writes"}}, # ditto ditto
 
     # Turns from: (node.elt, node.generators)
     #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
@@ -398,14 +466,17 @@ MARK_CALCULATION = {
     # del __gen
     # Too difficult, say we don't know
     # TODO - check we do not have similar problems for list/set/dict comp
-    "GeneratorExp": {"known": set()},
+    "GeneratorExp": {"known": set()}, # could try work out read/writes but would be a challenge
 
     # PEP 0342 describes yield expression.
     # Not mentioned to be accepted but experimentation tells me it probably was.
     "Yield": {"local": {"value"}, "add_break": {"except", "yield"}},
 
     "Compare": {"local": {"left"}, "localg": {"comparators"}, "add_break": {"except"}},
-    "Call": {"known": set()}, # No idea what we'd be calling # TODO - think harder
+
+    # No idea what we'd be calling, read/writes in the func are indirect # TODO - think harder
+    "Call": {"known": {"reads", "writes"}, "local": {"func", "starargs", "kwargs"}, "localg": {"args", "keywords"}},
+
     "Num": {},
     "Str": {},
     "Bytes": {},
@@ -413,17 +484,22 @@ MARK_CALCULATION = {
 
     # Eval node.value
     # Now we treat like a search for a simple name in node.value
+    # Assignment will have original name as load, actually we want read and write, but can't find how to easily do that
     # TODO - store and denied?
-    "Attribute": {"local": {"value", "ctx"}},
+    "Attribute": [{"local": {"ctx"}}, {"local": {"value"}, "unknown": {"reads", "writes"}}],
 
     # Similar to above
     # TODO - store and denied?
-    "Subscript": {"local": {"value", "slice", "ctx"}},
+    "Subscript": [{"local": {"slice", "ctx"}}, {"local": {"value"}, "unknown": {"reads", "writes"}}],
 
     "Starred": {"local": {"value", "ctx"}},
-    "Name": {"local": {"ctx"}},
-    "List": _unpack_dict,
-    "Tuple": _unpack_dict,
+    "Name": _ctx_aware({
+        "Store": {"add_writes": {"id"}},
+        "Load": {"add_reads": {"id"}},
+        "Del": {"add_writes": {"id"}},
+        }, {"local": {"ctx"}}),
+    "List": _ctx_aware({"Store": {"add_break": {"except"}}}, {"localg": {"elts"}, "local": {"ctx"}}),  # Read/Write names done in name
+    "Tuple": _ctx_aware({"Store": {"add_break": {"except"}}}, {"localg": {"elts"}, "local": {"ctx"}}), # Normal ctx stuff plus think about unpacking
 
     # expr_context
     "Load": {"add_break": {"except"}}, # if not found
@@ -443,48 +519,25 @@ MARK_CALCULATION = {
 #  - TODO - Sort this out, maybe?
 
     # boolop
-    "And": None,
-    "Or": None,
+    "And": None, "Or": None,
 
     # operator
-    "Add": None,
-    "Sub": None,
-    "Mult": None,
-    "Div": None,
-    "Mod": None,
-    "Pow": None,
-    "LShift": None,
-    "RShift": None,
-    "BitOr": None,
-    "BitXor": None,
-    "BitAnd": None,
-    "FloorDiv": None,
+    "Add": None, "Sub": None, "Mult": None, "Div": None, "Mod": None, "Pow": None, "LShift": None,
+    "RShift": None, "BitOr": None, "BitXor": None, "BitAnd": None, "FloorDiv": None,
 
 # Same with unary and comparisons
 
     # unaryop
-    "Invert": None,
-    "Not": None,
-    "UAdd": None,
-    "USub": None,
+    "Invert": None, "Not": None, "UAdd": None, "USub": None,
 
     # cmpop
-    "Eq": None,
-    "NotEq": None,
-    "Lt": None,
-    "LtE": None,
-    "Gt": None,
-    "GtE": None,
-    "Is": None,
-    "IsNot": None,
-    "In": None,
-    "NotIn": None,
+    "Eq": None, "NotEq": None, "Lt": None, "LtE": None, "Gt": None, "GtE": None, "Is": None, "IsNot": None, "In": None, "NotIn": None,
 
     # comprehension
     "comprehension": {"local": {"target", "iter"}, "localg": {"ifs"}, "add_break": {"except"}}, # for non-iterable iter 
 
     # excepthandler
-    "ExceptHandler": {"local": {"type", "body"}},
+    "ExceptHandler": {"local": {"type", "body"}, "add_writes": {"name"}},
 
     # arguments
     "arguments": {"localg": {"args", "kwonlyargs", "defaults", "kw_defaults"}, "local": {"varargannotation", "kwargannotation"}},
@@ -496,7 +549,7 @@ MARK_CALCULATION = {
     "keyword": {"local": {"value"}},
 
     # alias
-    "alias": {},
+    "alias": (lambda n: {"add_writes": {"asname" if node.asname != None else "name"}}),
 }
 
 class UserStop(Exception): pass
