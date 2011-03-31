@@ -37,6 +37,8 @@ class ReorderCommand(commandui.Command):
                              help="Show statement list partitions. Used for debugging.")
         actions.add_argument("-n", "--number", action="store_const", const="number", dest="do",
                              help="Calculate the total number of permutations we can retrieve for this node.")
+        actions.add_argument("-u", "--unique", action="store_const", const="unique", dest="do",
+                             help="Calculate the total number of unique permutations we have generated. Used for debugging. Expect MASSIVE memory usage.")
         actions.add_argument("-p", "--permutations", action="store_const", const="permutations", dest="do",
                              help="Show all possible permutations for the arguments. Used for debugging.")
         actions.add_argument("-b", "--best", action="store_const", const="best", dest="do",
@@ -93,6 +95,14 @@ class ReorderCommand(commandui.Command):
             for p in orderer.permutations():
                 total += 1
             print("The total number of permutations for this node is " + str(total))
+            return
+
+        if do == "unique":
+            perms = set()
+            for perm in orderer.permutations():
+                perms.add(tuple(perm))
+            total = len(perms)
+            print("The total number of unique permutations for this node is " + str(total))
             return
 
         if do == "permutations":
