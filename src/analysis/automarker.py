@@ -264,7 +264,7 @@ def _trans_func_decorators(node):
     func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
     assname = ast.Name(node.name, ast.Store())
     calls = ast.Name(node.name, ast.Load())
-    for dec in node.decorator_list.reverse():
+    for dec in reversed(node.decorator_list):
         calls = ast.Call(dec, [calls], [], None, None)
     return [func, ast.Assign([assname], calls)]
 
@@ -289,7 +289,7 @@ def _trans_class_decorators(node):
     cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
     assname = ast.Name(node.name, ast.Store())
     calls = ast.Name(node.name, ast.Load())
-    for dec in node.decorator_list.reverse():
+    for dec in reversed(node.decorator_list):
         calls = ast.Call(dec, [calls], [], None, None)
     return [cls, ast.Assign([assname], calls)]
 
