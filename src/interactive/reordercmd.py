@@ -35,6 +35,8 @@ class ReorderCommand(commandui.Command):
                              help="Check if this node can be reordered and print it's current state if so.")
         actions.add_argument("-s", "--split", action="store_const", const="split", dest="do",
                              help="Show statement list partitions. Used for debugging.")
+        actions.add_argument("-n", "--number", action="store_const", const="number", dest="do",
+                             help="Calculate the total number of permutations we can retrieve for this node.")
         actions.add_argument("-p", "--permutations", action="store_const", const="permutations", dest="do",
                              help="Show all possible permutations for the arguments. Used for debugging.")
         actions.add_argument("-b", "--best", action="store_const", const="best", dest="do",
@@ -85,6 +87,14 @@ class ReorderCommand(commandui.Command):
                 print("---")
             return
 
+        if do == "number":
+            # No len for generators
+            total = 0
+            for p in orderer.permutations():
+                total += 1
+            print("The total number of permutations for this node is " + str(total))
+            return
+
         if do == "permutations":
             for perm in orderer.permutations():
                 self._print_block(block, perm, args.display)
@@ -112,6 +122,7 @@ class ReorderCommand(commandui.Command):
                 print("The node has been reordered.")
             else:
                 print("This is the optimal chosen rearrangement. To write to the node see --edit.")
+            return
 
         print("The action, " + do + ", has not been implemented yet.") # Shouldn't get here
 
