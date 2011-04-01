@@ -28,7 +28,7 @@ class Reorderer:
 
     """
 
-    def __init__(self, statements : "List of statements"):
+    def __init__(self, statements : "List of statements", safe : "Perform sanity checks for things that won't need them if this is coded correctly" = True):
         """Initialise reorderer or raise TypeError."""
         # Check type
         if not isinstance(statements, list):
@@ -39,6 +39,7 @@ class Reorderer:
                 raise TypeError
 
         self.statements = statements
+        self.safe = safe
 
     def check_markings(self):
         """Check if all statements have the correct markings."""
@@ -98,7 +99,30 @@ class Reorderer:
                 rem.append(d)
 
         for perm in self._insert_statements(rem, current):
-            yield [s for (s, r, w) in perm]
+            if self.safe and not self._check_perm(perm):
+                print("Failed complete permutation check.")
+            else:
+                yield [s for (s, r, w) in perm]
+
+    def _check_perm(self, perm : "Permuted tuple statement list"):
+        """Check a permutation for validity. These should still be in tuple style."""
+
+        state = {} # Keep track of last statement to write a variable
+        for (stat, reads, writes) in perm:
+            for var in reads:
+                if state.get(var, None) != reads[var]: # Expects write from different statement
+                    print("Wrong writes")
+                    return False
+            state.update(dict.fromkeys(writes.keys(), stat))
+
+        # Now make sure all final vars are supposed to be that way
+        for (stat, reads, writes) in perm:
+            for w in writes:
+                if writes[w] != (state[w] == stat): # Discrepancy between final var in statement and not in perm
+                    print("Wrong final")
+                    return False
+
+        return True
 
     def _insert_statements(self, stats, current):
         """Find all the different ways the statements in stats can be inserted into current."""
