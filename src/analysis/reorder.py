@@ -138,8 +138,8 @@ class Reorderer:
         stats = {s for (s, r, w) in perm}
         stats.add(None)
 
-        if len(perm) != len(stats) - 1:
-            print("Failed statement count.")
+        if len(perm) + 1 != len(stats):
+            print("Failed complete statement count.")
 
         def test(state, s, r, w):
             return all(state.get(var, None) == r[var] for var in r)
@@ -161,8 +161,9 @@ class Reorderer:
         stats = {s for (s, r, w) in perm}
         stats.add(None)
 
-        if len(perm) != len(stats) - 1:
-            print("Failed statement count.")
+        if len(perm) + 1 != len(stats):
+            print("Failed incomplete statement count.")
+            return
 
         def test(state, s, r, w):
             return all(state.get(var, None) == r[var] for var in r if r[var] in stats)
@@ -216,8 +217,12 @@ class Reorderer:
             return
 
         try:
-            (pos_start, pos_end) = self._get_possible_insert_range(stat, s_writes, stats) # Period where anything that reads us can get to us
+            (pos_start, pos_end) = self._get_possible_insert_range(s_stat, s_writes, stats) # Period where anything that reads us can get to us
         except TypeError: # Got None
+            return
+
+        if self.safe and not self._check_insert_range(stats, stat, pos_start, pos_end):
+            print("Failed insert range check.")
             return
 
         start = max(ok_start, pos_start)
@@ -294,7 +299,7 @@ class Reorderer:
         def test(state, s, r, w):
             return all(state.get(var, None) == r[var] for var in r if r[var] in stats)
 
-        return self._dry_run(perm, from_i = start, to_i = end, test = test)
+        return self._dry_run(perm, from_i = start, to_i = end+1, test = test) # Add 1 to end as it is inclusive, we expect exclusive
 
 
     def _get_correct_state_range(self,
@@ -364,6 +369,23 @@ class Reorderer:
                     pay_attention[r] = i
         return pay_attention
 
+    def _check_insert_range(self, perm, stat, start, end):
+        """For each index we could insert, check anything reading our statement finds it."""
+
+        (s_s, s_r, s_w) = stat
+
+        def test(state, s, r, w):
+            if s_s in r.values(): # If this node reads from our new statement
+                reads_from_us = {var for var in r if r[var] == s_s} # variables read from us
+                return all(state.get(var, None) == s_s for var in reads_from_us) # For any read variable expecting to read from us, check that it is doing so
+            else:
+                return True
+
+        for i in range(start, end+1):
+            if not self._dry_run(perm[:i] + [stat] + perm[i:], test = test):
+                return False
+        return True
+
     def _get_possible_insert_range(self,
                                    stat : "The current statement number",
                                    writes : "Set of vars we write to and whether it is the last write of this variable.",
@@ -379,22 +401,21 @@ class Reorderer:
         """
 
         # PLAN -
-        # - First first read, we must be behind this
-        # - Proceed forward from this, keeping track of who wrote which variable. If a statement tries to read ours and we don't have it, die.
+        # - Find first statement to read something from us, we must be behind this
+        # - Proceed forward from this, keeping track of any variables written. If a statement tries to read ours and it's been written since, die.
         # - Proceed backward from this until a variable we write is overwritten, we have to start after this
 
         # Find the variables that actually get read from us
         attention = self._get_relevant_written_vars(stat, writes, stats)
 
         try:
-            end = min((attention[k] or len(stats)) for k in attention)
+            end = min((attention[k] if attention[k] != None else len(stats)) for k in attention)
         except ValueError: # Attention empty
             end = len(stats)
 
         # Iterate forward
         overwritten_vars = set()
-        for i in range(end, len(stats)): # scan from the first point after our last insertion point to end
-            (s, r, w) = stats[i]
+        for (s, r, w) in stats[end:]: # scan from the first point after our last insertion point to end
             # statement reads our var?
             for var in overwritten_vars.intersection(r.keys()):
                 if r[var] == stat:
