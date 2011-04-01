@@ -111,7 +111,6 @@ class Reorderer:
         for (stat, reads, writes) in perm:
             for var in reads:
                 if state.get(var, None) != reads[var]: # Expects write from different statement
-                    print("Wrong writes")
                     return False
             state.update(dict.fromkeys(writes.keys(), stat))
 
@@ -119,7 +118,28 @@ class Reorderer:
         for (stat, reads, writes) in perm:
             for w in writes:
                 if writes[w] != (state[w] == stat): # Discrepancy between final var in statement and not in perm
-                    print("Wrong final")
+                    return False
+
+        return True
+
+    def _check_incomplete_perm(self, perm : "Permuted tuple statement list"):
+        """Check an incomplete permutation for validity. These should still be in tuple style."""
+
+        # Get a list of all the statements currently in the perm
+        stats = {s for (s, r, w) in perm}
+        stats.add(None)
+
+        state = {} # Keep track of last statement to write a variable
+        for (stat, reads, writes) in perm:
+            for var in reads:
+                if reads[var] in stats and state.get(var, None) != reads[var]: # Expects write from different statement in perm
+                    return False
+            state.update(dict.fromkeys(writes.keys(), stat))
+
+        # Now make sure all final vars are that way (we don't mind if they are final and aren't supposed to be)
+        for (stat, reads, writes) in perm:
+            for w in writes:
+                if writes[w] and (state[w] != stat): # Discrepancy between final var in statement and not in perm
                     return False
 
         return True
@@ -131,11 +151,22 @@ class Reorderer:
             yield current
             return
 
-        for sub_perm in self._insert_statements(stats[1:], current):
-            for perm in self._insert_statement(stats[0], sub_perm):
-#        for ins in self._insert_statement(stats[0], current):
-#            for perm in self._insert_statements(stats[1:], ins):
-                yield perm
+        if True:
+            outer = self._insert_statements(stats[1:], current)
+            inner = (lambda x: self._insert_statement(stats[0], x))
+        else:
+            outer = self._insert_statement(stats[0], current)
+            inner = (lambda x: self._insert_statements(stats[1:], x))
+
+        for sub_perm in outer:
+            if self.safe and not self._check_incomplete_perm(sub_perm):
+                print("Failed outer incomplete permutation check.")
+            else:
+                for perm in inner(sub_perm):
+                    if self.safe and not self._check_incomplete_perm(perm):
+                        print("Failed inner incomplete permutation check.")
+                    else:
+                        yield perm
 
     def _insert_statement(self, stat, stats):
         """Yields all the ways to insert the statement stat into stats."""
