@@ -104,23 +104,55 @@ class Reorderer:
             else:
                 yield [s for (s, r, w) in perm]
 
+    def _dry_run(self, perm : "Tuple statement list to run through", to_i=None, from_i=None, test=None, finaltest=None):
+        """
+        Run through a permutation keeping track of variables and checking at each parameter with test.
+
+        test, if it is not None, should return True to keep testing or false to immediately fail.
+        finaltest is similar.
+
+        """
+
+        if from_i == None:
+            from_i = 0
+        if to_i == None:
+            to_i = len(perm)
+        if test == None:
+            test = (lambda state, s, r, w: True)
+
+        # Run through each statement keeping state
+        state = {}
+        for i in range(len(perm)):
+            (stat, reads, writes) = perm[i]
+            if i >= from_i and i < to_i and not test(state, stat, reads, writes):
+                return False
+            state.update(dict.fromkeys(writes.keys(), stat))
+
+        # Now check final vars
+        return finaltest == None or finaltest(state)
+
     def _check_perm(self, perm : "Permuted tuple statement list"):
         """Check a permutation for validity. These should still be in tuple style."""
 
-        state = {} # Keep track of last statement to write a variable
-        for (stat, reads, writes) in perm:
-            for var in reads:
-                if state.get(var, None) != reads[var]: # Expects write from different statement
-                    return False
-            state.update(dict.fromkeys(writes.keys(), stat))
+        # Get a list of all the statements currently in the perm
+        stats = {s for (s, r, w) in perm}
+        stats.add(None)
 
-        # Now make sure all final vars are supposed to be that way
-        for (stat, reads, writes) in perm:
-            for w in writes:
-                if writes[w] != (state[w] == stat): # Discrepancy between final var in statement and not in perm
-                    return False
+        if len(perm) != len(stats) - 1:
+            print("Failed statement count.")
 
-        return True
+        def test(state, s, r, w):
+            return all(state.get(var, None) == r[var] for var in r)
+
+        def finaltest(state):
+            # Now make sure all final vars are supposed to be that way
+            for (stat, reads, writes) in perm:
+                for w in writes:
+                    if writes[w] != (state[w] == stat): # Discrepancy between final var in statement and not in perm
+                        return False
+            return True
+
+        return self._dry_run(perm, test = test, finaltest = finaltest)
 
     def _check_incomplete_perm(self, perm : "Permuted tuple statement list"):
         """Check an incomplete permutation for validity. These should still be in tuple style."""
@@ -129,20 +161,21 @@ class Reorderer:
         stats = {s for (s, r, w) in perm}
         stats.add(None)
 
-        state = {} # Keep track of last statement to write a variable
-        for (stat, reads, writes) in perm:
-            for var in reads:
-                if reads[var] in stats and state.get(var, None) != reads[var]: # Expects write from different statement in perm
-                    return False
-            state.update(dict.fromkeys(writes.keys(), stat))
+        if len(perm) != len(stats) - 1:
+            print("Failed statement count.")
 
-        # Now make sure all final vars are that way (we don't mind if they are final and aren't supposed to be)
-        for (stat, reads, writes) in perm:
-            for w in writes:
-                if writes[w] and (state[w] != stat): # Discrepancy between final var in statement and not in perm
-                    return False
+        def test(state, s, r, w):
+            return all(state.get(var, None) == r[var] for var in r if r[var] in stats)
 
-        return True
+        def finaltest(state):
+            # Now make sure all final vars are supposed to be that way
+            for (stat, reads, writes) in perm:
+                for w in writes:
+                    if writes[w] and (state[w] != stat): # Discrepancy between final var in statement and not in perm
+                        return False
+            return True
+
+        return self._dry_run(perm, test = test, finaltest = finaltest)
 
     def _insert_statements(self, stats, current):
         """Find all the different ways the statements in stats can be inserted into current."""
@@ -176,6 +209,10 @@ class Reorderer:
         try:
             (ok_start, ok_end) = self._get_correct_state_range(s_reads, stats) # Period where our reads will receive correct values
         except TypeError: # Got None
+            return
+
+        if self.safe and not self._check_correct_state_range(s_reads, stats, ok_start, ok_end):
+            print("Failed state range check.")
             return
 
         try:
@@ -246,6 +283,19 @@ class Reorderer:
             if reads[var] == None or any(reads[var] == s for (s, r, w) in stats): # If the value we want is never written or written in stats
                 pay_attention.add(var) # Add the variable to our attention set
         return pay_attention
+
+    def _check_correct_state_range(self, reads, perm, start, end):
+        """Check that any reads between start and end reads the correct values if they have been written."""
+
+        # Get a list of all the statements currently in the perm
+        stats = {s for (s, r, w) in perm}
+        stats.add(None)
+
+        def test(state, s, r, w):
+            return all(state.get(var, None) == r[var] for var in r if r[var] in stats)
+
+        return self._dry_run(perm, from_i = start, to_i = end, test = test)
+
 
     def _get_correct_state_range(self,
                                  reads : "Set of vars we read and the statement we expect to read from",
