@@ -86,7 +86,7 @@ class Reorderer:
 
         # Convert to the dependence tuple
         tuples = [self._statement_tuple(s) for s in part]
-        dependence = [self._statement_dependence(tuples[i], tuples[:i]) for i in range(len(tuples))]
+        dependence = [self._statement_dependence(tuples[i], tuples[:i], tuples[(i+1):]) for i in range(len(tuples))]
 
         # Grab the list of visible statements - saves some computation
         current = []
@@ -99,7 +99,7 @@ class Reorderer:
 
         for perm in self._insert_statements(rem, current):
             yield [s for (s, r, w) in perm]
-        
+
     def _insert_statements(self, stats, current):
         """Find all the different ways the statements in stats can be inserted into current."""
 
@@ -107,8 +107,10 @@ class Reorderer:
             yield current
             return
 
-        for ins in self._insert_statement(stats[0], current):
-            for perm in self._insert_statements(stats[1:], ins):
+        for sub_perm in self._insert_statements(stats[1:], current):
+            for perm in self._insert_statement(stats[0], sub_perm):
+#        for ins in self._insert_statement(stats[0], current):
+#            for perm in self._insert_statements(stats[1:], ins):
                 yield perm
 
     def _insert_statement(self, stat, stats):
@@ -116,68 +118,202 @@ class Reorderer:
 
         (s_stat, s_reads, s_writes) = stat
 
-        # This new statement will be valid if it comes between the last statement we have recorded as writing for us
-        # and the first statement after that point that writes to any of the variables we have recorded as writing for us
-        # where the actual statement is in stats
-
-        # Find the variables where our expected write is somewhere in stats. (i.e. The ones we will pay attention to at this point)
-        pay_attention = set()
-        for var in s_reads: # Look through variables we read in the insertion statement
-            if s_reads[var] == None or any(s_reads[var] == s for (s, r, w) in stats): # If the value we want is never written or written in stats
-                pay_attention.add(var) # Add the variable to our attention set
-
-        ok_start = None
-        ok_end = None
-        waiting_to_write = {var for var in pay_attention if s_reads[var] != None} # Copy attention set and remove those who expect no writing
-
-        if not waiting_to_write: # set ok_start if already empty
-            ok_start = 0 # Insert after everything
-        for i in range(len(stats)):
-            (s, r, w) = stats[i]
-            interference = w.intersection(pay_attention)
-            # if any the var written by this statement is read by our inserted statement
-            for inter in interference:
-                if s_reads[inter] == s: # If this is the statement supposed to write it
-                    waiting_to_write.remove(inter)
-                elif inter not in waiting_to_write: # If we are overwriting an already written variable, we will never have the correct value back
-                    ok_end = i
-                    break # so give up
-            if ok_start == None and not waiting_to_write:
-                ok_start = i+1
-
-        if ok_start == None: # Never a point after which we can insert
+        try:
+            (ok_start, ok_end) = self._get_correct_state_range(s_reads, stats) # Period where our reads will receive correct values
+        except TypeError: # Got None
             return
 
-        if ok_end == None: # Never had to stop so can insert up to the end
-            ok_end = len(stats) # Last place we can insert
+        try:
+            (pos_start, pos_end) = self._get_possible_insert_range(stat, s_writes, stats) # Period where anything that reads us can get to us
+        except TypeError: # Got None
+            return
 
-        # It won't break anything if for any variable we write:
-        # There are no reads following the insertion point that depend on a write preceding it
+        start = max(ok_start, pos_start)
+        end = min(ok_end, pos_end)
 
-        # Scan backwards through the statements to our insertion point
-        # record each read, with statement it is reading from.
-        # Assuming the list is already correct, the closest read after our write will be sufficient to check. If
-        # a read happens after this, it must written in the same statement or one after the read, (i.e. after our insertion)
+        if start > end:
+            return
 
-        for i in range(ok_start, ok_end+1): # +1 so last insertion point also assigned to i
+        for i in range(start, end+1): # +1 so last insertion point also assigned to i
         # i is places we insert stat, so before is 0->i (non-inclusive), after is i->len(stats)
         # Check insertion at each point in turn
-            # Scan back
-            post_read = {}
-            for j in reversed(range(i, len(stats))):
-                (s, r, w) = stats[j]
-                post_read.update(r)
-            # Retain only statement indices from variables that we write
-            post_read = {post_read[k] for k in s_writes.intersection(post_read.keys())}
 
-            # Scan forward from beginning checking for statements in post_read
-            for j in range(i):
-                (s, r, w) = stats[j]
-                if s in post_read:
-                    break
-            else:
-                # Only happens if the loop completed, if so we have a valid permutation!
+            if not self._cuts_read_write(i, set(s_writes.keys()), stats):
                 yield stats[:i] + [stat] + stats[i:]
+
+    def _cuts_read_write(self, pos : "Point to chop", writes : "Variables we write", stats : "List of statements"):
+        """Check if inserting writes at pos will cut the link between any reads and writes."""
+
+        # Find writes for variables we overwrite, we want to make sure these writes do not precede us
+        # In a correct stats, we only need to check the closest following reads.
+        # If a read happens after this, it must written in the same statement or one after the closest, (i.e. after our insertion)
+        post_read = self._closest_reads(pos, writes, stats)
+
+        if None in post_read:
+            return True # broken link between pre-block write and a read
+
+        # Check link between a real write and a post-block reads
+        # Only happens if write before pos is a final write for variable we write
+        for (s, r, w) in stats[:pos]:
+            if any(w[var] for var in writes.intersection(w.keys())):
+                return False
+
+        # If we find a statement in pos_read before pos then we have broken a link
+        return bool(post_read.intersection({s for (s, r, w) in stats[:pos]}))
+
+
+    def _closest_reads(self, pos : "Point to check from", ours : "Variables we write", stats : "List of statements"): 
+        """
+        Generate a dictionary of the closest reads of any variable that occur after pos, along with the statement indices they read from.
+
+        Only entries for variables we write to are returned. Also it is only the statement indices we receieve.
+
+        """
+
+        post_read = {}
+        for i in reversed(range(pos, len(stats))):
+            (s, r, w) = stats[i]
+            post_read.update(r)
+        # Retain only statement indices from variables that we write
+        return {post_read[var] for var in ours.intersection(post_read.keys())}
+
+    def _get_relevant_read_vars(self, reads : "var -> statement", stats : "list of statements like from statement_dependence"):
+        """
+        Get a set of variables where the needed writes are in stats.
+
+        For any statement in this set, we read in (according to reads), and the statement we expect to have written it exists in stats.
+        Bear in mind that the statement we expect to have written it could be None - meaning it happened before we enter the block.
+
+        """
+
+        pay_attention = set()
+        for var in reads: # Look through variables we read in the insertion statement
+            if reads[var] == None or any(reads[var] == s for (s, r, w) in stats): # If the value we want is never written or written in stats
+                pay_attention.add(var) # Add the variable to our attention set
+        return pay_attention
+
+    def _get_correct_state_range(self,
+                                 reads : "Set of vars we read and the statement we expect to read from",
+                                 stats : "Set of statements we are inserting into"):
+        """
+        Get a range of indices where we could insert the statement that reads was generated from.
+
+        This actually calculates the period in which all the writes we rely on have happened and have not been overwritten yet.
+
+        The range is given from the first to the last possible index we could insert at, all-inclusive.
+        Insert at i means stats = stats[:i] + [stat] + stats[i:]
+
+        """
+
+        # Find the variables where our expected write is somewhere in stats. (i.e. The ones we will pay attention to at this point)
+        attention = self._get_relevant_read_vars(reads, stats)
+
+        start = None
+        end = None
+        # Copy attention set and remove those who have been implicitly written before the block
+        # These will be taken away each time we see the statement we want to write it
+        waiting_to_write = {var for var in attention if reads[var] != None}
+
+        # We can start inserting anywhere if everything already written
+        if not waiting_to_write:
+            start = 0
+
+        # Check each statement
+        for i in range(len(stats)):
+            (s, r, w) = stats[i]
+            # Take the writes at statement i which we are paying attention to
+            interference = attention.intersection(w.keys())
+            for inter in interference:
+                if reads[inter] == s: # If this is the statement expected to write it
+                    waiting_to_write.remove(inter)
+                elif inter not in waiting_to_write: # If we are overwriting an already written variable, we have missed our chance
+                    end = i
+                    break # so give up, doesn't matter about start as it would be after end
+            # Check if this is the first statement where we have been ready to start
+            if start == None and not waiting_to_write:
+                start = i+1
+
+        if start == None:
+            return None
+
+        if end == None:
+            end = len(stats) # after the last statement
+
+        if start > end:
+            return None
+
+        return (start, end)
+
+    def _get_relevant_written_vars(self,
+                                   stat : "Current statment",
+                                   writes : "List of variables that statement writes to and whether they are the final write",
+                                   stats : "list of statements like from statement_dependence"):
+        """Get a dict of variables which are read from statement stat with values as the first point they are read from stat."""
+
+        pay_attention = dict.fromkeys({w for w in writes if writes[w]}) # All final writes
+        # Look through statements for reads of this statement
+        for i in reversed(range(len(stats))):
+            (c_s, c_r, c_v) = stats[i]
+            for r in c_r:
+                if c_r[r] == stat:
+                    pay_attention[r] = i
+        return pay_attention
+
+    def _get_possible_insert_range(self,
+                                   stat : "The current statement number",
+                                   writes : "Set of vars we write to and whether it is the last write of this variable.",
+                                   stats : "Set of statements we are inserting into"):
+        """
+        Get a range of indices where we could insert the statement that reads and attention were generated from.
+
+        This actually calculates the period in which we could insert the statement and have all reads that rely on us actually read from us.
+
+        The range is given from the first to the last possible index we could insert at, all-inclusive.
+        Insert at i means stats = stats[:i] + [stat] + stats[i:]
+
+        """
+
+        # PLAN -
+        # - First first read, we must be behind this
+        # - Proceed forward from this, keeping track of who wrote which variable. If a statement tries to read ours and we don't have it, die.
+        # - Proceed backward from this until a variable we write is overwritten, we have to start after this
+
+        # Find the variables that actually get read from us
+        attention = self._get_relevant_written_vars(stat, writes, stats)
+
+        try:
+            end = min((attention[k] or len(stats)) for k in attention)
+        except ValueError: # Attention empty
+            end = len(stats)
+
+        # Iterate forward
+        overwritten_vars = set()
+        for i in range(end, len(stats)): # scan from the first point after our last insertion point to end
+            (s, r, w) = stats[i]
+            # statement reads our var?
+            for var in overwritten_vars.intersection(r.keys()):
+                if r[var] == stat:
+                    return None # Can insert nowhere
+            # statement writes our var
+            overwritten_vars.update(w.keys())
+
+        # Check final writes
+        if overwritten_vars.intersection(var for var in writes if writes[var]):
+            return None
+
+        # Now backward for the next written var, only stop if we get to a var that is actually read
+        start = None
+        for i in reversed(range(end)): # Just before end and backwards
+            (s, r, w) = stats[i]
+            if set(attention.keys()).intersection(w.keys()):
+                start = i+1
+                break
+
+        if start == None:
+            start = 0
+
+        return (start, end)
+
 
     def _statement_tuple(self, s : "Index of the statement to convert",):
         """
@@ -197,12 +333,14 @@ class Reorderer:
 
     def _statement_dependence(self,
                               t : "As returned by _statement_tuple",
-                              before : "Slice of statement tuples before t"):
+                              before : "Slice of statement tuples before t",
+                              after : "Slice of statement tuples after t"):
         """
         Returns a tuple similar to _statement_tuple but with indices where memory regions are written.
 
-        This means we turn the read/write sets into a dict with memory regions as keys and indices where
+        This means we turn the read sets into a dict with memory regions as keys and indices where
         they were written last as values. None values will remain where the write does not exist.
+        Write set becomes set with true of false indicating if they are the last write of the variable.
 
         """
 
@@ -216,7 +354,13 @@ class Reorderer:
             common_d = dict.fromkeys(common, b_stat)
             reads.update(common_d)
 
-        return (t_stat, reads, t_writes)        
+        writes = dict.fromkeys(t_writes, True)
+        for (a_stat, a_reads, a_writes) in after:
+            common = t_writes.intersection(a_writes)
+            common_d = dict.fromkeys(common, False)
+            writes.update(common_d)
+
+        return (t_stat, reads, writes)        
 
     def permute(self, perm):
         """Permute the statements with the given permutation. Does not affect the original statement list."""
