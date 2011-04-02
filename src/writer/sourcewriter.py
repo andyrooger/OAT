@@ -35,7 +35,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__out = out
 
         self.__top_ast = top_ast
-        if not isinstance(self.__top_ast, ast.AST):
+        if not isinstance(self.__top_ast, ast.AST) and not isinstance(self.__top_ast, list):
             raise TypeError("The tree needs to begin with an AST node.")
 
         self.__indentation = []
