@@ -28,7 +28,7 @@ class Reorderer:
 
     """
 
-    def __init__(self, statements : "List of statements", safe : "Perform sanity checks for things that won't need them if this is coded correctly" = True):
+    def __init__(self, statements : "List of statements", safe : "Perform sanity checks for things that won't need them if this is coded correctly" = False):
         """Initialise reorderer or raise TypeError."""
         # Check type
         if not isinstance(statements, list):
@@ -185,18 +185,11 @@ class Reorderer:
             yield current
             return
 
-        if True:
-            outer = self._insert_statements(stats[1:], current)
-            inner = (lambda x: self._insert_statement(stats[0], x))
-        else:
-            outer = self._insert_statement(stats[0], current)
-            inner = (lambda x: self._insert_statements(stats[1:], x))
-
-        for sub_perm in outer:
+        for sub_perm in self._insert_statements(stats[1:], current):
             if self.safe and not self._check_incomplete_perm(sub_perm):
                 print("Failed outer incomplete permutation check.")
             else:
-                for perm in inner(sub_perm):
+                for perm in self._insert_statement(stats[0], sub_perm):
                     if self.safe and not self._check_incomplete_perm(perm):
                         print("Failed inner incomplete permutation check.")
                     else:
