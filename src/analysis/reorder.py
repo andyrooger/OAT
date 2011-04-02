@@ -235,8 +235,43 @@ class Reorderer:
         # i is places we insert stat, so before is 0->i (non-inclusive), after is i->len(stats)
         # Check insertion at each point in turn
 
-            if not self._cuts_read_write(i, set(s_writes.keys()), stats):
+            cuts = self._cuts_read_write(i, set(s_writes.keys()), stats)
+            if self.safe and not self._check_read_write_cuts(i, s_writes, stats, cuts):
+                print("Failed cuts check.")
+                return
+            if not cuts:
                 yield stats[:i] + [stat] + stats[i:]
+
+    def _check_read_write_cuts(self, pos, writes, stats, ans : "Calculated answer from other func"):
+        """Calculate _cuts_read_write without shortcuts to test."""
+
+        # Wow long one now, calculate ALL read/write links between variables
+        links = {} # var -> set((write, read)), read/write are indices where the variable is read and written
+
+        state = {}
+        for i in range(len(stats)):
+            (s, r, w) = stats[i]
+            for var in r: # All read variables
+                if var not in links:
+                    links[var] = set()
+                reads_from = state.get(var, -1)
+                from_stat = None if reads_from == -1 else stats[reads_from][0]
+                if from_stat == r[var]: # Currently reading correctly
+                    links[var].add((reads_from, i))
+            state.update(dict.fromkeys(w.keys(), i)) # Use position in list rather than statement id
+        for var in state:
+            (from_s, from_r, from_w) = stats[state[var]]
+            if var not in links:
+                links[var] = set()
+            if from_w[var]: # Really should be a final write
+                links[var].add((state[var], len(stats)))
+
+        # Keep all the links for variables we will write
+        links = {v for var in links if var in writes for v in links[var]}
+
+        # Now check none are broken
+        broken = any(frm < pos and to >= pos for (frm, to) in links)
+        return broken == ans
 
     def _cuts_read_write(self, pos : "Point to chop", writes : "Variables we write", stats : "List of statements"):
         """Check if inserting writes at pos will cut the link between any reads and writes."""
@@ -253,9 +288,9 @@ class Reorderer:
         # Only happens if write before pos is a final write for variable we write
         for (s, r, w) in stats[:pos]:
             if any(w[var] for var in writes.intersection(w.keys())):
-                return False
+                return True
 
-        # If we find a statement in pos_read before pos then we have broken a link
+        # If we find a statement in post_read before pos then we have broken a link
         return bool(post_read.intersection({s for (s, r, w) in stats[:pos]}))
 
 
