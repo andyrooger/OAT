@@ -53,7 +53,7 @@ class ParseCommand(commandui.Command):
                 except IOError:
                     print("The AST file could not be opened.")
                     return False
-                except pickle.PickleError:
+                except pickle.PicklingError:
                     print("The AST could not be saved.")
                     return False
                 else:
@@ -67,7 +67,7 @@ class ParseCommand(commandui.Command):
             except SyntaxError:
                 print("The file contains incorrect syntax, are you sure it is a Python file?")
                 return False
-            except (TypeError, pickle.UnpickleError):
+            except (TypeError, pickle.UnpicklingError):
                 print("Could not use the data in the given file.")
                 return False
             except AssertionError:
@@ -149,7 +149,7 @@ class ASTStorage:
         Load the given file's AST from disk.
 
         Raises IOError if the ast or source files cannot be read.
-        Raises TypeError or pickle.UnpickleError if the AST file is incorrect
+        Raises TypeError or pickle.UnpicklingError if the AST file is incorrect
         Raises AssertError if the file has changed.
 
         """
@@ -186,7 +186,7 @@ class ASTStorage:
 
         Raises AssertionError if the AST has changed since parsing the file.
         Raises IOError if the file could not be opened.
-        Raises pickle.PickleError if the tree could not be pickled.
+        Raises pickle.PicklingError if the tree could not be pickled.
 
         """
 
