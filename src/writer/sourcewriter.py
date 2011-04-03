@@ -73,6 +73,11 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__character_level += len(s)
         self.__out.write(s)
 
+    def _write_list(self, s):
+        """Write a list assuming it is a list of statements. Should not be used willy nilly."""
+
+        self._write_block(s, indent=False)
+
     def _char_level(self, relative = True):
         """Get the absolute character level or relative to the indentation."""
 
