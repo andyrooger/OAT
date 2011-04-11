@@ -26,7 +26,7 @@ class ReorderCommand(commandui.Command):
 
         self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
                                 help="How to display statements, either by index, type or the full code.")
-        self._opts.add_argument("-v", "--valuer", choices=["random", "first"], default="random",
+        self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange"], default="random",
                                 help="Choose the valuer function.")
         self._opts.add_argument("-e", "--edit", action="store_true", default=False,
                                 help="Allow editing of the tree. This is disallowed by default.")
@@ -121,6 +121,8 @@ class ReorderCommand(commandui.Command):
             valuer = {
                 "random" : reorder.RandomValuer,
                 "first" : reorder.FirstValuer,
+                "wrange" : reorder.WriteRangeValuer,
+                "rwrange" : reorder.WriteUseValuer,
             }[args.valuer]
             perm = orderer.best_permutation(valuer)
 
