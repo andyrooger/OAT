@@ -569,7 +569,7 @@ understand still, or even be able to reorder the statements in such a way that t
 to the human thought process. The positive token we take from the programatic analyser's blindness to these matters is that it
 can be quite difficult to perform the reverse obfusction automatically.
 
-\subsection{Implementation}
+\subsection{Method}
 
 We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
 grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. This includes any expression, as well as things like function definitions or
@@ -650,7 +650,22 @@ This partitioning forms our second constraint on the permutations.
 
 \subsubsection{Read/Write Dependencies}
 
-Do me next!
+Now we have the two simpler constraints out the way, we should look at the part which takes most of the processing when choosing valid permutations. This is
+keeping read/write dependencies unbroken.
+
+So far we have been trying to make sure the correct statements are always run. This alone does not ensure correctness of our permutation. Take for instance
+the following:
+
+\begin{lstlisting}
+a = "hello"
+print(a)    # Prints "hello"
+a = "world"
+print(a)    # Prints "world"
+\end{lstlisting}
+
+We see that lines 2 and 4 are identical (excluding the comments), yet they produce entirely different output. We want to make sure this doesn't happen in
+our permutations. The way we achieve this is by ensuring that relevant state is kept identical when entering the each statement. If this is true then we can
+be sure the statement will behave in the same way 
 
 \section{Buuullllsshhhiiiitttt}
 
