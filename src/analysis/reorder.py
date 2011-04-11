@@ -22,6 +22,29 @@ def FirstValuer(statements, perm):
 
     return 1
 
+def WriteRangeValuer(statements, perm):
+    """Gives the sum of spread of written variables."""
+
+    variables = {}
+    # Collect ranges for all variables
+    for i in range(len(perm)):
+        stat = perm[i]
+        written = write.WriteMarker(statements[stat]).get_mark()
+        for w in written:
+            try:
+                (start, end) = variables[w]
+            except KeyError:
+                variables[w] = (i, i)
+            else:
+                variables[w] = (start, i)
+    # Sum ranges (we want smallest range and valuer rates high for good)
+    # (... also we don't have a limit to values output)
+    return -sum(e - s for (s, e) in variables.values())
+
+# Try all write valuers with read
+# Dist to nearest write?
+# Dist from write to furthest read of that write?
+
 class Reorderer:
     """
     Performs calculation on a set of statements and eventually returns a generator for different permutations.
