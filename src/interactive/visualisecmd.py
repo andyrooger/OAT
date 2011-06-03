@@ -4,8 +4,11 @@ Allow the user to visualise the current state of the program from the console.
 """
 
 import ast
+import tkinter
 
 from . import commandui
+
+from goat.staticvisual import StaticVisual
 
 class VisualiseCommand(commandui.Command):
     """Visualise the state of the program from the console."""
@@ -17,3 +20,17 @@ class VisualiseCommand(commandui.Command):
 
     def run(self, args):
         """Pop up our GUI."""
+
+        root = tkinter.Tk()
+        root.title("OAT Visualiser")
+        StaticVisual(root)
+
+        print("OAT Visualisation is being displayed.")
+        print("To return to the command console, please quit the "
+              "visualisation from its own window.")
+
+        root.mainloop()
+        try:
+            root.destroy()
+        except tkinter.TclError:
+            pass # Probably already destroyed by closing from window.
