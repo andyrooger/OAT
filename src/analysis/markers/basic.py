@@ -5,6 +5,7 @@ Basic functions that a marker should do.
 
 import ast
 import abc
+from ..customast import CustomAST
 
 class BasicMarker(metaclass=abc.ABCMeta):
     def __init__(self,
@@ -12,14 +13,16 @@ class BasicMarker(metaclass=abc.ABCMeta):
                  node : "Node to mark" = None):
         self.mark = mark
         if node == None:
-            self.node = DummyAST() # Dummy
+            self.node = CustomAST(None)
+        elif not isinstance(node, CustomAST):
+            raise TypeError("Marker needs a CustomAST node.")
         else:
             self.node = node
 
     def supports_markings(self):
         """Check if our node supports markings."""
 
-        return isinstance(self.node, ast.AST)
+        return True
 
     def has_markings(self):
         """Check if our node has markings."""
@@ -28,9 +31,6 @@ class BasicMarker(metaclass=abc.ABCMeta):
 
     def _get_markings(self, create : "Should we add markings if possible?" = False):
         """Get markings if the node has them, or None."""
-
-        if not self.supports_markings():
-            return None
 
         if self.has_markings():
             return self.node._markings
@@ -58,11 +58,8 @@ class BasicMarker(metaclass=abc.ABCMeta):
     def set_mark(self, val):
         """Set the value of our marking."""
 
-        if self.supports_markings():
-            self._get_markings(True)[self.mark] = val
-            return True
-        else:
-            return False
+        self._get_markings(True)[self.mark] = val
+        return True
 
     @abc.abstractmethod
     def get_default(self):
@@ -72,11 +69,9 @@ class BasicMarker(metaclass=abc.ABCMeta):
         """Detach the current marker from its node, duplicating necessary data."""
 
         data = self.duplicate()
-        self.node = DummyAST()
+        self.node = CustomAST(None)
         self.set_mark(data)
 
     @abc.abstractmethod
     def duplicate(self):
         """Returns identical to get_mark() but separate objects."""
-
-class DummyAST(ast.AST): pass

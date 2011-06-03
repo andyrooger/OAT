@@ -10,6 +10,7 @@ import ast
 import sys
 
 from . import sourcewriter
+from analysis.customast import CustomAST
 
 class BasicWriter(sourcewriter.SourceWriter):
     """
@@ -23,8 +24,9 @@ class BasicWriter(sourcewriter.SourceWriter):
     >>> theast = None
     >>> with open("../example/stuff.py") as file:
     ...     theast = ast.parse(file.read(), "stuff.py", "exec")
-    >>> type(theast)
-    <class '_ast.Module'>
+    >>> theast = CustomAST(theast)
+    >>> theast.type()
+    'Module'
     >>> with open("../example/stuff.py.basicformat") as file:
     ...         file.read() == sourcewriter.srcToStr(theast, BasicWriter)
     True
@@ -40,9 +42,9 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> BasicWriter("hello world")
         Traceback (most recent call last):
             ...
-        TypeError: The tree needs to begin with an AST node.
+        TypeError: The tree needs to begin with a CustomAST node.
         >>> import ast
-        >>> myast = ast.AST()
+        >>> myast = CustomAST(ast.AST())
         >>> myast = BasicWriter(myast)
 
         """
@@ -55,13 +57,13 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.Module([ast.Expr(ast.Str("Hello"))])
+        >>> myast = CustomAST(ast.Module([ast.Expr(ast.Str("Hello"))]))
         >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
 
         """
 
-        self._write_block(tree.body, indent = False)
+        self._write_block(tree.children["body"], indent = False)
 
     def _write_Interactive(self, tree):
         """
@@ -69,7 +71,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.Interactive([ast.Expr(ast.Str("Hello"))])
+        >>> myast = CustomAST(ast.Interactive([ast.Expr(ast.Str("Hello"))]))
         >>> sourcewriter.srcToStr(myast, BasicWriter) == ">>> 'Hello'"
         True
 
@@ -77,7 +79,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         old_interactive = self._is_interactive()
         self._is_interactive(True)
-        self._write_block(tree.body, indent = False)
+        self._write_block(tree.children["body"], indent = False)
         self._is_interactive(old_interactive)
 
     def _write_Expression(self, tree):
@@ -86,13 +88,13 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.Expression(ast.Expr(ast.Str("Hello")))
+        >>> myast = CustomAST(ast.Expression(ast.Expr(ast.Str("Hello"))))
         >>> sourcewriter.printSource(myast, BasicWriter)
         'Hello'
 
         """
 
-        self._write_block([tree.body], indent = False)
+        self._write_block(CustomAST([tree.children["body"]]), indent = False)
     
 
     def _write_Suite(self, tree):
@@ -111,7 +113,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ...     print("hi")
         ...     print("bye")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         @afunction
         def myfunction(arg1, arg2, arg3 = None):
@@ -121,17 +123,19 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
 
         self._interleave_write(
-            tree.decorator_list,
-            before = (lambda: self._write("@")),
+            tree.children["decorator_list"],
+            before = (lambda: self._ground_write("@")),
             after = self._next_statement)
 
-        self._write("def " + tree.name + "(")
-        self._write(tree.args)
-        self._write(")")
-        if tree.returns != None:
-            self._write(" -> ")
-            self._write(tree.returns)
-        self._write_block(tree.body)          
+        self._ground_write("def ")
+        self._write(tree.children["name"])
+        self._ground_write("(")
+        self._write(tree.children["args"])
+        self._ground_write(")")
+        if not tree.children["returns"].is_empty():
+            self._ground_write(" -> ")
+            self._write(tree.children["returns"])
+        self._write_block(tree.children["body"])
 
     def _write_ClassDef(self, tree):
         """
@@ -145,7 +149,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ...     print("hi")
         ...     print("bye")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         @aclassdecorator
         class myclass(base1, base2, metaclass = m, *varpos, **varkey):
@@ -154,35 +158,40 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._interleave_write(tree.decorator_list,
-            before=(lambda: self._write("@")),
+        self._interleave_write(tree.children["decorator_list"],
+            before=(lambda: self._ground_write("@")),
             after=self._next_statement)
 
-        self._write("class " + tree.name)
-        if tree.bases or tree.keywords or tree.starargs or tree.kwargs:
-            self._write("(")
+        self._ground_write("class ")
+        self._write(tree.children["name"])
+        if (not tree.children["bases"].is_empty() or
+           not tree.children["keywords"].is_empty() or
+           not tree.children["starargs"].is_empty() or
+           not tree.children["kwargs"].is_empty()):
+            self._ground_write("(")
 
-            self._interleave_write(tree.bases + tree.keywords,
-                between=(lambda: self._write(", ")))
+            self._interleave_write(
+                tree.children["bases"].temp_list(tree.children["keywords"]),
+                between=(lambda: self._ground_write(", ")))
 
-            had_arg = tree.bases or tree.keywords
+            had_arg = tree.children["bases"] or tree.children["keywords"]
 
-            if tree.starargs:
+            if not tree.children["starargs"].is_empty():
                 if had_arg:
-                    self._write(", ")
+                    self._ground_write(", ")
                 had_arg = True
-                self._write("*")
-                self._write(tree.starargs)
+                self._ground_write("*")
+                self._write(tree.children["starargs"])
 
-            if tree.kwargs:
+            if not tree.children["kwargs"].is_empty():
                 if had_arg:
-                    self._write(", ")
+                    self._ground_write(", ")
                 had_arg = True
-                self._write("**")
-                self._write(tree.kwargs)
+                self._ground_write("**")
+                self._write(tree.children["kwargs"])
 
-            self._write(")")
-        self._write_block(tree.body)
+            self._ground_write(")")
+        self._write_block(tree.children["body"])
         
 
     def _write_Return(self, tree):
@@ -191,14 +200,14 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("return 'Hello there'")
+        >>> myast = CustomAST(ast.parse("return 'Hello there'"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         return 'Hello there'
 
         """
 
-        self._write("return ")
-        self._write(tree.value)
+        self._ground_write("return ")
+        self._write(tree.children["value"])
 
     def _write_Delete(self, tree):
         """
@@ -206,15 +215,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("del myvar, yourvar")
+        >>> myast = CustomAST(ast.parse("del myvar, yourvar"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         del myvar, yourvar
 
         """
 
-        self._write("del ")
-        self._interleave_write(tree.targets,
-            between=(lambda: self._write(", ")))
+        self._ground_write("del ")
+        self._interleave_write(tree.children["targets"],
+            between=(lambda: self._ground_write(", ")))
 
 
     def _write_Assign(self, tree):
@@ -223,14 +232,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a=b=c=142")
+        >>> myast = CustomAST(ast.parse("a=b=c=142"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         a = b = c = 142
 
         """
 
-        self._interleave_write(tree.targets + [tree.value],
-            between=(lambda: self._write(" = ")))
+        self._interleave_write(tree.children["targets"],
+            between=(lambda: self._ground_write(" = ")))
+        self._ground_write(" = ")
+        self._write(tree.children["value"])
 
 
     def _write_AugAssign(self, tree):
@@ -239,17 +250,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a+=2")
+        >>> myast = CustomAST(ast.parse("a+=2"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         a += 2
 
         """
 
-        self._write(tree.target)
-        self._write(" ")
-        self._write(tree.op)
-        self._write("= ")
-        self._write(tree.value)
+        self._write(tree.children["target"])
+        self._ground_write(" ")
+        self._write(tree.children["op"])
+        self._ground_write("= ")
+        self._write(tree.children["value"])
 
     def _write_For(self, tree):
         """
@@ -263,7 +274,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... else:
         ...     print("I wonder how this happened...")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         for i in range(3):
             print(str(i))
@@ -272,16 +283,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("for ")
-        self._write(tree.target)
-        self._write(" in ")
-        self._write(tree.iter)
-        self._write_block(tree.body)
+        self._ground_write("for ")
+        self._write(tree.children["target"])
+        self._ground_write(" in ")
+        self._write(tree.children["iter"])
+        self._write_block(tree.children["body"])
 
-        if tree.orelse:
+        if not tree.children["orelse"].is_empty():
             self._next_statement()
-            self._write("else")
-            self._write_block(tree.orelse)
+            self._ground_write("else")
+            self._write_block(tree.children["orelse"])
 
     def _write_While(self, tree):
         """
@@ -295,7 +306,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... else:
         ...     print("Never get here.")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         while True:
             pass
@@ -304,14 +315,14 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("while ")
-        self._write(tree.test)
-        self._write_block(tree.body)
+        self._ground_write("while ")
+        self._write(tree.children["test"])
+        self._write_block(tree.children["body"])
 
-        if tree.orelse:
+        if not tree.children["orelse"].is_empty():
             self._next_statement()
-            self._write("else")
-            self._write_block(tree.orelse)
+            self._ground_write("else")
+            self._write_block(tree.children["orelse"])
 
     def _write_If(self, tree):
         """
@@ -325,7 +336,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... else:
         ...     print(":(")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         if 'linux' in sys.platform:
             print(':)')
@@ -334,14 +345,14 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("if ")
-        self._write(tree.test)
-        self._write_block(tree.body)
+        self._ground_write("if ")
+        self._write(tree.children["test"])
+        self._write_block(tree.children["body"])
 
-        if tree.orelse:
+        if not tree.children["orelse"].is_empty():
             self._next_statement()
-            self._write("else")
-            self._write_block(tree.orelse)
+            self._ground_write("else")
+            self._write_block(tree.children["orelse"])
 
 
     def _write_With(self, tree):
@@ -354,21 +365,21 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... with open("/dev/null") as nothing:
         ...     nothing.write("hello")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         with open('/dev/null') as nothing:
             nothing.write('hello')
 
         """
 
-        self._write("with ")
-        self._write(tree.context_expr)
+        self._ground_write("with ")
+        self._write(tree.children["context_expr"])
 
-        if tree.optional_vars:
-            self._write(" as ")
-            self._write(tree.optional_vars)
+        if not tree.children["optional_vars"].is_empty():
+            self._ground_write(" as ")
+            self._write(tree.children["optional_vars"])
 
-        self._write_block(tree.body)
+        self._write_block(tree.children["body"])
 
 
     def _write_Raise(self, tree):
@@ -377,18 +388,18 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("raise Exception('Bad thing happened') from Exception()")
+        >>> myast = CustomAST(ast.parse("raise Exception('Bad thing happened') from Exception()"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         raise Exception('Bad thing happened') from Exception()
 
         """
 
-        self._write("raise ")
-        self._write(tree.exc)
+        self._ground_write("raise ")
+        self._write(tree.children["exc"])
 
-        if tree.cause != None:
-            self._write(" from ")
-            self._write(tree.cause)
+        if not tree.children["cause"].is_empty():
+            self._ground_write(" from ")
+            self._write(tree.children["cause"])
 
 
     def _write_TryExcept(self, tree):
@@ -403,7 +414,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... except: pass
         ... else: print("Oh...")
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             raise Exception
@@ -416,16 +427,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("try")
-        self._write_block(tree.body)
+        self._ground_write("try")
+        self._write_block(tree.children["body"])
 
-        self._interleave_write(tree.handlers,
+        self._interleave_write(tree.children["handlers"],
             before = self._next_statement)
 
-        if tree.orelse:
+        if not tree.children["orelse"].is_empty():
             self._next_statement()
-            self._write("else")
-            self._write_block(tree.orelse)
+            self._ground_write("else")
+            self._write_block(tree.children["orelse"])
         
 
     def _write_TryFinally(self, tree):
@@ -438,7 +449,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... try: raise Exception
         ... finally: pass
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             raise Exception
@@ -447,12 +458,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("try")
-        self._write_block(tree.body)
+        self._ground_write("try")
+        self._write_block(tree.children["body"])
 
         self._next_statement()
-        self._write("finally")
-        self._write_block(tree.finalbody)
+        self._ground_write("finally")
+        self._write_block(tree.children["finalbody"])
 
     def _write_Assert(self, tree):
         """
@@ -460,18 +471,18 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("assert False, 'Oh dear'")
+        >>> myast = CustomAST(ast.parse("assert False, 'Oh dear'"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         assert False, 'Oh dear'
 
         """
 
-        self._write("assert ")
-        self._write(tree.test)
+        self._ground_write("assert ")
+        self._write(tree.children["test"])
 
-        if tree.msg != None:
-            self._write(", ")
-            self._write(tree.msg)
+        if not tree.children["msg"].is_empty():
+            self._ground_write(", ")
+            self._write(tree.children["msg"])
 
 
     def _write_Import(self, tree):
@@ -480,15 +491,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("import sys, os")
+        >>> myast = CustomAST(ast.parse("import sys, os"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         import sys, os
 
         """
 
-        self._write("import ")
-        self._interleave_write(tree.names,
-            between = (lambda: self._write(", ")))
+        self._ground_write("import ")
+        self._interleave_write(tree.children["names"],
+            between = (lambda: self._ground_write(", ")))
 
     def _write_ImportFrom(self, tree):
         """
@@ -496,19 +507,20 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("from .. sys import sys as sys2, os")
+        >>> myast = CustomAST(ast.parse("from .. sys import sys as sys2, os"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         from ..sys import sys as sys2, os
 
         """
 
-        self._write("from ")
-        if tree.level != None:
-            self._write("." * tree.level)
-        self._write(tree.module + " import ")
+        self._ground_write("from ")
+        if not tree.children["level"].is_empty():
+            self._ground_write("." * tree.children["level"].node())
+        self._write(tree.children["module"])
+        self._ground_write(" import ")
 
-        self._interleave_write(tree.names,
-            between = (lambda: self._write(", ")))
+        self._interleave_write(tree.children["names"],
+            between = (lambda: self._ground_write(", ")))
 
 
     def _write_Global(self, tree):
@@ -517,15 +529,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("global g1, g2")
+        >>> myast = CustomAST(ast.parse("global g1, g2"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         global g1, g2
 
         """
 
-        self._write("global ")
-        self._interleave_write(tree.names,
-            between = (lambda: self._write(", ")))
+        self._ground_write("global ")
+        self._interleave_write(tree.children["names"],
+            between = (lambda: self._ground_write(", ")))
 
 
     def _write_Nonlocal(self, tree):
@@ -534,15 +546,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("nonlocal n1, n2")
+        >>> myast = CustomAST(ast.parse("nonlocal n1, n2"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         nonlocal n1, n2
 
         """
 
-        self._write("nonlocal ")
-        self._interleave_write(tree.names,
-            between = (lambda: self._write(", ")))
+        self._ground_write("nonlocal ")
+        self._interleave_write(tree.children["names"],
+            between = (lambda: self._ground_write(", ")))
 
 
     def _write_Expr(self, tree):
@@ -552,19 +564,20 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> import ast
         >>> from . import sourcewriter
         >>> innerast = ast.Str("Hello")
-        >>> outerast = ast.Expr(innerast)
+        >>> outerast = CustomAST(ast.Expr(innerast))
+        >>> innerast = CustomAST(innerast)
         >>> sourcewriter.srcToStr(innerast, BasicWriter) == sourcewriter.srcToStr(outerast, BasicWriter)
         True
 
         """
 
-        self._write(tree.value)
+        self._write(tree.children["value"])
 
 
     # not worth testing
-    def _write_Pass(self, tree): self._write("pass")
-    def _write_Break(self, tree): self._write("break")
-    def _write_Continue(self, tree): self._write("continue")
+    def _write_Pass(self, tree): self._ground_write("pass")
+    def _write_Break(self, tree): self._ground_write("break")
+    def _write_Continue(self, tree): self._ground_write("continue")
 
     # expr
     def _write_BoolOp(self, tree):
@@ -573,20 +586,20 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a and b or c")
+        >>> myast = CustomAST(ast.parse("a and b or c"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         ((a and b) or c)
 
         """
 
         def sep():
-            self._write(" ")
-            self._write(tree.op)
-            self._write(" ")
+            self._ground_write(" ")
+            self._write(tree.children["op"])
+            self._ground_write(" ")
 
-        self._write("(")
-        self._interleave_write(tree.values, between = sep)
-        self._write(")")
+        self._ground_write("(")
+        self._interleave_write(tree.children["values"], between = sep)
+        self._ground_write(")")
 
     def _write_BinOp(self, tree):
         """
@@ -594,19 +607,19 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a / 2 * 3 + 10")
+        >>> myast = CustomAST(ast.parse("a / 2 * 3 + 10"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         (((a / 2) * 3) + 10)
 
         """
 
-        self._write("(")
-        self._write(tree.left)
-        self._write(" ")
-        self._write(tree.op)
-        self._write(" ")
-        self._write(tree.right)
-        self._write(")")
+        self._ground_write("(")
+        self._write(tree.children["left"])
+        self._ground_write(" ")
+        self._write(tree.children["op"])
+        self._ground_write(" ")
+        self._write(tree.children["right"])
+        self._ground_write(")")
 
     def _write_UnaryOp(self, tree):
         """
@@ -614,15 +627,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("not ~a")
+        >>> myast = CustomAST(ast.parse("not ~a"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         not ~ a
 
         """
 
-        self._write(tree.op)
-        self._write(" ")
-        self._write(tree.operand)
+        self._write(tree.children["op"])
+        self._ground_write(" ")
+        self._write(tree.children["operand"])
 
     def _write_Lambda(self, tree):
         """
@@ -630,18 +643,18 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("lambda a,b,c: a + b + c")
+        >>> myast = CustomAST(ast.parse("lambda a,b,c: a + b + c"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         lambda a, b, c: ((a + b) + c)
 
         """
 
-        self._write("lambda")
-        if tree.args != None:
-            self._write(" ")
-            self._write(tree.args)
-        self._write(": ")
-        self._write(tree.body)
+        self._ground_write("lambda")
+        if not tree.children["args"].is_empty():
+            self._ground_write(" ")
+            self._write(tree.children["args"])
+        self._ground_write(": ")
+        self._write(tree.children["body"])
 
     def _write_IfExp(self, tree):
         """
@@ -649,17 +662,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a if b else c")
+        >>> myast = CustomAST(ast.parse("a if b else c"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         a if b else c
 
         """
 
-        self._write(tree.body)
-        self._write(" if ")
-        self._write(tree.test)
-        self._write(" else ")
-        self._write(tree.orelse)
+        self._write(tree.children["body"])
+        self._ground_write(" if ")
+        self._write(tree.children["test"])
+        self._ground_write(" else ")
+        self._write(tree.children["orelse"])
 
 
     def _write_Dict(self, tree):
@@ -668,23 +681,25 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("{1 : 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}")
+        >>> myast = CustomAST(ast.parse("{1 : 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         {1: 'partridge in a pear tree', 2: 'two turtle doves', 3: 'three french hens'}
 
         """
 
-        def item_writer(key_val):
-            key, val = key_val
-            self._write(key)
-            self._write(": ")
-            self._write(val)
+        self._ground_write("{")
 
-        self._write("{")
-        self._interleave_write(zip(tree.keys, tree.values),
-            writer = item_writer,
-            between = (lambda: self._write(", ")))
-        self._write("}")
+        had_arg = False
+        for child in tree.children["keys"].ordered_children():
+            if had_arg:
+                self._ground_write(", ")
+            else:
+                had_arg = True
+            self._write(tree.children["keys"].children[child])
+            self._ground_write(": ")
+            self._write(tree.children["values"].children[child])
+
+        self._ground_write("}")
 
 
     def _write_Set(self, tree):
@@ -693,16 +708,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("{2,3,5,7,13,17,19}")
+        >>> myast = CustomAST(ast.parse("{2,3,5,7,13,17,19}"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         {2, 3, 5, 7, 13, 17, 19}
 
         """
 
-        self._write("{")
-        self._interleave_write(tree.elts,
-            between = (lambda: self._write(", ")))
-        self._write("}")
+        self._ground_write("{")
+        self._interleave_write(tree.children["elts"],
+            between = (lambda: self._ground_write(", ")))
+        self._ground_write("}")
 
 
     def _write_ListComp(self, tree):
@@ -711,17 +726,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("[x*y for x in range(10) if x != 5 for y in range(10) if y != 5]")
+        >>> myast = CustomAST(ast.parse("[x*y for x in range(10) if x != 5 for y in range(10) if y != 5]"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         [(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5]
 
         """
 
-        self._write("[")
-        self._write(tree.elt)
-        self._interleave_write(tree.generators,
-            before = (lambda: self._write(" ")))
-        self._write("]")
+        self._ground_write("[")
+        self._write(tree.children["elt"])
+        self._interleave_write(tree.children["generators"],
+            before = (lambda: self._ground_write(" ")))
+        self._ground_write("]")
 
     def _write_SetComp(self, tree):
         """
@@ -729,17 +744,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("{x*y for x in range(10) if x != 5 for y in range(10) if y != 5}")
+        >>> myast = CustomAST(ast.parse("{x*y for x in range(10) if x != 5 for y in range(10) if y != 5}"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         {(x * y) for x in range(10) if x != 5 for y in range(10) if y != 5}
 
         """
 
-        self._write("{")
-        self._write(tree.elt)
-        self._interleave_write(tree.generators,
-            before = (lambda: self._write(" ")))
-        self._write("}")
+        self._ground_write("{")
+        self._write(tree.children["elt"])
+        self._interleave_write(tree.children["generators"],
+            before = (lambda: self._ground_write(" ")))
+        self._ground_write("}")
 
     def _write_DictComp(self, tree):
         """
@@ -747,19 +762,19 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("{x: y for x in range(10) if x != 5 for y in range(10) if y != 5}")
+        >>> myast = CustomAST(ast.parse("{x: y for x in range(10) if x != 5 for y in range(10) if y != 5}"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         {x: y for x in range(10) if x != 5 for y in range(10) if y != 5}
 
         """
 
-        self._write("{")
-        self._write(tree.key)
-        self._write(": ")
-        self._write(tree.value)
-        self._interleave_write(tree.generators,
-            before = (lambda: self._write(" ")))
-        self._write("}")
+        self._ground_write("{")
+        self._write(tree.children["key"])
+        self._ground_write(": ")
+        self._write(tree.children["value"])
+        self._interleave_write(tree.children["generators"],
+            before = (lambda: self._ground_write(" ")))
+        self._ground_write("}")
 
     def _write_GeneratorExp(self, tree):
         """
@@ -767,17 +782,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("(x*y for x in range(10) if x != 5 for y in range(10) if y != 5)")
+        >>> myast = CustomAST(ast.parse("(x*y for x in range(10) if x != 5 for y in range(10) if y != 5)"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         ((x * y) for x in range(10) if x != 5 for y in range(10) if y != 5)
 
         """
 
-        self._write("(")
-        self._write(tree.elt)
-        self._interleave_write(tree.generators,
-            before = (lambda: self._write(" ")))
-        self._write(")")
+        self._ground_write("(")
+        self._write(tree.children["elt"])
+        self._interleave_write(tree.children["generators"],
+            before = (lambda: self._ground_write(" ")))
+        self._ground_write(")")
 
     def _write_Yield(self, tree):
         """
@@ -785,16 +800,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("yield x")
+        >>> myast = CustomAST(ast.parse("yield x"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         yield x
 
         """
 
-        self._write("yield")
-        if tree.value != None:
-            self._write(" ")
-            self._write(tree.value)
+        self._ground_write("yield")
+        if not tree.children["value"].is_empty():
+            self._ground_write(" ")
+            self._write(tree.children["value"])
 
     def _write_Compare(self, tree):
         """
@@ -802,19 +817,19 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("a != b < c > d")
+        >>> myast = CustomAST(ast.parse("a != b < c > d"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         a != b < c > d
 
         """
 
-        self._write(tree.left)
+        self._write(tree.children["left"])
 
-        for op, comp in zip(tree.ops, tree.comparators):
-            self._write(" ")
-            self._write(op)
-            self._write(" ")
-            self._write(comp)
+        for child in tree.children["ops"].ordered_children():
+            self._ground_write(" ")
+            self._write(tree.children["ops"].children[child])
+            self._ground_write(" ")
+            self._write(tree.children["comparators"].children[child])
 
     def _write_Call(self, tree):
         """
@@ -822,35 +837,36 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("print('Hello world')")
+        >>> myast = CustomAST(ast.parse("print('Hello world')"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         print('Hello world')
 
         """
 
-        self._write(tree.func)
-        self._write("(")
+        self._write(tree.children["func"])
+        self._ground_write("(")
 
-        self._interleave_write(tree.args + tree.keywords,
-            between = (lambda: self._write(", ")))
+        allargs = tree.children["args"].temp_list(tree.children["keywords"])
+        self._interleave_write(allargs,
+            between = (lambda: self._ground_write(", ")))
 
-        has_arg = tree.args + tree.keywords
+        has_arg = bool(allargs)
 
-        if tree.starargs != None:
+        if not tree.children["starargs"].is_empty():
             if has_arg:
-                self._write(", ")
+                self._ground_write(", ")
             has_arg = True
-            self._write("*")
-            self._write(starargs)
+            self._ground_write("*")
+            self._write(tree.children["starargs"])
 
-        if tree.kwargs != None:
+        if not tree.children["kwargs"].is_empty():
             if has_arg:
-                self._write(", ")
+                self._ground_write(", ")
             has_arg = True
-            self._write("*")
-            self._write(kwargs)
+            self._ground_write("*")
+            self._write(tree.children["kwargs"])
 
-        self._write(")")
+        self._ground_write(")")
 
     def _write_Num(self, tree):
         """
@@ -858,12 +874,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("1042"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("1042")), BasicWriter)
         1042
 
         """
 
-        self._write(repr(tree.n))
+        self._ground_write(repr(tree.children["n"].node()))
 
     def _write_Str(self, tree):
         """
@@ -871,12 +887,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.Str("Hello"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.Str("Hello")), BasicWriter)
         'Hello'
 
         """
 
-        self._write(repr(tree.s))
+        self._ground_write(repr(tree.children["s"].node()))
 
     def _write_Bytes(self, tree):
         """
@@ -884,15 +900,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("b'hello world'")
+        >>> myast = CustomAST(ast.parse("b'hello world'"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         b'hello world'
 
         """
 
-        self._write(repr(tree.s))
+        self._ground_write(repr(tree.children["s"].node()))
 
-    def _write_Ellipsis(self, tree): self._write("...")
+    def _write_Ellipsis(self, tree): self._ground_write("...")
 
     def _write_Attribute(self, tree):
         """
@@ -902,15 +918,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("sys.path")
+        >>> myast = CustomAST(ast.parse("sys.path"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         sys.path
 
         """
 
-        self._write(tree.value)
-        self._write(".")
-        self._write(tree.attr)
+        self._write(tree.children["value"])
+        self._ground_write(".")
+        self._write(tree.children["attr"])
 
     def _write_Subscript(self, tree):
         """
@@ -920,16 +936,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("mylist[2]")
+        >>> myast = CustomAST(ast.parse("mylist[2]"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         mylist[2]
 
         """
 
-        self._write(tree.value)
-        self._write("[")
-        self._write(tree.slice)
-        self._write("]")
+        self._write(tree.children["value"])
+        self._ground_write("[")
+        self._write(tree.children["slice"])
+        self._ground_write("]")
 
     def _write_Starred(self, tree):
         """
@@ -939,14 +955,14 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("head, *tail = list(range(10))")
+        >>> myast = CustomAST(ast.parse("head, *tail = list(range(10))"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         (head, *tail) = list(range(10))
 
         """
 
-        self._write("*")
-        self._write(tree.value)
+        self._ground_write("*")
+        self._write(tree.children["value"])
 
     def _write_Name(self, tree):
         """
@@ -954,12 +970,12 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("a_var_name"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("a_var_name")), BasicWriter)
         a_var_name
 
         """
 
-        self._write(tree.id)
+        self._write(tree.children["id"])
 
     def _write_List(self, tree):
         """
@@ -967,15 +983,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("[1,2,3,4]"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("[1,2,3,4]")), BasicWriter)
         [1, 2, 3, 4]
 
         """
 
-        self._write("[")
-        self._interleave_write(tree.elts,
-            between = (lambda: self._write(", ")))
-        self._write("]")
+        self._ground_write("[")
+        self._interleave_write(tree.children["elts"],
+            between = (lambda: self._ground_write(", ")))
+        self._ground_write("]")
 
 
     def _write_Tuple(self, tree):
@@ -984,15 +1000,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("(a,b,c)"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("(a,b,c)")), BasicWriter)
         (a, b, c)
 
         """
 
-        self._write("(")
-        self._interleave_write(tree.elts,
-            between = (lambda: self._write(", ")))
-        self._write(")")
+        self._ground_write("(")
+        self._interleave_write(tree.children["elts"],
+            between = (lambda: self._ground_write(", ")))
+        self._ground_write(")")
 
 
     # expr_context - these should not be drawn
@@ -1010,19 +1026,19 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("mylist[1:10:2]"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("mylist[1:10:2]")), BasicWriter)
         mylist[1:10:2]
 
         """
 
-        if tree.lower != None:
-            self._write(tree.lower)
-        self._write(":")
-        if tree.upper != None:
-            self._write(tree.upper)
-        if tree.step != None:
-            self._write(":")
-            self._write(tree.step)
+        if not tree.children["lower"].is_empty():
+            self._write(tree.children["lower"])
+        self._ground_write(":")
+        if not tree.children["upper"].is_empty():
+            self._write(tree.children["upper"])
+        if not tree.children["step"].is_empty():
+            self._ground_write(":")
+            self._write(tree.children["step"])
 
     def _write_ExtSlice(self, tree):
         """
@@ -1030,13 +1046,13 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("mylist[:2,4:]"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("mylist[:2,4:]")), BasicWriter)
         mylist[:2,4:]
 
         """
 
-        self._interleave_write(tree.dims,
-            between = (lambda: self._write(",")))
+        self._interleave_write(tree.children["dims"],
+            between = (lambda: self._ground_write(",")))
 
     def _write_Index(self, tree):
         """
@@ -1044,49 +1060,49 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> sourcewriter.printSource(ast.parse("mylist[1]"), BasicWriter)
+        >>> sourcewriter.printSource(CustomAST(ast.parse("mylist[1]")), BasicWriter)
         mylist[1]
 
         """
 
-        self._write(tree.value)
+        self._write(tree.children["value"])
 
 
     # boolop - too simple to test
-    def _write_And(self, tree): self._write("and")
-    def _write_Or(self, tree): self._write("or")
+    def _write_And(self, tree): self._ground_write("and")
+    def _write_Or(self, tree): self._ground_write("or")
 
     # operator - too simple to bother testing
-    def _write_Add(self, tree): self._write("+")
-    def _write_Sub(self, tree): self._write("-")
-    def _write_Mult(self, tree): self._write("*")
-    def _write_Div(self, tree): self._write("/")
-    def _write_Mod(self, tree): self._write("%")
-    def _write_Pow(self, tree): self._write("**")
-    def _write_LShift(self, tree): self._write("<<")
-    def _write_RShift(self, tree): self._write(">>")
-    def _write_BitOr(self, tree): self._write("|")
-    def _write_BitXor(self, tree): self._write("^")
-    def _write_BitAnd(self, tree): self._write("&")
-    def _write_FloorDiv(self, tree): self._write("//")
+    def _write_Add(self, tree): self._ground_write("+")
+    def _write_Sub(self, tree): self._ground_write("-")
+    def _write_Mult(self, tree): self._ground_write("*")
+    def _write_Div(self, tree): self._ground_write("/")
+    def _write_Mod(self, tree): self._ground_write("%")
+    def _write_Pow(self, tree): self._ground_write("**")
+    def _write_LShift(self, tree): self._ground_write("<<")
+    def _write_RShift(self, tree): self._ground_write(">>")
+    def _write_BitOr(self, tree): self._ground_write("|")
+    def _write_BitXor(self, tree): self._ground_write("^")
+    def _write_BitAnd(self, tree): self._ground_write("&")
+    def _write_FloorDiv(self, tree): self._ground_write("//")
 
     # unaryop - too simple
-    def _write_Invert(self, tree): self._write("~")
-    def _write_Not(self, tree): self._write("not")
-    def _write_UAdd(self, tree): self._write("+")
-    def _write_USub(self, tree): self._write("-")
+    def _write_Invert(self, tree): self._ground_write("~")
+    def _write_Not(self, tree): self._ground_write("not")
+    def _write_UAdd(self, tree): self._ground_write("+")
+    def _write_USub(self, tree): self._ground_write("-")
 
     # cmpop - too simple
-    def _write_Eq(self, tree): self._write("==")
-    def _write_NotEq(self, tree): self._write("!=")
-    def _write_Lt(self, tree): self._write("<")
-    def _write_LtE(self, tree): self._write("<=")
-    def _write_Gt(self, tree): self._write(">")
-    def _write_GtE(self, tree): self._write(">=")
-    def _write_Is(self, tree): self._write("is")
-    def _write_IsNot(self, tree): self._write("is not")
-    def _write_In(self, tree): self._write("in")
-    def _write_NotIn(self, tree): self._write("not in")
+    def _write_Eq(self, tree): self._ground_write("==")
+    def _write_NotEq(self, tree): self._ground_write("!=")
+    def _write_Lt(self, tree): self._ground_write("<")
+    def _write_LtE(self, tree): self._ground_write("<=")
+    def _write_Gt(self, tree): self._ground_write(">")
+    def _write_GtE(self, tree): self._ground_write(">=")
+    def _write_Is(self, tree): self._ground_write("is")
+    def _write_IsNot(self, tree): self._ground_write("is not")
+    def _write_In(self, tree): self._ground_write("in")
+    def _write_NotIn(self, tree): self._ground_write("not in")
 
     # comprehension
     def _write_comprehension(self, tree):
@@ -1095,19 +1111,19 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("[x for x in range(10) if x != 5]")
+        >>> myast = CustomAST(ast.parse("[x for x in range(10) if x != 5]"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         [x for x in range(10) if x != 5]
 
         """
 
-        self._write("for ")
-        self._write(tree.target)
-        self._write(" in ")
-        self._write(tree.iter)
+        self._ground_write("for ")
+        self._write(tree.children["target"])
+        self._ground_write(" in ")
+        self._write(tree.children["iter"])
 
-        self._interleave_write(tree.ifs,
-            before = (lambda: self._write(" if ")))
+        self._interleave_write(tree.children["ifs"],
+            before = (lambda: self._ground_write(" if ")))
 
 
     # excepthandler
@@ -1121,7 +1137,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         ... try: pass
         ... except Exception as exc: pass
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         try:
             pass
@@ -1130,16 +1146,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write("except")
+        self._ground_write("except")
 
-        if tree.type != None:
-            self._write(" ")
-            self._write(tree.type)
+        if not tree.children["type"].is_empty():
+            self._ground_write(" ")
+            self._write(tree.children["type"])
 
-            if tree.name != None:
-                self._write(" as " + tree.name)
+            if not tree.children["name"].is_empty():
+                self._ground_write(" as ")
+                self._write(tree.children["name"])
 
-        self._write_block(tree.body)
+        self._write_block(tree.children["body"])
 
 
     # arguments
@@ -1152,7 +1169,7 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> c = '''
         ... def f(a : "An argument", b = None, *args, kwo = True, **kwargs): pass
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         def f(a : 'An argument', b = None, *args, kwo = True, **kwargs):
             pass
@@ -1161,58 +1178,59 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         had_arg = False # Cannot use _separated_write here
 
-        n_posargs = len(tree.args) - len(tree.defaults)
+        ordered_args = list(tree.children["args"].ordered_children())
+        n_posargs = len(ordered_args) - len(tree.children["defaults"].node())
 
         # positional args
-        for arg in tree.args[:n_posargs]:
+        for arg in ordered_args[:n_posargs]:
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = True
-            self._write(arg)
+            self._write(tree.children["args"].children[arg])
 
         # keyword args
-        for (arg, default) in zip(tree.args[n_posargs:], tree.defaults):
+        for (arg, default) in zip(ordered_args[n_posargs:], tree.children["defaults"].ordered_children()):
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = True
-            self._write(arg)
-            self._write(" = ")
-            self._write(default)
+            self._write(tree.children["args"].children[arg])
+            self._ground_write(" = ")
+            self._write(tree.children["defaults"].children[default])
 
         # variable positional args
-        if tree.vararg != None:
+        if not tree.children["vararg"].is_empty():
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = True
-            self._write("*")
-            self._write(tree.vararg)
-            if tree.varargannotation != None:
-                self._write(" : ")
-                self._write(tree.varargannotation)
-        elif tree.kwonlyargs:
+            self._ground_write("*")
+            self._write(tree.children["vararg"])
+            if not tree.children["varargannotation"].is_empty():
+                self._ground_write(" : ")
+                self._write(tree.children["varargannotation"])
+        elif not tree.children["kwonlyargs"].is_empty():
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = True
-            self._write("*")
+            self._ground_write("*")
 
         # keyword only args
-        for (arg, default) in zip(tree.kwonlyargs, tree.kw_defaults):
+        for child in tree.children["kwonlyargs"].ordered_children():
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = True
-            self._write(arg)
-            self._write(" = ")
-            self._write(default)
+            self._write(tree.children["kwonlyargs"].children[child])
+            self._ground_write(" = ")
+            self._write(tree.children["kw_defaults"].children[child])
 
         # variable keyword args
-        if tree.kwarg != None:
+        if not tree.children["kwarg"].is_empty():
             if had_arg:
-                self._write(", ")
+                self._ground_write(", ")
             had_arg = False
-            self._write("**")
-            self._write(tree.kwarg)
-            if tree.kwargannotation != None:
-                self._write(" : ")
+            self._ground_write("**")
+            self._write(tree.children["kwarg"])
+            if not tree.children["kwargannotation"].is_empty():
+                self._ground_write(" : ")
                 self._write(tree.kwargannotation)
 
     # arg
@@ -1225,17 +1243,17 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> c = '''
         ... def f(a : "An argument"): pass
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, BasicWriter)
         def f(a : 'An argument'):
             pass
 
         """
 
-        self._write(tree.arg)
-        if tree.annotation != None:
-            self._write(" : ")
-            self._write(tree.annotation)
+        self._write(tree.children["arg"])
+        if not tree.children["annotation"].is_empty():
+            self._ground_write(" : ")
+            self._write(tree.children["annotation"])
 
 
     # keyword
@@ -1245,16 +1263,16 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("class c(a = b): pass")
+        >>> myast = CustomAST(ast.parse("class c(a = b): pass"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         class c(a = b):
             pass
 
         """
 
-        self._write(tree.arg)
-        self._write(" = ")
-        self._write(tree.value)
+        self._write(tree.children["arg"])
+        self._ground_write(" = ")
+        self._write(tree.children["value"])
 
 
     # alias
@@ -1264,16 +1282,17 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> myast = ast.parse("import hello as world")
+        >>> myast = CustomAST(ast.parse("import hello as world"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         import hello as world
 
         """
 
-        self._write(tree.name)
+        self._write(tree.children["name"])
 
-        if tree.asname != None:
-            self._write(" as " + tree.asname)
+        if not tree.children["asname"].is_empty():
+            self._ground_write(" as ")
+            self._write(tree.children["asname"])
 
 
 if __name__ == "__main__":
