@@ -7,6 +7,7 @@ import ast
 import hashlib
 import pickle
 
+from analysis.customast import CustomAST
 from . import commandui
 
 class ParseCommand(commandui.Command):
@@ -133,7 +134,7 @@ class ASTStorage:
             source = file.read()
 
         # Could raise SyntaxError or TypeError
-        theast = ast.parse(source, filename=fname)
+        theast = CustomAST(ast.parse(source, filename=fname))
 
         h = hashlib.sha224()
         h.update(source.encode())

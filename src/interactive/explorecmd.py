@@ -58,23 +58,25 @@ class ExploreCommand(commandui.Command):
 
         if args.field != None:
             if self.enter_field(args.field):
-                print("Looking at: " + self.describe_node(self.ast_current))
+                print("Looking at: " + str(self.ast_current))
             return
         elif args.parent:
             if self.level_up():
-                print("Looking at: " + self.describe_node(self.ast_current))
+                print("Looking at: " + str(self.ast_current))
             return
 
         current = self.ast_current
-        print("Looking at: " + self.describe_node(current))
+        print("Looking at: " + str(current))
 
         if args.attributes:
             print()
             print("Attributes:")
-            if isinstance(current, ast.AST):
-                if current._attributes:
-                    for attr in current._attributes:
-                        print("  " + attr + " - " + str(getattr(current, attr)))
+            if current.is_ast():
+                loc = current.location()
+                if loc != None:
+                    line, offset = loc
+                    print("  Line Num   - " + str(line))
+                    print("  Col Offset - " + str(offset))
                 else:
                     print("  There are no attributes for this node.")
             else:
@@ -82,57 +84,28 @@ class ExploreCommand(commandui.Command):
 
         print()
         print("Fields:")
-        if isinstance(current, ast.AST):
-            for field in current._fields:
-                print("  " + field + " - " + self.describe_node(getattr(current, field)))
-        elif isinstance(current, list):
-            for i in range(len(current)):
-                print("  " + str(i) + " - " + self.describe_node(current[i]))
+        if current.children:
+            for field in current.ordered_children():
+                print("  " + field + " - " + str(current.children[field]))
         else:
-            print("  Fields are not valid on this type of node.")
+            print("  This node has no fields.")
 
     def status(self):
         self._ensure_node_sync()
-        print("Viewing node: " + self.describe_node(self.ast_current))
-
-    def describe_node(self, node):
-        """Get basic details for the current node."""
-
-        if node == None:
-                return "No node"
-        elif isinstance(node, ast.AST):
-            text = node.__class__.__name__
-            location = None
-            try:
-                location = "line " + str(node.lineno)
-                location += ", col " + str(node.col_offset)
-            except AttributeError:
-                pass
-            if location != None:
-                text += " (" + location + ")"
-            return text
-        elif isinstance(node, list):
-            return "Block of statements"
-        else:
-            return "Unknown node (" + str(node) + ")"
+        print("Viewing node: " + str(self.ast_current) if self.ast_current != None else "No node")
 
     def enter_field(self, field):
         current = self.ast_current
         child = None
 
-        if isinstance(current, ast.AST) and field in current._fields:
-            child = getattr(current, field)
-        elif isinstance(current, list) and field.isdigit() and int(field) < len(current):
-            child = current[int(field)]
-        else:
+        try:
+            child = current.children[field]
+        except KeyError:
             print("Field does not exist.")
             return False
+        else:
+            self.ast_parents.append(child)
 
-        if not isinstance(child, ast.AST) and not isinstance(child, list):
-            print("Field is not a valid node.")
-            return False
-
-        self.ast_parents.append(child)
         return True
 
     def level_up(self):
@@ -156,10 +129,6 @@ class ExploreCommand(commandui.Command):
             self._ensure_node_sync()
             current = self.ast_current
             if current != None:
-                fields = []
-                if isinstance(current, ast.AST):
-                    fields = list(current._fields)
-                if isinstance(current, list):
-                    fields = [str(index) for index in range(len(current))]
-                return [field for field in fields if field.startswith(arg)]
+                return [f for f in current.ordered_children()
+                        if f.startswith(arg)]
         return []

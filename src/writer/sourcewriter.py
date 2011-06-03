@@ -1,14 +1,16 @@
 """
 Holds the abstract base class for source writers.
 
-It should somehow take an AST and output correct source. This only performs
-simple tasks that will be needed by all writers.
+It should somehow take a CustomAST and output correct source. This only
+performs simple tasks that will be needed by all writers.
 
 """
 
 import ast
 import abc
 import sys
+
+from analysis.customast import CustomAST
 
 class SourceWriter(metaclass = abc.ABCMeta):
     """
@@ -17,6 +19,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
     This only performs basic functionality common to any writer.
     Additionally it will define abstract methods for all the types in
     the ast definition here: http://docs.python.org/py3k/library/ast.html
+    along with others that our CustomAST supports.
 
     The assumption for the writers is that all blocks (even top level blocks)
     should be written by _write_block. Each statement will already have lines
@@ -35,17 +38,12 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self.__out = out
 
         self.__top_ast = top_ast
-        if not isinstance(self.__top_ast, ast.AST) and not isinstance(self.__top_ast, list):
-            raise TypeError("The tree needs to begin with an AST node.")
+        if not isinstance(self.__top_ast, CustomAST):
+            raise TypeError("The tree needs to begin with a CustomAST node.")
 
         self.__indentation = []
         self.__character_level = 0
         self.__is_interactive = False
-
-    def _node_type(self, tree : "Node whose type to find"):
-        """Get the type of this node as a string."""
-
-        return tree.__class__.__name__
 
     def write(self):
         """Dump out the entire source tree."""
@@ -61,22 +59,17 @@ class SourceWriter(metaclass = abc.ABCMeta):
         """
 
         try:
-            method = getattr(self, "_write_" + self._node_type(tree))
+            method = getattr(self, "_write_" + tree.type())
         except AttributeError as exc:
-            raise TypeError("Unknown AST node") from exc
+            raise TypeError("Unknown CustomAST node: " + tree.type()) from exc
         else:
             method(tree)
 
-    def _write_str(self, s):
-        """Write a string, all writing should be done through here."""
+    def _ground_write(self, s):
+        """Write the most basic string - all writing should be done through here."""
 
         self.__character_level += len(s)
         self.__out.write(s)
-
-    def _write_list(self, s):
-        """Write a list assuming it is a list of statements. Should not be used willy nilly."""
-
-        self._write_block(s, indent=False)
 
     def _char_level(self, relative = True):
         """Get the absolute character level or relative to the indentation."""
@@ -90,7 +83,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _newline(self):
         """Write out a new line."""
 
-        self._write("\n")
+        self._ground_write("\n")
         self.__character_level = 0
 
     def _inc_indent(self, by : "How far to indent - '' to indent to character level" = "    "):
@@ -111,7 +104,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
     def _indent(self):
         """Indent to the correct level."""
 
-        self._write("".join(self.__indentation))
+        self._ground_write("".join(self.__indentation))
 
     def _is_interactive(self, interactive = None):
         if interactive != None:
@@ -123,9 +116,9 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         if self._is_interactive():
             if self._indent_level(): # is indented
-                self._write("... ")
+                self._ground_write("... ")
             else:
-                self._write(">>> ")
+                self._ground_write(">>> ")
         self._indent()
 
     def _interleave_write(self,
@@ -141,24 +134,21 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         """
 
-        if not exprs:
+        if not exprs.children:
             return
         if not writer:
             writer = self._write
 
-        i = iter(exprs)
+        i = iter(exprs.ordered_children())
         before()
-        writer(next(i))
+        writer(exprs.children[next(i)])
         after()
         for expr in i:
             between()
             before()
-            writer(expr)
+            writer(exprs.children[expr])
             after()
 
-
-    def _write_int(self, i): self._write(str(i))
-    def _write_float(self, f): self._write(str(f))
 
     def _write_block(self,
                     stmts : "List of statements inside the block.",
@@ -166,13 +156,13 @@ class SourceWriter(metaclass = abc.ABCMeta):
         """Write a list of statements, each on a new line in a new indentation level."""
 
         if indent:
-            self._write(":")
+            self._ground_write(":")
             self._inc_indent()
             self._newline()    # not next_statement as we want to allow 
                                # next statement to change independently
             self._write_block(stmts, indent = False)
             self._dec_indent()
-        elif stmts: # Don't write if no statements
+        elif stmts.children: # Don't write if no statements
             self._start_line()
             self._interleave_write(stmts, between=self._next_statement)
 
@@ -181,6 +171,17 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         self._newline()
         self._start_line()
+
+    # Non-ast writers
+
+    def _write_list(self, s):
+        """Write a list assuming it is a list of statements. Should not be used willy nilly."""
+
+        self._write_block(s, indent=False)
+
+    def _write_str(self, s): self._ground_write(s.node())
+    def _write_int(self, i): self._ground_write(str(i.node()))
+    def _write_float(self, f): self._ground_write(str(f.node()))
 
     # Below are abstract methods to write all the tags listed in
     # the AST definition
@@ -415,7 +416,7 @@ def printSource(tree : "Tree to print", writer : "Type to write with"):
 
     >>> import ast
     >>> from . basicwriter import BasicWriter
-    >>> myast = ast.Str("Hello there")
+    >>> myast = CustomAST(ast.Str("Hello there"))
     >>> printSource(myast, BasicWriter)
     'Hello there'
 
@@ -430,7 +431,7 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
 
     >>> import ast
     >>> from . basicwriter import BasicWriter
-    >>> myast = ast.Str("Hello there")
+    >>> myast = CustomAST(ast.Str("Hello there"))
     >>> srcToStr(myast, BasicWriter)
     "'Hello there'"
 
@@ -438,9 +439,6 @@ def srcToStr(tree : "Tree to stringify", writer : "Type to write with"):
 
     import io
     out = io.StringIO()
-    if isinstance(tree, list):
-        # Hacky, but assume module will write things fine.
-        tree = ast.Module(tree)
     writer(tree, out).write()
     return out.getvalue()
 

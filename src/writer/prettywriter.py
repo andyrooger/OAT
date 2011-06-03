@@ -10,6 +10,8 @@ import sys
 from . import sourcewriter
 from . basicwriter import BasicWriter
 
+from analysis.customast import CustomAST
+
 class PrettyWriter(BasicWriter):
     """
     Writes pretty source from an AST.
@@ -20,7 +22,7 @@ class PrettyWriter(BasicWriter):
     >>> from . import sourcewriter
     >>> theast = None
     >>> with open("../example/stuff.py") as file:
-    ...     theast = ast.parse(file.read(), "startup.py", "exec")
+    ...     theast = CustomAST(ast.parse(file.read(), "startup.py", "exec"))
     >>> with open("../example/stuff.py.prettyformat") as file:
     ...         file.read() == sourcewriter.srcToStr(theast, PrettyWriter)
     True
@@ -52,7 +54,7 @@ class PrettyWriter(BasicWriter):
         ...     See!
         ...     \"\"\"
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, PrettyWriter)
         def myfunc():
             \"\"\"
@@ -63,17 +65,17 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        if self._node_type(tree.value) == "Str":
-            self._write_docstring(tree.value)
+        if tree.children["value"].type() == "Str":
+            self._write_docstring(tree.children["value"])
         else:
-            self._write(tree.value)
+            self._write(tree.children["value"])
 
 
     def _write_docstring(self, doc : "Docstring to write"):
         """Write Str as a docstring."""
 
         clean = []
-        for c in self._clean_docstring(doc.s):
+        for c in self._clean_docstring(doc.children["s"].node()):
             c = c.replace('\\', '\\\\') # first to avoid ruining later replaces
             c = c.replace('"', '\\"') # so we can enclose with """
             c = c.replace('\r', '\\r')
@@ -81,20 +83,18 @@ class PrettyWriter(BasicWriter):
             clean.append(c)
 
         if len(clean) == 0: # Empty
-            self._write("\"\"\"\"\"\"")
+            self._ground_write("\"\"\"\"\"\"")
         elif len(clean) < 2: # Single line
-            self._write("\"\"\"")
-            self._write(clean[0])
-            self._write("\"\"\"")
+            self._ground_write("\"\"\"" + clean[0] + "\"\"\"")
         else: # multiline
             char_lv = self._char_level()
             if char_lv > 0:
                 self._inc_indent(" "*char_lv)
-            self._write("\"\"\"")
+            self._ground_write("\"\"\"")
             self._next_statement()
-            self._interleave_write(clean, after=self._next_statement)
+            self._interleave_write(CustomAST(clean), after=self._next_statement)
             self._next_statement() # blank line
-            self._write("\"\"\"")
+            self._ground_write("\"\"\"")
             if char_lv > 0:
                 self._dec_indent()
 
@@ -145,15 +145,15 @@ class PrettyWriter(BasicWriter):
 
         >>> import ast
         >>> from . import sourcewriter
-        >>> a = ast.parse('def f(a): pass')
+        >>> a = CustomAST(ast.parse('def f(a): pass'))
         >>> sourcewriter.printSource(a, PrettyWriter)
         def f(a):
             pass
-        >>> b = ast.parse('def g(b : "hi"): pass')
+        >>> b = CustomAST(ast.parse('def g(b : "hi"): pass'))
         >>> sourcewriter.printSource(b, PrettyWriter)
         def g(b : 'hi'):
             pass
-        >>> c = ast.parse('def h(b : "hi", c : "Bye"): pass')
+        >>> c = CustomAST(ast.parse('def h(b : "hi", c : "Bye"): pass'))
         >>> sourcewriter.printSource(c, PrettyWriter)
         def h(b : 'hi',
               c : 'Bye'):
@@ -173,7 +173,7 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        return tree.defaults != None or tree.kw_defaults != None
+        return not tree.children["defaults"].is_empty() or not tree.children["kw_defaults"].is_empty()
 
 
     def _has_annotations(self, tree):
@@ -182,18 +182,18 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        for arg in tree.args:
-            if arg.annotation != None:
+        for arg in tree.children["args"].children.values():
+            if not arg.children["annotation"].is_empty():
                 return True
 
-        if tree.varargannotation != None:
+        if not tree.children["varargannotation"].is_empty():
             return True
 
-        for arg in tree.kwonlyargs:
-            if arg.annotation != None:
+        for arg in tree.children["kwonlyargs"].children.values():
+            if not arg.children["annotation"].is_empty():
                 return True
 
-        if tree.kwargannotation != None:
+        if not tree.children["kwargannotation"].is_empty():
             return True
 
         return False
@@ -209,7 +209,7 @@ class PrettyWriter(BasicWriter):
         ... def myfunc(a, b : "Hello", c : "Goodbye" = 2):
         ...     pass
         ... '''
-        >>> myast = ast.parse(c)
+        >>> myast = CustomAST(ast.parse(c))
         >>> sourcewriter.printSource(myast, PrettyWriter)
         def myfunc(a,
                    b : 'Hello',
@@ -223,65 +223,66 @@ class PrettyWriter(BasicWriter):
             self._inc_indent(" "*char_lv)
 
         had_arg = False # Cannot use _separated_write here
-        n_posargs = len(tree.args) - len(tree.defaults)
+        ord_args = list(tree.children["args"].ordered_children())
+        n_posargs = len(ord_args) - len(tree.children["defaults"].children)
 
         # positional args
-        for arg in tree.args[:n_posargs]:
+        for arg in ord_args[:n_posargs]:
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(arg)
+            self._write(tree.children["args"].children[arg])
 
         # keyword args
-        for (arg, default) in zip(tree.args[n_posargs:], tree.defaults):
+        for (arg, default) in zip(ord_args[n_posargs:], tree.children["defaults"].ordered_children()):
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(arg)
-            self._write(" = ")
-            self._write(default)
+            self._write(tree.children["args"].children[arg])
+            self._ground_write(" = ")
+            self._write(tree.children["defaults"].children[default])
 
         # variable positional args
-        if tree.vararg != None:
+        if not tree.children["vararg"].is_empty():
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write("*")
-            self._write(tree.vararg)
-            if tree.varargannotation != None:
-                self._write(" : ")
-                self._write(tree.varargannotation)
-        elif tree.kwonlyargs:
+            self._ground_write("*")
+            self._write(tree.children["vararg"])
+            if not tree.children["varargannotation"].is_empty():
+                self._ground_write(" : ")
+                self._write(tree.children["varargannotation"])
+        elif not tree.children["kwonlyargs"].is_empty():
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write("*")
+            self._ground_write("*")
 
         # keyword only args
-        for (arg, default) in zip(tree.kwonlyargs, tree.kw_defaults):
+        for child in tree.children["kwonlyargs"].ordered_children():
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(arg)
-            self._write(" = ")
-            self._write(default)
+            self._write(tree.children["kwonlyargs"].children[child])
+            self._ground_write(" = ")
+            self._write(tree.children["kw_defaults"].children[child])
 
         # variable keyword args
-        if tree.kwarg != None:
+        if not tree.children["kwarg"].is_empty():
             if had_arg:
-                self._write(",")
+                self._ground_write(",")
                 self._next_statement()
             had_arg = False
-            self._write("**")
-            self._write(tree.kwarg)
-            if tree.kwargannotation != None:
-                self._write(" : ")
-                self._write(tree.kwargannotation)
+            self._ground_write("**")
+            self._write(tree.children["kwarg"])
+            if not tree.children["kwargannotation"].is_empty():
+                self._ground_write(" : ")
+                self._write(tree.children["kwargannotation"])
 
         if char_lv > 0:
             self._dec_indent()
@@ -314,16 +315,17 @@ class PrettyWriter(BasicWriter):
         Take a block and split into groups of related instructions.
 
         >>> import ast
-        >>> instructions = [
-        ...     ast.Import(),
-        ...     ast.Import(),
-        ...     ast.FunctionDef(),
-        ...     ast.ClassDef(),
-        ...     ast.Return()
-        ... ]
-        >>> spl = PrettyWriter(ast.AST())._split_block(instructions)
+        >>> instructions = CustomAST([
+        ...     ast.parse("import a").body[0],
+        ...     ast.parse("import b").body[0],
+        ...     ast.parse("def f(): pass").body[0],
+        ...     ast.parse("class c: pass").body[0],
+        ...     ast.parse("return r").body[0]
+        ... ])
+        >>> spl = PrettyWriter(CustomAST([]))
+        >>> spl = spl._split_block(instructions)
         >>> for s in spl:
-        ...     print([x.__class__.__name__ for x in s])
+        ...     print([s.children[x].type() for x in s.ordered_children()])
         ['Import', 'Import']
         ['FunctionDef']
         ['ClassDef']
@@ -334,7 +336,8 @@ class PrettyWriter(BasicWriter):
         current = [] # Current statement list
         total = [] # Total statement grouping
 
-        for stmt in stmts:
+        for s in stmts.ordered_children():
+            stmt = stmts.children[s]
             if self._statement_new_group(current, stmt):
                 if current:
                     total.append(current)
@@ -345,7 +348,7 @@ class PrettyWriter(BasicWriter):
         if current: # Append last group
             total.append(current)
 
-        return total
+        return [CustomAST(grp) for grp in total]
 
     def _statement_new_group(self, oldgroup, statement):
         """Check if a statement should be in the same group or a new one."""
@@ -365,8 +368,8 @@ class PrettyWriter(BasicWriter):
         if not oldgroup:
             return False # Current group is empty to doesn't matter
         else:
-            node_type = statement.__class__.__name__
-            prev_node = oldgroup[-1].__class__.__name__
+            node_type = statement.type()
+            prev_node = oldgroup[-1].type()
 
             if node_type in single_nodes:
                 return True # Always own group

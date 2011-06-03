@@ -18,6 +18,8 @@ from analysis.markers import read
 from analysis.markers import write
 from analysis.markers import scope
 
+from analysis.customast import CustomAST
+
 class ReorderCommand(commandui.Command):
     """Reorder statement blocks from the console."""
 
@@ -72,7 +74,7 @@ class ReorderCommand(commandui.Command):
             return False
 
         if do == "current":
-            self._print_block(block, range(len(block)), args.display, True)
+            self._print_block(block, range(len(block.children)), args.display, True)
             if orderer.check_markings():
                 print("The statements can be reordered.")
             else:
@@ -91,16 +93,14 @@ class ReorderCommand(commandui.Command):
 
         if do == "number":
             # No len for generators
-            total = 0
-            for p in orderer.permutations():
-                total += 1
+            total = sum(1 for _ in orderer.permutations())
             print("The total number of permutations for this node is " + str(total))
             return
 
         if do == "unique":
-            perms = set()
-            for perm in orderer.permutations():
-                perms.add(tuple(perm))
+            perms = {
+                tuple(perm) for perm in orderer.permutations()
+            }
             total = len(perms)
             print("The total number of unique permutations for this node is " + str(total))
             return
@@ -141,17 +141,17 @@ class ReorderCommand(commandui.Command):
 
     def _get_block(self):
         cur = self._related_explorecmd.ast_current
-        if not isinstance(cur, list):
+        if not cur.is_list():
             return None
-        for stmt in cur:
-            if not isinstance(stmt, ast.stmt):
+        for stmt in [cur.children[s] for s in cur.children]:
+            if not issubclass(stmt.type(asclass=True), ast.stmt):
                 return None
         return cur
 
     def _set_block(self, block):
         cur = self._related_explorecmd.ast_current
-        if isinstance(cur, list):
-            cur[:] = block
+        if cur.is_list():
+            cur.become(block) # Throws TypeError if not a list, but could change in future
             self._related_parsecmd.ast.modified = True
         else:
             raise TypeError
@@ -165,15 +165,17 @@ class ReorderCommand(commandui.Command):
             print()
 
         else:
+            ord_stat = list(statements.ordered_children())
             for i in perm:
+                child = statements.children[ord_stat[i]]
                 if disp == "type":
-                     print(str(i) + ": " + statements[i].__class__.__name__, end="")
+                     print(str(i) + ": " + child.type(), end="")
                 elif disp == "code":
                      print()
-                     sourcewriter.printSource(statements[i], prettywriter.PrettyWriter)
+                     sourcewriter.printSource(child, prettywriter.PrettyWriter)
 
                 if markings:
-                    complete_markings = reorder.Reorderer([statements[i]]).check_markings()
+                    complete_markings = reorder.Reorderer(CustomAST([child])).check_markings()
 
                     if complete_markings:
                         print(" - Completely marked")
