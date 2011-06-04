@@ -99,7 +99,7 @@ class CustomAST:
         if self.is_list():
             return (str(i) for i in range(len(self._node)))
 
-        return keys()
+        return self.children.keys()
 
     def _gen_children(self):
         """
@@ -127,3 +127,31 @@ class CustomAST:
         elif not self.is_empty() and not self.is_basic():
             # We have not met this guy before
             raise TypeError("Not a recognised node type ("+self.type()+").")
+
+    def location(self):
+        """Get the node's location in a file if it exists."""
+
+        try:
+            return (self._node.lineno, self._node.col_offset)
+        except AttributeError:
+            return None
+
+    def __str__(self):
+        if self.is_empty():
+            if self.is_list():
+                return "Empty list"
+            else:
+                return "No node"
+
+        if self.is_ast():
+            loc = self.location()
+            if loc:
+                loc = " (line " + str(loc[0]) + ", col " + str(loc[1]) + ")"
+            else:
+                loc = ""
+            return self.type() + loc
+
+        if self.is_list():
+            return "Block of statements"
+
+        return "Unknown node (" + str(self.node()) + " : " + self.type() + ")"
