@@ -106,6 +106,9 @@ class CustomAST:
         Generate children from current node.
 
         This takes children, assigns labels to them and fills our child dict.
+        This converts any non-CustomAST children to CustomASTs in our children
+        dict, but converts any CustomASTs in the simple node to other simple
+        nodes.
 
         """
 
@@ -113,20 +116,29 @@ class CustomAST:
         if self.is_ast():
             # Then we have an AST node
             self.children = {
-                field: CustomAST(getattr(self._node, field))
+                field: getattr(self._node, field)
                 for field in self._node._fields
             }
 
         elif self.is_list():
             # We have a list of nodes
             self.children = {
-                str(idx): CustomAST(self._node[idx])
+                str(idx): self._node[idx]
                 for idx in range(len(self._node))
             }
 
         elif not self.is_empty() and not self.is_basic():
             # We have not met this guy before
             raise TypeError("Not a recognised node type ("+self.type()+").")
+
+        for key in self.children:
+            if isinstance(self.children[key], CustomAST):
+                # Convert CustomAST node-children to normal nodes
+                setattr(self._node, key, self.children[key]._node)
+            else:
+                # And our normal ast children to CustomAST
+                self.children[key] = CustomAST(self.children[key])
+
 
     def location(self):
         """Get the node's location in a file if it exists."""
