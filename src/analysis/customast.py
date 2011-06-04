@@ -59,21 +59,28 @@ class CustomAST:
 
         return self._node == None or (self.is_list() and not self.node())
 
-    def temp_list(self, *vargs, flattenlists=True):
+    def temp_list(self, *vargs, flattenlists=True, ignorethis=False):
         """
         Create a temporary list node starting with this node.
 
         If this node is a list and flattenlists is True then we duplicate
         it to begin our list. Otherwise we use it as the first item in
         the new list. All other arguments are kept in order and added to
-        the temporary list. Added lists can be flattened into our list
-        rather than added as single items if flattenlists is True.
+        the temporary list.
+
+        Added lists can be flattened into our list rather than added as
+        single items if flattenlists is True. We can ignore the contents
+        of this node if we set ignorethis. (Helpful when creating lists
+        with CustomAST([]) ).
 
         """
 
         n_list = CustomAST([])
         idx = 0
-        for item in [self] + list(vargs):
+        items = list(vargs)
+        if not ignorethis:
+            items = [self] + items
+        for item in items:
             if item.is_list() and flattenlists:
                 for child in item.ordered_children():
                     n_list.children[str(idx)] = item.children[child]
