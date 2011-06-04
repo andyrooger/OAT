@@ -177,7 +177,7 @@ class AutoMarker:
         needed.discard("indirectrw")
 
         # Lists are always treated the same, we hard code it!
-        if isinstance(node, list):
+        if node.is_list():
             marks = self._base_marks(needed)
             for stmt in node:
                 other = self.resolve_marks(stmt, needed)
@@ -185,7 +185,7 @@ class AutoMarker:
             return marks
 
         try:
-            act = MARK_CALCULATION[node.__class__.__name__]
+            act = MARK_CALCULATION[node.type()]
         except KeyError:
             return {}
         else:
@@ -217,18 +217,18 @@ class AutoMarker:
 
         if "local" in act:
             for field in act["local"]:
-                if hasattr(node, field):
-                    sub = getattr(node, field)
-                    if sub != None:
+                if field in node.children:
+                    sub = node.children[field]
+                    if not sub.is_empty():
                         other = self.resolve_marks(sub, needed)
                         self._combine_marks(marks, other, needed)
 
         if "localg" in act:
             for field in act["localg"]:
-                if hasattr(node, field):
-                    sub = getattr(node, field)
-                    for s in sub:
-                        other = self.resolve_marks(s, needed)
+                if field in node.children:
+                    sub = node.children[field]
+                    for s in sub.ordered_children():
+                        other = self.resolve_marks(sub.children[s], needed)
                         self._combine_marks(marks, other, needed)
 
         if "rem_break" in act and "breaks" in needed:
@@ -258,15 +258,23 @@ def _trans_func_decorators(node):
 
     """
 
-    if not node.decorator_list:
+    if node.children["decorator_list"].is_empty():
         return None
 
-    func = ast.FunctionDef(node.name, node.args, node.body, [], node.returns)
-    assname = ast.Name(node.name, ast.Store())
-    calls = ast.Name(node.name, ast.Load())
-    for dec in reversed(node.decorator_list):
-        calls = ast.Call(dec, [calls], [], None, None)
-    return [func, ast.Assign([assname], calls)]
+    func = CustomAST(ast.FunctionDef(
+               node.children["name"],
+               node.children["args"],
+               node.children["body"],
+               [],
+               node.children["returns"]
+    ))
+    assname = CustomAST(ast.Name(node.children["name"], ast.Store()))
+    calls = CustomAST(ast.Name(node.children["name"], ast.Load()))
+    dlist = node.children["decorator_list"]
+    for dec in reversed(dlist.ordered_children()):
+        calls = ast.Call(dlist.children[dec], [calls], [], None, None)
+        calls = CustomAST(calls)
+    return CustomAST([func, ast.Assign([assname], calls)])
 
 def _trans_class_decorators(node):
     """
@@ -283,22 +291,34 @@ def _trans_class_decorators(node):
 
     """
 
-    if not node.decorator_list: # Translate for decorators
+    if node.children["decorator_list"].is_empty(): # Translate for decorators
         return None
 
-    cls = ast.ClassDef(node.name, node.bases, node.keywords, node.starargs, node.kwargs, [])
-    assname = ast.Name(node.name, ast.Store())
-    calls = ast.Name(node.name, ast.Load())
-    for dec in reversed(node.decorator_list):
-        calls = ast.Call(dec, [calls], [], None, None)
-    return [cls, ast.Assign([assname], calls)]
+    cls = CustomAST(ast.ClassDef(
+        node.children["name"],
+        node.children["bases"],
+        node.children["keywords"],
+        node.children["starargs"],
+        node.children["kwargs"],
+        []
+    ))
+    assname = CustomAST(ast.Name(node.children["name"], ast.Store()))
+    calls = CustomAST(ast.Name(node.children["name"], ast.Load()))
+    dlist = node.children["decorator_list"]
+    for dec in reversed(dlist.ordered_children()):
+        calls = CustomAST(ast.Call(dlist[dec], [calls], [], None, None))
+    return CustomAST([cls, ast.Assign([assname], calls)])
 
 
 def _trans_aug_assign(node):
     """Convert an augmented assign into a normal assignment of the operation to the target."""
 
-    calc = ast.BinOp(node.target, node.op, node.value) # Transform to a binary op
-    return ast.Assign([node.target], calc)
+    calc = CustomAST(ast.BinOp( # Transform to a binary op
+        node.children["target"],
+        node.children["op"],
+        node.children["value"]
+    ))
+    return CustomAST(ast.Assign([node.children["target"]], calc))
 
 def _try_except_dict(node):
     # visible/break same as running body, running handlers, running else
@@ -307,8 +327,8 @@ def _try_except_dict(node):
 
     d = {"local": {"body"}}
 
-    for handler in node.handlers:
-        if handler.type == None:
+    for h in node.children["handlers"].children:
+        if node.children["handlers"].children[h].children["type"].is_empty():
             d["rem_break"] = {"except"}
             break
 
@@ -317,7 +337,7 @@ def _try_except_dict(node):
 def _unpack_dict(self, node, needed):
     # Normal ctx stuff plus think about unpacking
     d = {"localg": {"elts"}, "local": {"ctx"}}
-    if isinstance(node.ctx, ast.Store):
+    if node.children["ctx"].type() == "Store":
         d["add_break"] = {"except"}
     return d
 

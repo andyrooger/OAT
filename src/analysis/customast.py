@@ -134,7 +134,10 @@ class CustomAST:
         for key in self.children:
             if isinstance(self.children[key], CustomAST):
                 # Convert CustomAST node-children to normal nodes
-                setattr(self._node, key, self.children[key]._node)
+                if self.is_list():
+                    self._node[int(key)] = self.children[key]._node
+                else:
+                    setattr(self._node, key, self.children[key]._node)
             else:
                 # And our normal ast children to CustomAST
                 self.children[key] = CustomAST(self.children[key])
