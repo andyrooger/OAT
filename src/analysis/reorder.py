@@ -12,24 +12,25 @@ from .markers import read
 from .markers import write
 from .markers import indirectrw
 
-def RandomValuer(statements, perm):
+from .customast import CustomAST
+
+def RandomValuer(statements):
     """Give a random value, no matter the permutation."""
 
     return random.uniform(0, 100)
 
-def FirstValuer(statements, perm):
+def FirstValuer(statements):
     """Give exactly the same value, no matter the permutation."""
 
     return 1
 
-def WriteRangeValuer(statements, perm):
+def WriteRangeValuer(statements):
     """Gives the sum of spread of written variables."""
 
     variables = {}
     # Collect ranges for all variables
-    for i in range(len(perm)):
-        stat = perm[i]
-        written = write.WriteMarker(statements[stat]).get_mark()
+    for i in range(len(statements)):
+        written = write.WriteMarker(statements[i]).get_mark()
         for w in written:
             try:
                 (start, end) = variables[w]
@@ -41,16 +42,15 @@ def WriteRangeValuer(statements, perm):
     # (... also we don't have a limit to values output)
     return -sum(e - s for (s, e) in variables.values())
 
-def WriteUseValuer(statements, perm):
+def WriteUseValuer(statements):
     """Encourages smaller distance between the write of a variable and the furthest read of that write."""
 
     total = 0
     variables = {} # Where written
     # Collect ranges for all variables
-    for i in range(len(perm)):
-        stat = perm[i]
-        reads = read.ReadMarker(statements[stat]).get_mark()
-        written = write.WriteMarker(statements[stat]).get_mark()
+    for i in range(len(statements)):
+        reads = read.ReadMarker(statements[i]).get_mark()
+        written = write.WriteMarker(statements[i]).get_mark()
         for var in reads:
             try:
                 (w, r) = variables[var]
@@ -100,7 +100,7 @@ class BasicReorderer:
     def permute(self, perm):
         """Permute the statements with the given permutation. Does not affect the original statement list."""
 
-        return [self.statement_at(i) for i in perm]
+        return CustomAST([self.statement_at(i) for i in perm])
 
     def permutations(self):
         """
