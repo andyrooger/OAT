@@ -348,10 +348,7 @@ class PrettyWriter(BasicWriter):
         if current: # Append last group
             total.append(current)
 
-        return [
-            CustomAST([]).temp_list(*grp, flattenlists=False, ignorethis=True)
-            for grp in total
-        ]
+        return [CustomAST(grp) for grp in total]
 
     def _statement_new_group(self, oldgroup, statement):
         """Check if a statement should be in the same group or a new one."""

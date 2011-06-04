@@ -94,7 +94,7 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._write_block(tree.children["body"].temp_list(), indent = False)
+        self._write_block(CustomAST([tree.children["body"]]), indent = False)
     
 
     def _write_Suite(self, tree):
