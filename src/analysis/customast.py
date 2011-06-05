@@ -91,6 +91,15 @@ class CustomAST:
 
         return self.children.keys()
 
+    def become(self, node):
+        """Replace ast node with the innards of the new node and update children."""
+
+        if not self.is_list() or not node.is_list():
+            raise TypeError("become() operation is only supported between lists currently.")
+
+        self._node[:] = node._node
+        self.children = node.children.copy()
+
     def _gen_children(self):
         """
         Generate children from current node.
