@@ -7,6 +7,7 @@ import tkinter
 from tkinter import ttk
 
 from . import asttree
+from . import markpane
 
 class StaticVisual(ttk.Frame):
     """
@@ -29,7 +30,7 @@ class StaticVisual(ttk.Frame):
             StaticVisualPanes(self, fulltree, currenttree).grid(sticky="nsew")
 
         self.button = ttk.Button(self, text="Close", command=master.quit)
-        self.button.grid(sticky="e", pady=5)
+        self.button.grid(sticky="e", pady=5, padx=5)
 
 
 class StaticVisualPanes(ttk.PanedWindow):
@@ -46,5 +47,7 @@ class StaticVisualPanes(ttk.PanedWindow):
 
         tree = asttree.ScrolledASTTreeview(self, node, currentnode)
         self.add(tree)
+        marks = markpane.MarkPane(self, currentnode)
+        self.add(marks)
         #asttree.ScrolledASTTreeview(self, fulltree, currenttree).grid(
         #    sticky="nsew")
