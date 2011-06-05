@@ -26,9 +26,12 @@ class VisualiseCommand(commandui.Command):
 
         root = tkinter.Tk()
         root.title("OAT Visualiser <" + str(self._related_parsecmd.ast) + ">")
+        root.grid_columnconfigure(0, weight=1)
+        root.grid_rowconfigure(0, weight=1)
         StaticVisual(root,
                      fulltree=self._related_explorecmd.ast_top,
-                     currenttree=self._related_explorecmd.ast_current)
+                     currenttree=self._related_explorecmd.ast_current
+                     ).grid(sticky="nsew")
 
         print("OAT Visualisation is being displayed.")
         print("To return to the command console, please quit the "

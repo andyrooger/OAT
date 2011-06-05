@@ -12,6 +12,9 @@ class ScrolledASTTreeview(ttk.Frame):
     def __init__(self, parent, fulltree, currenttree=None):
         ttk.Frame.__init__(self, parent)
 
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
         xscroll = ttk.Scrollbar(self, orient="horizontal")
         xscroll.grid(column=0, row=1, sticky="ew")
         yscroll = ttk.Scrollbar(self)
