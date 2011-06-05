@@ -22,9 +22,13 @@ class VisualiseCommand(commandui.Command):
     def run(self, args):
         """Pop up our GUI."""
 
+        self._related_explorecmd._ensure_node_sync()
+
         root = tkinter.Tk()
         root.title("OAT Visualiser <" + str(self._related_parsecmd.ast) + ">")
-        StaticVisual(root, fulltree=self._related_parsecmd.ast.tree)
+        StaticVisual(root,
+                     fulltree=self._related_explorecmd.ast_top,
+                     currenttree=self._related_explorecmd.ast_current)
 
         print("OAT Visualisation is being displayed.")
         print("To return to the command console, please quit the "
