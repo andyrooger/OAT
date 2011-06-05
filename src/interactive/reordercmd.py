@@ -165,7 +165,7 @@ class ReorderCommand(commandui.Command):
             print()
 
         else:
-            ord_stat = statements.ordered_children()
+            ord_stat = list(statements.ordered_children())
             for i in perm:
                 child = statements.children[ord_stat[i]]
                 if disp == "type":

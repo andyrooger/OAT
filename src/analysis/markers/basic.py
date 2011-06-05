@@ -14,7 +14,7 @@ class BasicMarker(metaclass=abc.ABCMeta):
         self.mark = mark
         if node == None:
             self.node = CustomAST(None)
-        elif not isinstance(self.node, CustomAST):
+        elif not isinstance(node, CustomAST):
             raise TypeError("Marker needs a CustomAST node.")
         else:
             self.node = node

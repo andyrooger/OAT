@@ -179,7 +179,7 @@ class AutoMarker:
         # Lists are always treated the same, we hard code it!
         if node.is_list():
             marks = self._base_marks(needed)
-            for stmt in node:
+            for stmt in [node.children[s] for s in node.ordered_children()]:
                 other = self.resolve_marks(stmt, needed)
                 self._combine_marks(marks, other, needed)
             return marks

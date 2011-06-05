@@ -83,12 +83,12 @@ class BasicReorderer:
 
     def __init__(self,
                  statements : "CustomAST list node of statements",
-                 range : "Permutation representing the original statement list" = None):
+                 rng : "Permutation representing the original statement list" = None):
         """Initialise reorderer or raise TypeError."""
 
         self.statements = statements
         self.stat_order = list(statements.ordered_children())
-        self.range = range
+        self.range = rng
         if self.range == None:
             self.range = list(range(len(self.stat_order)))
 
@@ -191,12 +191,12 @@ class ReorderChecker:
 
         if precond:
             # Check type
-            if not self.statments.is_list():
-                raise TypeError
+            if not self.statements.is_list():
+                raise TypeError("Can only reorder lists.")
 
             for s in self.stat_order:
                 if not self.statements.children[s].is_ast():
-                    raise TypeError
+                    raise TypeError("Can only reorder lists of AST nodes.")
 
 
     def check_markings(self):
@@ -225,18 +225,18 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
 
     def __init__(self,
                  statements : "CustomAST list node of statements",
-                 range : "Permutation representing the original statement list" = None,
+                 rng : "Permutation representing the original statement list" = None,
                  precond : "Perform precondition checks for input values" = True):
         """Initialise reorderer or raise TypeError."""
 
-        BasicReorderer.__init__(self, statements, range=range)
+        BasicReorderer.__init__(self, statements, rng=rng)
         ReorderChecker.__init__(self, precond=precond)
 
-    def permutations(self, part : "List of indices to statements"):
+    def permutations(self):
         """Generate all the possible permutations for a single partition."""
 
         # Convert to the dependence tuple
-        tuples = [self._statement_tuple(s) for s in part]
+        tuples = [self._statement_tuple(s) for s in self.range]
         dependence = [self._statement_dependence(tuples[i], tuples[:i], tuples[(i+1):]) for i in range(len(tuples))]
 
         # Grab the list of visible statements - saves some computation
@@ -256,7 +256,7 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         rem = []
         for d in dependencies:
             if visible.VisibleMarker(self.statement_at(d[0])).isVisible():
-                current.append(d)
+                vis.append(d)
             else:
                 rem.append(d)
 
@@ -299,9 +299,6 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         # Check insertion at each point in turn
 
             cuts = self._cuts_read_write(i, s_writes, stats)
-            if self.safe and not self._check_read_write_cuts(i, s_writes, stats, cuts):
-                print("Failed cuts check.")
-                return
             if not cuts:
                 yield stats[:i] + [stat] + stats[i:]
 
@@ -492,12 +489,12 @@ class Reorderer(BasicReorderer, ReorderChecker):
 
     def __init__(self,
                  statements : "CustomAST list node of statements",
-                 range : "Permutation representing the original statement list" = None,
+                 rng : "Permutation representing the original statement list" = None,
                  precond : "Perform precondition checks for input values" = True,
                  safe : "Perform sanity checks for things that won't need them if this is coded correctly" = False):
         """Initialise reorderer or raise TypeError."""
 
-        BasicReorderer.__init__(self, statements, range=range)
+        BasicReorderer.__init__(self, statements, rng=rng)
         ReorderChecker.__init__(self, precond=precond)
 
         self.PartReorderer = SafeReorderer if safe else SingleReorderer
@@ -522,7 +519,7 @@ class Reorderer(BasicReorderer, ReorderChecker):
             # Difficult calculation? Hopefully not
             # Do the bigger calculation less
 
-            reord = self.PartReorderer(self.statements, range=head, precond=False)
+            reord = self.PartReorderer(self.statements, rng=head, precond=False)
             h_perms = list(reord.permutations()) # Calculate once!
             for remainder in self._permutations(tail):
                 for perm in h_perms:
@@ -560,13 +557,13 @@ class SafeReorderer(SingleReorderer):
 
     def __init__(self,
                  statements : "CustomAST list node of statements",
-                 range : "Permutation representing the original statement list" = None,
+                 rng : "Permutation representing the original statement list" = None,
                  precond : "Perform precondition checks for input values" = True):
         """Initialise reorderer or raise TypeError."""
 
-        SingleReorderer.__init__(self, statements, range=range, precond=precond)
+        SingleReorderer.__init__(self, statements, rng=rng, precond=precond)
 
-    def permutations(self, part : "List of indices to statements"):
+    def permutations(self):
         """As in permutations, but with safety checks."""
 
         for perm in super()._permutations(part):
