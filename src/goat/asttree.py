@@ -27,6 +27,7 @@ class ScrolledASTTreeview(ttk.Frame):
         xscroll.config(command=tv.xview)
         yscroll.config(command=tv.yview)
 
+
 class ASTTreeview(ttk.Treeview):
     """Create treeview to display an AST."""
 
@@ -36,6 +37,7 @@ class ASTTreeview(ttk.Treeview):
                               columns=["type", "value"],
                               selectmode="none")
         self.heading("type", text="Type")
+        self.column("type", width=100)
         self.heading("value", text="Value")
 
         # Tags

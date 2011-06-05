@@ -30,4 +30,4 @@ class StaticVisual(ttk.Frame):
             self.tree.grid(sticky="nsew")
 
         self.button = ttk.Button(self, text="Close", command=master.quit)
-        self.button.grid(sticky="e")
+        self.button.grid(sticky="e", pady=5)
