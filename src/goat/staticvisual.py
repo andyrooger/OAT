@@ -26,8 +26,25 @@ class StaticVisual(ttk.Frame):
             ttk.Label(self, text="Please use parse to create one.").grid(sticky="n")
         else:
             self.grid_rowconfigure(0, weight=1)
-            self.tree = asttree.ScrolledASTTreeview(self, fulltree, currenttree)
-            self.tree.grid(sticky="nsew")
+            StaticVisualPanes(self, fulltree, currenttree).grid(sticky="nsew")
 
         self.button = ttk.Button(self, text="Close", command=master.quit)
         self.button.grid(sticky="e", pady=5)
+
+
+class StaticVisualPanes(ttk.PanedWindow):
+    """
+    PanedWindow containing everything we want to view a node.
+
+    """
+
+    def __init__(self, master, node, currentnode=None, **kwargs):
+        ttk.PanedWindow.__init__(self, master, **kwargs)
+
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        tree = asttree.ScrolledASTTreeview(self, node, currentnode)
+        self.add(tree)
+        #asttree.ScrolledASTTreeview(self, fulltree, currenttree).grid(
+        #    sticky="nsew")
