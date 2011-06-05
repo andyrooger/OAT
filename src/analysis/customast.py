@@ -141,22 +141,36 @@ class CustomAST:
         except AttributeError:
             return None
 
-    def __str__(self):
+    def desc(self):
+        """Provide a text description of the node."""
+
         if self.is_empty():
             if self.is_list():
                 return "Empty list"
             else:
                 return "No node"
 
-        if self.is_ast():
-            loc = self.location()
-            if loc:
-                loc = " (line " + str(loc[0]) + ", col " + str(loc[1]) + ")"
-            else:
-                loc = ""
-            return self.type() + loc
-
         if self.is_list():
             return "Block of statements"
 
+        if self.is_ast():
+            return self.type()
+
         return "Unknown node (" + str(self.node()) + " : " + self.type() + ")"
+
+    def locstr(self):
+        """Provide a text description of the location."""
+
+        loc = self.location()
+        if loc:
+            return "line " + str(loc[0]) + " column " + str(loc[1])
+        else:
+            return None
+
+    def __str__(self):
+        d = self.desc()
+        l = self.locstr()
+        
+        return d + " (" + l + ")" if l else d
+
+

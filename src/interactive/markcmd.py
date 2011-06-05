@@ -15,6 +15,8 @@ from . import commandui
 from writer import sourcewriter
 from writer import prettywriter
 
+from analysis.customast import CustomAST
+
 class MarkCommand(commandui.Command):
     """Mark AST nodes with extra information from the console."""
 
@@ -55,10 +57,6 @@ class MarkCommand(commandui.Command):
         if node == None:
             print("There is no AST to mark. Have you create one with the parse command?")
             return None
-
-        #if not isinstance(node, ast.AST):
-        #    print("This node does not support markings.")
-        #    return None
 
         return node        
 
@@ -111,20 +109,14 @@ class MarkCommand(commandui.Command):
 
         print("Markings for current node:")
 
-        if isinstance(node, ast.AST):
-            for marker in self.marks:
-                self.marks[marker].show(node, "  " + marker.title() + " - ")
-        else:
-            print("  This node does not support markings.")
-            return None
+        for marker in self.marks:
+            self.marks[marker].show(node, "  " + marker.title() + " - ")
 
     def _show_dummy_markings(self, markings):
         # Create a dummy node with the markings already set to show
-        class DummyAST(ast.AST): pass
-        d_node = DummyAST()
+        d_node = CustomAST([])
         d_node._markings = markings
         self._show_markings(d_node)
-        
 
 
     def _ask_specific(self, node, needed):
@@ -166,10 +158,10 @@ class MarkCommand(commandui.Command):
     def _node_information(self, node):
         """Display information about a node."""
 
-        print("Type: " + node.__class__.__name__)
-        if hasattr(node, "_attributes") and node._attributes:
-            # Assume attributes will always be lineno, col_offset
-            print("Location: line " + str(node.lineno) + " column " + str(node.col_offset))
+        print("Type: " + node.desc())
+        loc = node.locstr()
+        if loc:
+            print("Location: " + loc)
 
 
     def _review_marks(self, node, markings):
