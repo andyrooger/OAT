@@ -22,7 +22,7 @@ class StaticVisual:
             ttk.Label(frame, text="No tree loaded.").pack()
             ttk.Label(frame, text="Please use parse to create one.").pack()
         else:
-            self.tree = asttree.ASTTreeview(frame, fulltree, currenttree)
+            self.tree = asttree.ScrolledASTTreeview(frame, fulltree, currenttree)
             self.tree.pack()
 
         self.button = ttk.Button(frame, text="QUIT", command=frame.quit)

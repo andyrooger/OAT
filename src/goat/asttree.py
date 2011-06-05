@@ -6,6 +6,24 @@ Display a tree view of the current abstract syntax tree.
 import tkinter
 from tkinter import ttk
 
+class ScrolledASTTreeview(ttk.Frame):
+    """Scrolling version on ASTTreeview."""
+
+    def __init__(self, parent, fulltree, currenttree=None):
+        ttk.Frame.__init__(self, parent)
+
+        xscroll = ttk.Scrollbar(self, orient="horizontal")
+        xscroll.grid(column=0, row=1, sticky="ew")
+        yscroll = ttk.Scrollbar(self)
+        yscroll.grid(column=1, row=0, sticky="ns")
+
+        tv = ASTTreeview(self, fulltree, currenttree,
+                         xscrollcommand=xscroll.set,
+                         yscrollcommand=yscroll.set)
+        tv.grid(column=0, row=0, sticky="nsew")
+        xscroll.config(command=tv.xview)
+        yscroll.config(command=tv.yview)
+
 class ASTTreeview(ttk.Treeview):
     """Create treeview to display an AST."""
 
