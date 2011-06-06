@@ -22,6 +22,14 @@ class CommandUI(cmd.Cmd):
 
         self._commands = {}
 
+    def cmdloop(self, intro = None):
+        """Un-KeyboardInterrup-able cmdloop."""
+        try:
+            super().cmdloop(intro)
+        except KeyboardInterrupt:
+            print()
+            self.cmdloop("")
+
     def postcmd(self, stop, line):
         print()
         return stop
