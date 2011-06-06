@@ -93,6 +93,7 @@ class CodeBox(tkinter.Text):
 
     def __init__(self, master, **kwargs):
         tkinter.Text.__init__(self, master, state="disabled", **kwargs)
+        self.tag_config("selectednode", background="blue")
 
     def fill(self, writer, node, highlight=None):
         """Write the code."""
@@ -108,10 +109,13 @@ class CodeBox(tkinter.Text):
         """Take a writer class and return an instance prepared to write to our display."""
 
         class TaggingWriter(writer):
-            def _write(self, node):
+            def _write(innerself, node):
                 if node is highlight:
                     # Tag here and after
+                    self.mark_set("starthighlight", "current")
+                    self.mark_gravity("starthighlight", "left")
                     super()._write(node)
+                    self.tag_add("selectednode", "starthighlight", "current")
                 else:
                     super()._write(node)
 
