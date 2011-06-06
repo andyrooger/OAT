@@ -322,7 +322,6 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
             if not cuts:
                 yield stats[:i] + [stat] + stats[i:]
 
-
     def _get_correct_state_range(self,
                                  reads : "Set of vars we read and the statement we expect to read from",
                                  stats : "Set of statements we are inserting into"):
@@ -782,3 +781,18 @@ class SafeReorderer(SingleReorderer):
 
 class RandomReorderer(Reorderer):
     """Like Reorderer but permutations are created in a random order."""
+
+    def __init__(self, *varargs, **kwargs):
+        Reorderer.__init__(self, *varargs, **kwargs)
+
+        class RandomPartReorderer(self.PartReorderer):
+            def _insert_statement(innerself, stat, stats):
+                perms = super()._insert_statement(stat, stats)
+                return self._rearrange(list(perms))
+
+        self.PartReorderer = RandomPartReorderer
+
+    def _rearrange(self, lst):
+        """Randomly rearrange lst. Used to randomise the order we return permutations."""
+
+        return random.sample(lst, len(lst))
