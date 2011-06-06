@@ -537,14 +537,23 @@ class Reorderer(BasicReorderer, ReorderChecker):
         else:
             head, *tail = partitions
 
-            # Recalculate everything for each permutation? Yes
-            # Difficult calculation? Hopefully not
-            # Do the bigger calculation less
-
             reord = self.PartReorderer(self.statements, rng=head, precond=False)
-            h_perms = list(reord.permutations()) # Calculate once!
-            for remainder in self._permutations(tail):
-                for perm in h_perms:
+
+            # Record calculated head perms during first iteration
+            # These can be used in next iteration
+            # Don't calculate all now as we may never need to know them
+
+            tail_perms = self._permutations(tail) # generator (only need to use once)
+            head_perms = [] # list as we need to reuse these
+            
+            for remainder in tail_perms:
+                for perm in reord.permutations():
+                    yield perm + remainder # Whack out the value ASAP
+                    head_perms.append(perm)
+                break # Only wanted the first iteration
+
+            for remainder in tail_perms:
+                for perm in head_perms:
                     yield perm + remainder
 
     def partition(self):
