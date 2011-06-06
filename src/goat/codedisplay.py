@@ -37,14 +37,15 @@ class CodeDisplay(ttk.Frame):
     def refresh(self):
         """Refill code with previous node values."""
 
-        if hasattr(self, "_node") and hasattr(self, "_highlight"):
-            self.fill(self._node, self._highlight)
+        if hasattr(self, "_node") and hasattr(self, "_selected") and hasattr(self, "_current"):
+            self.fill(self._node, self._selected, self._current)
 
-    def fill(self, node, highlight=None):
+    def fill(self, node, selected=None, current=None):
         """Print the actual code in our box."""
 
         self._node = node
-        self._highlight = highlight
+        self._selected = selected
+        self._current = current
 
         try:
             writer = {
@@ -54,7 +55,7 @@ class CodeDisplay(ttk.Frame):
         except KeyError:
             raise ValueError("Writer radio button has incorrect value.")
         else:
-            self.codebox.fill(writer, node, highlight)
+            self.codebox.fill(writer, node, selected, current)
 
 class ScrolledCodeBox(ttk.Frame):
     """
@@ -80,10 +81,10 @@ class ScrolledCodeBox(ttk.Frame):
         xscroll.config(command=self.codebox.xview)
         yscroll.config(command=self.codebox.yview)
 
-    def fill(self, writer, node, highlight=None):
+    def fill(self, writer, node, selected=None, current=None):
         """Write the code."""
 
-        self.codebox.fill(writer, node, highlight)
+        self.codebox.fill(writer, node, selected, current)
 
 class CodeBox(tkinter.Text):
     """
@@ -93,32 +94,19 @@ class CodeBox(tkinter.Text):
 
     def __init__(self, master, **kwargs):
         tkinter.Text.__init__(self, master, state="disabled", **kwargs)
-        self.tag_config("selectednode", background="blue")
+        self.tag_config("currentnode", background="#b2ff00")
+        self.tag_config("selectednode", background="#8B98C6", foreground="white")
 
-    def fill(self, writer, node, highlight=None):
+    def fill(self, writer, node, selected=None, current=None):
         """Write the code."""
 
         self.config(state="normal")
 
         self.delete("1.0", "end") # clear
-        self._display_writer(writer, node, highlight).write()
+        TaggingWriter = tagging_writer(writer, self, selectednode=selected, currentnode=current)
+        TaggingWriter(node).write()
 
         self.config(state="disabled")
-
-    def _display_writer(self, writer, node, highlight=None):
-        """Take a writer class and return an instance prepared to write to our display."""
-
-        TaggingWriter = tagging_writer(writer, self, selectednode=highlight)
-        return TaggingWriter(node, self._display_file())
-
-    def _display_file(self):
-        """Get a file-like object to write to the display."""
-
-        class DisplayIO:
-            def write(innerself, data):
-                self.insert("end", data)
-
-        return DisplayIO()
 
 
 def tagging_writer(writer, display, **highlight):
@@ -162,7 +150,14 @@ def tagging_writer(writer, display, **highlight):
         return f2
 
 
+    class DisplayIO:
+        def write(self, data):
+            display.insert("end", data)
+
     class TaggingWriter(writer):
+
+        def __init__(self, node, *varargs, **kwargs):
+            writer.__init__(self, node, DisplayIO(), *varargs, **kwargs)
 
         @_highlighter
         def _write(self, *varargs, **kwargs):
