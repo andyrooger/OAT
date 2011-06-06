@@ -42,12 +42,16 @@ class StaticVisualPanes(ttk.PanedWindow):
     def __init__(self, master, node, currentnode=None, **kwargs):
         ttk.PanedWindow.__init__(self, master, **kwargs)
 
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.tree = asttree.ScrolledASTTreeview(
+            self, node, currentnode, select_handler=self._update_node)
+        self.add(self.tree)
+        self.marks = markpane.MarkPane(self, currentnode)
+        self.add(self.marks)
 
-        tree = asttree.ScrolledASTTreeview(self, node, currentnode)
-        self.add(tree)
-        marks = markpane.MarkPane(self, currentnode)
-        self.add(marks)
-        #asttree.ScrolledASTTreeview(self, fulltree, currenttree).grid(
-        #    sticky="nsew")
+    def _update_node(self, node):
+        """Callback for tree view when node is changed."""
+
+        self.remove(self.marks)
+        self.marks.destroy()
+        self.marks = markpane.MarkPane(self, node)
+        self.add(self.marks)
