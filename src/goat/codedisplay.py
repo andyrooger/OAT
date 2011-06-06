@@ -108,17 +108,7 @@ class CodeBox(tkinter.Text):
     def _display_writer(self, writer, node, highlight=None):
         """Take a writer class and return an instance prepared to write to our display."""
 
-        class TaggingWriter(writer):
-            def _write(innerself, node):
-                if node is highlight:
-                    # Tag here and after
-                    self.mark_set("starthighlight", "current")
-                    self.mark_gravity("starthighlight", "left")
-                    super()._write(node)
-                    self.tag_add("selectednode", "starthighlight", "current")
-                else:
-                    super()._write(node)
-
+        TaggingWriter = tagging_writer(writer, self, selectednode=highlight)
         return TaggingWriter(node, self._display_file())
 
     def _display_file(self):
@@ -129,3 +119,61 @@ class CodeBox(tkinter.Text):
                 self.insert("end", data)
 
         return DisplayIO()
+
+
+def tagging_writer(writer, display, **highlight):
+    """
+    Create a tagging writer class from a writer class.
+
+    highlight is a dict from tag name to nodes.
+
+    """
+
+    in_progress = set()
+
+    def _highlight(name, state):
+        """Start or stop tagging name."""
+
+        if state == (name in in_progress):
+            return
+        else:
+            if state:
+                in_progress.add(name)
+            else:
+                in_progress.remove(name)
+        if state:
+            display.mark_set("starthighlight"+name, "current")
+            display.mark_gravity("starthighlight"+name, "left")
+        else:
+            display.tag_add(name, "starthighlight"+name, "current")
+
+
+    def _highlighter(f):
+        """Can highlight innards of methods."""
+
+        def f2(self, node, *varargs, **kwargs):
+            for h in highlight:
+                if node is highlight[h]:
+                    _highlight(h, True)
+            f(self, node, *varargs, **kwargs)
+            for h in highlight:
+                if node is highlight[h]:
+                    _highlight(h, False)
+        return f2
+
+
+    class TaggingWriter(writer):
+
+        @_highlighter
+        def _write(self, *varargs, **kwargs):
+            super()._write(*varargs, **kwargs)
+
+        @_highlighter
+        def _interleave_write(self, *varargs, **kwargs):
+            super()._interleave_write(*varargs, **kwargs)
+
+        @_highlighter
+        def _write_block(self, *varargs, **kwargs):
+            super()._write_block(*varargs, **kwargs)
+
+    return TaggingWriter
