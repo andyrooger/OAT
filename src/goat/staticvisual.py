@@ -40,18 +40,37 @@ class StaticVisualPanes(ttk.PanedWindow):
     """
 
     def __init__(self, master, node, currentnode=None, **kwargs):
-        ttk.PanedWindow.__init__(self, master, **kwargs)
+        ttk.PanedWindow.__init__(self, master, orient="horizontal", **kwargs)
 
-        self.tree = asttree.ScrolledASTTreeview(
-            self, node, currentnode, select_handler=self._update_node)
-        self.add(self.tree)
-        self.marks = markpane.MarkPane(self, currentnode)
-        self.add(self.marks)
+        self._cur_node = node
+
+        self.inner = ttk.PanedWindow(self, **kwargs)
+        self.add(self.inner)
+
+        tree = asttree.ScrolledASTTreeview(
+            self.inner, node, currentnode, select_handler=self._update_node)
+        self.inner.add(tree)
+
+        self.marks = markpane.MarkPane(self.inner, currentnode)
+        self.inner.add(self.marks)
+
+        self.code = ttk.Label(self, text="Placeholder")
+        self.add(self.code)
 
     def _update_node(self, node):
         """Callback for tree view when node is changed."""
 
-        self.remove(self.marks)
+        if self._cur_node == node:
+            return
+        else:
+            self._cur_node = None
+
+        self.inner.remove(self.marks)
         self.marks.destroy()
-        self.marks = markpane.MarkPane(self, node)
-        self.add(self.marks)
+        self.marks = markpane.MarkPane(self.inner, node)
+        self.inner.add(self.marks)
+
+        self.remove(self.code)
+        self.code.destroy()
+        self.code = ttk.Label(self, text="Placeholder")
+        self.add(self.code)
