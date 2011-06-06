@@ -232,7 +232,7 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         BasicReorderer.__init__(self, statements, rng=rng)
         ReorderChecker.__init__(self, precond=precond)
 
-    def permutations(self):
+    def permutations(self, convtuple=True):
         """Generate all the possible permutations for a single partition."""
 
         # Convert to the dependence tuple
@@ -243,7 +243,7 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         current, rem = self._split_by_visibility(dependence)
 
         for perm in self._insert_statements(rem, current):
-            yield [s for (s, r, w) in perm]
+            yield [s for (s, r, w) in perm] if convtuple else perm
 
     def _split_by_visibility(self, dependencies : "List of dependencies to split"):
         """
@@ -566,7 +566,7 @@ class SafeReorderer(SingleReorderer):
     def permutations(self):
         """As in permutations, but with safety checks."""
 
-        for perm in super()._permutations(part):
+        for perm in super().permutations(convtuple=False):
             assert self._check_perm_uniqueness(perm), "Failed complete statement uniqueness."
             assert self._check_perm(perm), "Failed complete permutation check."
             yield perm
@@ -616,8 +616,8 @@ class SafeReorderer(SingleReorderer):
     def _cuts_read_write(self, pos : "Point to chop", writes : "Variables we write", stats : "List of statements"):
         """Like normal _cuts_read_write but with safety check."""
 
-        cuts = super()._cuts_read_write(i, writes, stats)
-        assert self._check_read_write_cuts(i, writes, stats, cuts), "Failed cuts check."
+        cuts = super()._cuts_read_write(pos, writes, stats)
+        assert self._check_read_write_cuts(pos, writes, stats, cuts), "Failed cuts check."
         return cuts
 
     def _perm_walk(self,
@@ -649,7 +649,7 @@ class SafeReorderer(SingleReorderer):
 
     def _check_perm_uniqueness(self, perm):
         """Check each statement in the permutation is unique."""
-        
+
         # Get a list of all the statements currently in the perm
         stats = {s for (s, r, w) in perm}
         stats.add(None)
