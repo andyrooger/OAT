@@ -6,26 +6,56 @@ Provides a display of the current code, possibly with highlighting.
 import tkinter
 from tkinter import ttk
 
+from writer import sourcewriter
+from writer import prettywriter
+from writer import basicwriter
+
 class CodeDisplay(ttk.Frame):
     """
     Create frame containing all the widgets we need for displaying the code.
 
     """
 
-    def __init__(self, master, node, highlight=None, **kwargs):
+    def __init__(self, master, **kwargs):
         ttk.Frame.__init__(self, master, **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        ScrolledCodeBox(self, node, highlight, **kwargs).grid(
-            column=0, row=0, columnspan=2, sticky="nsew")
+        self.codebox = ScrolledCodeBox(self, **kwargs)
+        self.codebox.grid(column=0, row=0, columnspan=3, sticky="nsew")
 
         ttk.Label(self, text="Code displayed using").grid(
-            column=0, row=1, sticky="nse")
+            column=0, row=1, sticky="nsw")
 
-        self.disp_type = ttk.Combobox(self, values=["Basic", "Pretty"], state="readonly")
-        self.disp_type.set("Pretty")
-        self.disp_type.grid(column=1, row=1, sticky="ns")
+        self.disp_type = tkinter.StringVar(value="pretty")
+        def_btn = ttk.Radiobutton(
+            self, text="Pretty", variable=self.disp_type, value="pretty", command=self.refresh)
+        def_btn.grid(column=1, row=1, sticky="ns")
+        ttk.Radiobutton(
+            self, text="Basic", variable=self.disp_type, value="basic", command=self.refresh).grid(
+            column=2, row=1, sticky="ns")
+
+    def refresh(self):
+        """Refill code with previous node values."""
+
+        if hasattr(self, "_node") and hasattr(self, "_highlight"):
+            self.fill(self._node, self._highlight)
+
+    def fill(self, node, highlight=None):
+        """Print the actual code in our box."""
+
+        self._node = node
+        self._highlight = highlight
+
+        try:
+            writer = {
+                "pretty": prettywriter.PrettyWriter,
+                "basic": basicwriter.BasicWriter
+            }[self.disp_type.get()]
+        except KeyError:
+            raise ValueError("Writer radio button has incorrect value.")
+        else:
+            self.codebox.fill(writer, node, highlight)
 
 class ScrolledCodeBox(ttk.Frame):
     """
@@ -33,7 +63,7 @@ class ScrolledCodeBox(ttk.Frame):
 
     """
 
-    def __init__(self, master, node, highlight=None, **kwargs):
+    def __init__(self, master, **kwargs):
         ttk.Frame.__init__(self, master, **kwargs)
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -43,13 +73,18 @@ class ScrolledCodeBox(ttk.Frame):
         yscroll = ttk.Scrollbar(self)
         yscroll.grid(column=1, row=0, sticky="ns")
 
-        cb = CodeBox(self, node, highlight,
-                     xscrollcommand=xscroll.set,
-                     yscrollcommand=yscroll.set)
-        cb.grid(column=0, row=0, sticky="nsew")
+        self.codebox = CodeBox(self,
+                               xscrollcommand=xscroll.set,
+                               yscrollcommand=yscroll.set)
+        self.codebox.grid(column=0, row=0, sticky="nsew")
 
-        xscroll.config(command=cb.xview)
-        yscroll.config(command=cb.yview)
+        xscroll.config(command=self.codebox.xview)
+        yscroll.config(command=self.codebox.yview)
+
+    def fill(self, writer, node, highlight=None):
+        """Write the code."""
+
+        self.codebox.fill(writer, node, highlight)
 
 class CodeBox(tkinter.Text):
     """
@@ -57,5 +92,18 @@ class CodeBox(tkinter.Text):
 
     """
 
-    def __init__(self, master, node, highlight=None, **kwargs):
-        tkinter.Text.__init__(self, master, **kwargs)
+    def __init__(self, master, **kwargs):
+        tkinter.Text.__init__(self, master, state="disabled", **kwargs)
+
+    def fill(self, writer, node, highlight=None):
+        """Write the code."""
+
+        # Print source, could take a while
+        src = sourcewriter.srcToStr(node, writer)
+
+        self.config(state="normal")
+
+        self.delete("1.0", "end") # clear
+        self.insert("end", src)
+
+        self.config(state="disabled")

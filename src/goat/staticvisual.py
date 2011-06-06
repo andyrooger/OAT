@@ -56,8 +56,9 @@ class StaticVisualPanes(ttk.PanedWindow):
         self.marks = markpane.MarkPane(self.inner, currentnode)
         self.inner.add(self.marks)
 
-        self.codebox = codedisplay.CodeDisplay(self, node, currentnode)
+        self.codebox = codedisplay.CodeDisplay(self)
         self.add(self.codebox)
+        self.codebox.fill(node, currentnode)
 
     def _update_node(self, node):
         """Callback for tree view when node is changed."""
@@ -72,7 +73,4 @@ class StaticVisualPanes(ttk.PanedWindow):
         self.marks = markpane.MarkPane(self.inner, node)
         self.inner.add(self.marks)
 
-        self.remove(self.codebox)
-        self.codebox.destroy()
-        self.codebox = codedisplay.CodeDisplay(self, self._top_node, node)
-        self.add(self.codebox)
+        self.codebox.fill(self._top_node, node)
