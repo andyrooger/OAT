@@ -6,7 +6,6 @@ Provides a display of the current code, possibly with highlighting.
 import tkinter
 from tkinter import ttk
 
-from writer import sourcewriter
 from writer import prettywriter
 from writer import basicwriter
 
@@ -98,12 +97,31 @@ class CodeBox(tkinter.Text):
     def fill(self, writer, node, highlight=None):
         """Write the code."""
 
-        # Print source, could take a while
-        src = sourcewriter.srcToStr(node, writer)
-
         self.config(state="normal")
 
         self.delete("1.0", "end") # clear
-        self.insert("end", src)
+        self._display_writer(writer, node, highlight).write()
 
         self.config(state="disabled")
+
+    def _display_writer(self, writer, node, highlight=None):
+        """Take a writer class and return an instance prepared to write to our display."""
+
+        class TaggingWriter(writer):
+            def _write(self, node):
+                if node is highlight:
+                    # Tag here and after
+                    super()._write(node)
+                else:
+                    super()._write(node)
+
+        return TaggingWriter(node, self._display_file())
+
+    def _display_file(self):
+        """Get a file-like object to write to the display."""
+
+        class DisplayIO:
+            def write(innerself, data):
+                self.insert("end", data)
+
+        return DisplayIO()
