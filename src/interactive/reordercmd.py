@@ -32,6 +32,12 @@ class ReorderCommand(commandui.Command):
                                 help="Choose the valuer function.")
         self._opts.add_argument("-e", "--edit", action="store_true", default=False,
                                 help="Allow editing of the tree. This is disallowed by default.")
+        self._opts.add_argument("-t", "--safetytests", dest="safe", action="store_true", default=False,
+                                help="Perform safety tests on the reorderer during calculations. Warning: This could cause significant slow-down.")
+        self._opts.add_argument("-r", "--random", action="store_true", default=False,
+                                help="Randomise order of output permutations.")
+        self._opts.add_argument("-l", "--limit", type=int, default=None,
+                                help="Take only the first LIMIT permutations. Combine with --random for a very fast random permutation.")
         actions = self._opts.add_mutually_exclusive_group()
         actions.add_argument("-c", "--current", action="store_const", const="current", dest="do",
                              help="Check if this node can be reordered and print it's current state if so.")
@@ -68,10 +74,21 @@ class ReorderCommand(commandui.Command):
             return False
 
         try:
-            orderer = reorder.Reorderer(block)
+            orderer = (reorder.RandomReorderer(block, safe=args.safe, limit=args.limit) if args.random
+                      else reorder.Reorderer(block, safe=args.safe, limit=args.limit))
         except TypeError:
             print("The node's body was of unexpected type, I don't know what do do with this.")
             return False
+
+        try:
+            self._perform_action(do, block, orderer, args)
+        except AssertionError:
+            if not args.safe: # Then we shouldn't have got this
+                raise
+            print("Safety check failed.")
+
+    def _perform_action(self, do, block, orderer, args):
+        """Perform the chosen action."""
 
         if do == "current":
             self._print_block(block, range(len(block.children)), args.display, True)
@@ -137,7 +154,6 @@ class ReorderCommand(commandui.Command):
             return
 
         print("The action, " + do + ", has not been implemented yet.") # Shouldn't get here
-
 
     def _get_block(self):
         cur = self._related_explorecmd.ast_current
