@@ -83,7 +83,8 @@ class BasicReorderer:
 
     def __init__(self,
                  statements : "CustomAST list node of statements",
-                 rng : "Permutation representing the original statement list" = None):
+                 rng : "Permutation representing the original statement list" = None,
+                 limit : "Limit to number of output permutations." = None):
         """Initialise reorderer or raise TypeError."""
 
         self.statements = statements
@@ -91,6 +92,7 @@ class BasicReorderer:
         self.range = rng
         if self.range == None:
             self.range = list(range(len(self.stat_order)))
+        self.limit = None if limit == None else max(limit, 1)
 
     def statement_at(self, i):
         """Get the statement at position i."""
@@ -102,6 +104,21 @@ class BasicReorderer:
 
         return CustomAST([self.statement_at(i) for i in perm])
 
+    def _gen_limit(self, gen):
+        """Generate only the first limit elements from gen."""
+
+        if self.limit == None:
+            for g in gen:
+                yield g
+            return
+        else:
+            lim = self.limit
+            for g in gen:
+                lim -= 1
+                if lim < 0:
+                    return
+                yield g
+
     def permutations(self):
         """
         Generates all possible permutations.
@@ -111,7 +128,7 @@ class BasicReorderer:
 
         """
 
-        yield self.range
+        return self._gen_limit([self.range])
 
     def best_permutation(self, valuer=RandomValuer):
         """Select the best permutation (with the highest value from the value function)."""
@@ -226,13 +243,14 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
     def __init__(self,
                  statements : "CustomAST list node of statements",
                  rng : "Permutation representing the original statement list" = None,
-                 precond : "Perform precondition checks for input values" = True):
+                 precond : "Perform precondition checks for input values" = True,
+                 limit : "Limit to number of output permutations." = None):
         """Initialise reorderer or raise TypeError."""
 
-        BasicReorderer.__init__(self, statements, rng=rng)
+        BasicReorderer.__init__(self, statements, rng=rng, limit=limit)
         ReorderChecker.__init__(self, precond=precond)
 
-    def permutations(self):
+    def permutations(self, convtuple=True):
         """Generate all the possible permutations for a single partition."""
 
         # Convert to the dependence tuple
@@ -242,8 +260,10 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         # Grab the list of visible statements - saves some computation
         current, rem = self._split_by_visibility(dependence)
 
-        for perm in self._insert_statements(rem, current):
-            yield [s for (s, r, w) in perm]
+        return self._gen_limit(
+            ([s for (s, r, w) in perm] if convtuple else perm)
+            for perm in self._insert_statements(rem, current)
+        )
 
     def _split_by_visibility(self, dependencies : "List of dependencies to split"):
         """
@@ -301,7 +321,6 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
             cuts = self._cuts_read_write(i, s_writes, stats)
             if not cuts:
                 yield stats[:i] + [stat] + stats[i:]
-
 
     def _get_correct_state_range(self,
                                  reads : "Set of vars we read and the statement we expect to read from",
@@ -491,10 +510,11 @@ class Reorderer(BasicReorderer, ReorderChecker):
                  statements : "CustomAST list node of statements",
                  rng : "Permutation representing the original statement list" = None,
                  precond : "Perform precondition checks for input values" = True,
-                 safe : "Perform sanity checks for things that won't need them if this is coded correctly" = False):
+                 safe : "Perform sanity checks for things that won't need them if this is coded correctly" = False,
+                 limit : "Limit to number of output permutations." = None):
         """Initialise reorderer or raise TypeError."""
 
-        BasicReorderer.__init__(self, statements, rng=rng)
+        BasicReorderer.__init__(self, statements, rng=rng, limit=limit)
         ReorderChecker.__init__(self, precond=precond)
 
         self.PartReorderer = SafeReorderer if safe else SingleReorderer
@@ -504,7 +524,9 @@ class Reorderer(BasicReorderer, ReorderChecker):
 
         partitions = self.partition()
 
-        return self._permutations(partitions)
+        return self._gen_limit(
+            self._permutations(partitions)
+        )
 
     def _permutations(self, partitions : "As returned by partition()"):
         """Does the actual generation for permutations."""
@@ -515,14 +537,23 @@ class Reorderer(BasicReorderer, ReorderChecker):
         else:
             head, *tail = partitions
 
-            # Recalculate everything for each permutation? Yes
-            # Difficult calculation? Hopefully not
-            # Do the bigger calculation less
-
             reord = self.PartReorderer(self.statements, rng=head, precond=False)
-            h_perms = list(reord.permutations()) # Calculate once!
-            for remainder in self._permutations(tail):
-                for perm in h_perms:
+
+            # Record calculated head perms during first iteration
+            # These can be used in next iteration
+            # Don't calculate all now as we may never need to know them
+
+            tail_perms = self._permutations(tail) # generator (only need to use once)
+            head_perms = [] # list as we need to reuse these
+            
+            for remainder in tail_perms:
+                for perm in reord.permutations():
+                    yield perm + remainder # Whack out the value ASAP
+                    head_perms.append(perm)
+                break # Only wanted the first iteration
+
+            for remainder in tail_perms:
+                for perm in head_perms:
                     yield perm + remainder
 
     def partition(self):
@@ -558,18 +589,19 @@ class SafeReorderer(SingleReorderer):
     def __init__(self,
                  statements : "CustomAST list node of statements",
                  rng : "Permutation representing the original statement list" = None,
-                 precond : "Perform precondition checks for input values" = True):
+                 precond : "Perform precondition checks for input values" = True,
+                 limit : "Limit to number of output permutations." = None):
         """Initialise reorderer or raise TypeError."""
 
-        SingleReorderer.__init__(self, statements, rng=rng, precond=precond)
+        SingleReorderer.__init__(self, statements, rng=rng, precond=precond, limit=limit)
 
     def permutations(self):
         """As in permutations, but with safety checks."""
 
-        for perm in super()._permutations(part):
+        for perm in super().permutations(convtuple=False): # Already limited by our base class
             assert self._check_perm_uniqueness(perm), "Failed complete statement uniqueness."
             assert self._check_perm(perm), "Failed complete permutation check."
-            yield perm
+            yield [s for (s, r, w) in perm]
 
     def _insert_statements(self, stats, current):
         """Like normal _insert_statements but with a safety/correctness check."""
@@ -616,8 +648,8 @@ class SafeReorderer(SingleReorderer):
     def _cuts_read_write(self, pos : "Point to chop", writes : "Variables we write", stats : "List of statements"):
         """Like normal _cuts_read_write but with safety check."""
 
-        cuts = super()._cuts_read_write(i, writes, stats)
-        assert self._check_read_write_cuts(i, writes, stats, cuts), "Failed cuts check."
+        cuts = super()._cuts_read_write(pos, writes, stats)
+        assert self._check_read_write_cuts(pos, writes, stats, cuts), "Failed cuts check."
         return cuts
 
     def _perm_walk(self,
@@ -649,7 +681,7 @@ class SafeReorderer(SingleReorderer):
 
     def _check_perm_uniqueness(self, perm):
         """Check each statement in the permutation is unique."""
-        
+
         # Get a list of all the statements currently in the perm
         stats = {s for (s, r, w) in perm}
         stats.add(None)
@@ -755,3 +787,21 @@ class SafeReorderer(SingleReorderer):
         # Now check none are broken
         broken = any(frm < pos and to >= pos for (frm, to) in links)
         return broken == ans
+
+class RandomReorderer(Reorderer):
+    """Like Reorderer but permutations are created in a random order."""
+
+    def __init__(self, *varargs, **kwargs):
+        Reorderer.__init__(self, *varargs, **kwargs)
+
+        class RandomPartReorderer(self.PartReorderer):
+            def _insert_statement(innerself, stat, stats):
+                perms = super()._insert_statement(stat, stats)
+                return self._rearrange(list(perms))
+
+        self.PartReorderer = RandomPartReorderer
+
+    def _rearrange(self, lst):
+        """Randomly rearrange lst. Used to randomise the order we return permutations."""
+
+        return random.sample(lst, len(lst))
