@@ -8,6 +8,7 @@ from tkinter import ttk
 
 from . import asttree
 from . import markpane
+from . import codedisplay
 
 class StaticVisual(ttk.Frame):
     """
@@ -42,7 +43,8 @@ class StaticVisualPanes(ttk.PanedWindow):
     def __init__(self, master, node, currentnode=None, **kwargs):
         ttk.PanedWindow.__init__(self, master, orient="horizontal", **kwargs)
 
-        self._cur_node = node
+        self._top_node = node
+        self._cur_node = currentnode
 
         self.inner = ttk.PanedWindow(self, **kwargs)
         self.add(self.inner)
@@ -54,8 +56,8 @@ class StaticVisualPanes(ttk.PanedWindow):
         self.marks = markpane.MarkPane(self.inner, currentnode)
         self.inner.add(self.marks)
 
-        self.code = ttk.Label(self, text="Placeholder")
-        self.add(self.code)
+        self.codebox = codedisplay.CodeDisplay(self, node, currentnode)
+        self.add(self.codebox)
 
     def _update_node(self, node):
         """Callback for tree view when node is changed."""
@@ -70,7 +72,7 @@ class StaticVisualPanes(ttk.PanedWindow):
         self.marks = markpane.MarkPane(self.inner, node)
         self.inner.add(self.marks)
 
-        self.remove(self.code)
-        self.code.destroy()
-        self.code = ttk.Label(self, text="Placeholder")
-        self.add(self.code)
+        self.remove(self.codebox)
+        self.codebox.destroy()
+        self.codebox = codedisplay.CodeDisplay(self, self._top_node, node)
+        self.add(self.codebox)
