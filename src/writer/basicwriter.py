@@ -206,8 +206,10 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._ground_write("return ")
-        self._write(tree.children["value"])
+        self._ground_write("return")
+        if not tree.children["value"].is_empty():
+            self._ground_write(" ")
+            self._write(tree.children["value"])
 
     def _write_Delete(self, tree):
         """
@@ -394,12 +396,15 @@ class BasicWriter(sourcewriter.SourceWriter):
 
         """
 
-        self._ground_write("raise ")
-        self._write(tree.children["exc"])
+        self._ground_write("raise")
 
-        if not tree.children["cause"].is_empty():
-            self._ground_write(" from ")
-            self._write(tree.children["cause"])
+        if not tree.children["exc"].is_empty():
+            self._ground_write(" ")
+            self._write(tree.children["exc"])
+
+            if not tree.children["cause"].is_empty():
+                self._ground_write(" from ")
+                self._write(tree.children["cause"])
 
 
     def _write_TryExcept(self, tree):
