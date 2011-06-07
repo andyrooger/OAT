@@ -583,6 +583,71 @@ the other permutations of statments which have the same visible output. Once we 
 of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
 orderings hold the information will be a bridge to cross later on.
 
+\subsection{Problems}
+
+So now we know what we would do with permutations of the statement list, we need to see how to generate them correctly. As mentioned, our actual
+aim is to make sure visible output is not affected by the permutation of the instructions. Visible output means anything that will affect the outside
+world that the caller resides in, such printing a line of text or returning a value. For the rest of this discussion we will refer to statements that generate
+this output as 'visible' statements.
+
+To avoid affecting our visible output we need to try not to disturb these visible statements. This means that those visible statements that would have been
+executed originally with a given initial program state will still be executed, and in the same order, with enough of the same program state to act correctly.
+Once we have a way to determine which statements are visible, we take some basic rules from here.
+
+\begin{enumerate}
+\item Visible statements need to remain in order relative to other visible statements.
+\item Immediately before executing a visible statement, any part of the program state it relies on same as it would have been before the permutation.
+(We will not worry about world state, either these will be things outside of our control, or changes made by us will be kept in order by the previous
+item.)
+\item Any statements that break from a linear flow through the list should remain in order relative to visible statements and other breaking statements.
+(A breaking statement will mean we do not execute the whole list. If we were not in order relative to the visible statements, we may not execute all of
+the statements we meant to.)
+\end{enumerate}
+
+Now the problems we need to address involve knowing a lot about the program we are obfuscating. We will first need to determine the visible statements
+from the invisible. There are obvious cases where we will know the answer to this, such as return statements, or a print statement. For general functions
+however, it would be very difficult to tell. We would need to know which solid function the particular function binds to (this can change during the course
+of the program. We would then need to analyse the particular function to see if it's implementation contains visible statements. In fact the function could be
+Python or part of a native library which we could not analyse.
+
+Even if we know which statements are visible, we still need to work out which statements break program flow and how to maintain the necessary state. Firstly,
+it turns out that looking for breaking statements will be particularly difficult in Python due to the way exceptions work. \textbf{Any} function can throw
+an exception at any time, without declaring that it might as you may expect in a function such as Java. We can search specifically for raise statements to see
+the possible problem functions, however we would miss exceptions raised by other functions inside this. To accurately identify those functions raising exceptions,
+we would need to analyse every function ever called by the program, including built in ones. This is a lot of work, and if we ever missed a possible exception
+the result would be incorrect permutations of our statements. The solution will be discussed shortly.
+
+Finally we want to be able to find out which parts of the program state a statement will read or write when executed. There are tools that attempt to analyse the
+program and gain this kind of information, many discussed in the background section. There is also a lot of existing and ongoing research about how to do this.
+We will not be implementing this research, nor using the existing tools to perform the analysis, for the simple reason that they are more than we need. We do not
+need to know everything about how a statement will operate, if we are unsure we can err on the side of caution and decide not to reorder that particular statement.
+Many of the tools will try hard to be able to find types and complex control flow graphs to work out what the program does and can resort to intelligent guesswork
+if necessary. By keeping things as simple as possible we can make sure everything we do is correct (or at least make it the user's choice to be unsafe), and avoid
+much complexity.
+
+\subsection{Solutions}
+
+Having talked about the problems we face in reordering statements, we will look at the solutions. Firstly we will decide that visible statements should be specified
+by the user. Inside our obfuscation and analysis tool we can ask the user to specifically mark either those statements that should be visible or invisible or those
+functions that should be. If we choose to mark functions (and can resolve the correct function a statement refers to) then we can store a database with the markings
+to be reused in future. If we start with a database of built in functions with markings we could even try to automatically generate the markings for all other
+functions. Obviously this approach becomes difficult when functions are hard to resolve so the user may need to be asked anyway for certain statements.
+
+Now we know the visible statements, we can easily keep them in order. Likewise, once we find the possible breaking statements, we can partition the statement list
+into sections between each breaking statement. These can then be reordered like they were separate lists. We can work out the breaking statements as they will either
+be explicit or they will be functions that may raise an uncaught exception.
+
+The previous solutions have been to pass our work on to the user instead, although we could automate these things with tools if we wanted to in future. When caclulating
+the regions of program state each statement will read or write, this information will also be stored in a database however we will do the work ourselves.
+
+---- TALK ABOUT THE FLOW-BREAKING STATEMENTS, USER FUNCTION DATABASE, TOOLS FOR ANALYSIS --------------------
+
+The main property we want
+to keep is that any statement S that relies on a previous statement T to function properly remains ahead of T. Also we want to know that S still
+relies on T in the new permutation (i.e. we don't have an intermediate instruction inserted that overrides T).
+
+\subsection{Save in case}
+
 Our approach to finding possible statement orderings will be for each node in the list to build a list of every other node in the list that that
 particular node is dependant on. More simply, if the effect of statement A could change the effect of statement B, then B depends on A. For internal
 data such as variable assignments this means if A changes a memory region R that B accesses at some point in the future, then B depends on A.
