@@ -29,8 +29,10 @@ def WriteRangeValuer(statements):
 
     variables = {}
     # Collect ranges for all variables
-    for i in range(len(statements)):
-        written = write.WriteMarker(statements[i]).get_mark()
+    ord_stats = list(statements.ordered_children())
+    for i in range(len(ord_stats)):
+        stat = statements[ord_stats[i]]
+        written = write.WriteMarker(stat).get_mark()
         for w in written:
             try:
                 (start, end) = variables[w]
@@ -48,9 +50,11 @@ def WriteUseValuer(statements):
     total = 0
     variables = {} # Where written
     # Collect ranges for all variables
-    for i in range(len(statements)):
-        reads = read.ReadMarker(statements[i]).get_mark()
-        written = write.WriteMarker(statements[i]).get_mark()
+    ord_stats = list(statements.ordered_children())
+    for i in range(len(ord_stats)):
+        stat = statements[ord_stats[i]]
+        reads = read.ReadMarker(stat).get_mark()
+        written = write.WriteMarker(stat).get_mark()
         for var in reads:
             try:
                 (w, r) = variables[var]
@@ -91,13 +95,13 @@ class BasicReorderer:
         self.stat_order = list(statements.ordered_children())
         self.range = rng
         if self.range == None:
-            self.range = list(range(len(self.stat_order)))
+            self.range = list(range(len(self.statements)))
         self.limit = None if limit == None else max(limit, 1)
 
     def statement_at(self, i):
         """Get the statement at position i."""
 
-        return self.statements.children[self.stat_order[i]]
+        return self.statements[self.stat_order[i]]
 
     def permute(self, perm):
         """Permute the statements with the given permutation. Does not affect the original statement list."""
@@ -211,15 +215,16 @@ class ReorderChecker:
             if not self.statements.is_list():
                 raise TypeError("Can only reorder lists.")
 
-            for s in self.stat_order:
-                if not self.statements.children[s].is_ast():
+            for s in self.statements:
+                if not self.statements[s].is_ast():
                     raise TypeError("Can only reorder lists of AST nodes.")
 
 
     def check_markings(self):
         """Check if all statements have the correct markings."""
 
-        for stat in [self.statements.children[s] for s in self.stat_order]:
+        for s in self.statements:
+            stat = self.statements[s]
             if not breaks.BreakMarker(stat).is_marked():
                 return False
             if not visible.VisibleMarker(stat).is_marked():

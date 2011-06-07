@@ -91,6 +91,11 @@ class CustomAST:
 
         return self.children.keys()
 
+    def has_children(self):
+        """Does the node have children?"""
+
+        return bool(self.children)
+
     def become(self, node):
         """Replace ast node with the innards of the new node and update children."""
 
@@ -176,10 +181,29 @@ class CustomAST:
         else:
             return None
 
+    # For implementing str(node)
+
     def __str__(self):
         d = self.desc()
         l = self.locstr()
         
         return d + " (" + l + ")" if l else d
 
+    # For dictionary lookup of children and iteration
 
+    def __getitem__(self, key):
+        if not isinstance(key, str):
+            raise TypeError("Keys for nodes must be strings.")
+        try:
+            return self.children[key]
+        except KeyError:
+            raise KeyError("Node '" + key + "' is not a valid child.")
+
+    def __iter__(self):
+        return iter(self.ordered_children())
+
+    def __contains__(self, item):
+        return item in self.children
+
+    def __len__(self):
+        return len(self.children)

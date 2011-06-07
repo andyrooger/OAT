@@ -91,7 +91,7 @@ class ReorderCommand(commandui.Command):
         """Perform the chosen action."""
 
         if do == "current":
-            self._print_block(block, range(len(block.children)), args.display, True)
+            self._print_block(block, range(len(block)), args.display, True)
             if orderer.check_markings():
                 print("The statements can be reordered.")
             else:
@@ -159,8 +159,8 @@ class ReorderCommand(commandui.Command):
         cur = self._related_explorecmd.ast_current
         if not cur.is_list():
             return None
-        for stmt in [cur.children[s] for s in cur.children]:
-            if not issubclass(stmt.type(asclass=True), ast.stmt):
+        for stmt in cur:
+            if not issubclass(cur[stmt].type(asclass=True), ast.stmt):
                 return None
         return cur
 
@@ -183,7 +183,7 @@ class ReorderCommand(commandui.Command):
         else:
             ord_stat = list(statements.ordered_children())
             for i in perm:
-                child = statements.children[ord_stat[i]]
+                child = statements[ord_stat[i]]
                 if disp == "type":
                      print(str(i) + ": " + child.type(), end="")
                 elif disp == "code":

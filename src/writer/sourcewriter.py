@@ -86,7 +86,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self._ground_write("\n")
         self.__character_level = 0
 
-    def _inc_indent(self, by : "How far to indent - '' to indent to character level" = "    "):
+    def _inc_indent(self, by : "How far to indent - use '' to indent to character level" = "    "):
         """Increase indentation."""
 
         if by == '':
@@ -134,19 +134,19 @@ class SourceWriter(metaclass = abc.ABCMeta):
 
         """
 
-        if not exprs.children:
+        if not exprs.has_children():
             return
         if not writer:
             writer = self._write
 
-        i = iter(exprs.ordered_children())
+        i = iter(exprs)
         before()
-        writer(exprs.children[next(i)])
+        writer(exprs[next(i)])
         after()
         for expr in i:
             between()
             before()
-            writer(exprs.children[expr])
+            writer(exprs[expr])
             after()
 
 
@@ -162,7 +162,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
                                # next statement to change independently
             self._write_block(stmts, indent = False)
             self._dec_indent()
-        elif stmts.children: # Don't write if no statements
+        elif stmts.has_children(): # Don't write if no statements
             self._start_line()
             self._interleave_write(stmts, between=self._next_statement)
 

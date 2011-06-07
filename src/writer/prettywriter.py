@@ -65,17 +65,17 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        if tree.children["value"].type() == "Str":
-            self._write_docstring(tree.children["value"])
+        if tree["value"].type() == "Str":
+            self._write_docstring(tree["value"])
         else:
-            self._write(tree.children["value"])
+            self._write(tree["value"])
 
 
     def _write_docstring(self, doc : "Docstring to write"):
         """Write Str as a docstring."""
 
         clean = []
-        for c in self._clean_docstring(doc.children["s"].node()):
+        for c in self._clean_docstring(doc["s"].node()):
             c = c.replace('\\', '\\\\') # first to avoid ruining later replaces
             c = c.replace('"', '\\"') # so we can enclose with """
             c = c.replace('\r', '\\r')
@@ -173,7 +173,7 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        return not tree.children["defaults"].is_empty() or not tree.children["kw_defaults"].is_empty()
+        return not tree["defaults"].is_empty() or not tree["kw_defaults"].is_empty()
 
 
     def _has_annotations(self, tree):
@@ -182,18 +182,18 @@ class PrettyWriter(BasicWriter):
 
         """
 
-        for arg in tree.children["args"].children.values():
-            if not arg.children["annotation"].is_empty():
+        for arg in tree["args"].children.values():
+            if not arg["annotation"].is_empty():
                 return True
 
-        if not tree.children["varargannotation"].is_empty():
+        if not tree["varargannotation"].is_empty():
             return True
 
-        for arg in tree.children["kwonlyargs"].children.values():
-            if not arg.children["annotation"].is_empty():
+        for arg in tree["kwonlyargs"].children.values():
+            if not arg["annotation"].is_empty():
                 return True
 
-        if not tree.children["kwargannotation"].is_empty():
+        if not tree["kwargannotation"].is_empty():
             return True
 
         return False
@@ -223,8 +223,8 @@ class PrettyWriter(BasicWriter):
             self._inc_indent(" "*char_lv)
 
         had_arg = False # Cannot use _separated_write here
-        ord_args = list(tree.children["args"].ordered_children())
-        n_posargs = len(ord_args) - len(tree.children["defaults"].children)
+        ord_args = list(tree["args"].ordered_children())
+        n_posargs = len(ord_args) - len(tree["defaults"].children)
 
         # positional args
         for arg in ord_args[:n_posargs]:
@@ -232,30 +232,30 @@ class PrettyWriter(BasicWriter):
                 self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(tree.children["args"].children[arg])
+            self._write(tree["args"][arg])
 
         # keyword args
-        for (arg, default) in zip(ord_args[n_posargs:], tree.children["defaults"].ordered_children()):
+        for (arg, default) in zip(ord_args[n_posargs:], tree["defaults"].ordered_children()):
             if had_arg:
                 self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(tree.children["args"].children[arg])
+            self._write(tree["args"][arg])
             self._ground_write(" = ")
-            self._write(tree.children["defaults"].children[default])
+            self._write(tree["defaults"][default])
 
         # variable positional args
-        if not tree.children["vararg"].is_empty():
+        if not tree["vararg"].is_empty():
             if had_arg:
                 self._ground_write(",")
                 self._next_statement()
             had_arg = True
             self._ground_write("*")
-            self._write(tree.children["vararg"])
-            if not tree.children["varargannotation"].is_empty():
+            self._write(tree["vararg"])
+            if not tree["varargannotation"].is_empty():
                 self._ground_write(" : ")
-                self._write(tree.children["varargannotation"])
-        elif not tree.children["kwonlyargs"].is_empty():
+                self._write(tree["varargannotation"])
+        elif not tree["kwonlyargs"].is_empty():
             if had_arg:
                 self._ground_write(",")
                 self._next_statement()
@@ -263,26 +263,26 @@ class PrettyWriter(BasicWriter):
             self._ground_write("*")
 
         # keyword only args
-        for child in tree.children["kwonlyargs"].ordered_children():
+        for child in tree["kwonlyargs"]:
             if had_arg:
                 self._ground_write(",")
                 self._next_statement()
             had_arg = True
-            self._write(tree.children["kwonlyargs"].children[child])
+            self._write(tree["kwonlyargs"][child])
             self._ground_write(" = ")
-            self._write(tree.children["kw_defaults"].children[child])
+            self._write(tree["kw_defaults"][child])
 
         # variable keyword args
-        if not tree.children["kwarg"].is_empty():
+        if not tree["kwarg"].is_empty():
             if had_arg:
                 self._ground_write(",")
                 self._next_statement()
             had_arg = False
             self._ground_write("**")
-            self._write(tree.children["kwarg"])
-            if not tree.children["kwargannotation"].is_empty():
+            self._write(tree["kwarg"])
+            if not tree["kwargannotation"].is_empty():
                 self._ground_write(" : ")
-                self._write(tree.children["kwargannotation"])
+                self._write(tree["kwargannotation"])
 
         if char_lv > 0:
             self._dec_indent()
@@ -325,7 +325,7 @@ class PrettyWriter(BasicWriter):
         >>> spl = PrettyWriter(CustomAST([]))
         >>> spl = spl._split_block(instructions)
         >>> for s in spl:
-        ...     print([s.children[x].type() for x in s.ordered_children()])
+        ...     print([s[x].type() for x in s])
         ['Import', 'Import']
         ['FunctionDef']
         ['ClassDef']
@@ -336,8 +336,8 @@ class PrettyWriter(BasicWriter):
         current = [] # Current statement list
         total = [] # Total statement grouping
 
-        for s in stmts.ordered_children():
-            stmt = stmts.children[s]
+        for s in stmts:
+            stmt = stmts[s]
             if self._statement_new_group(current, stmt):
                 if current:
                     total.append(current)

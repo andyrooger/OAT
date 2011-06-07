@@ -105,6 +105,10 @@ class CodeBox(tkinter.Text):
         self.delete("1.0", "end") # clear
         TaggingWriter = tagging_writer(writer, self, selectednode=selected, currentnode=current)
         TaggingWriter(node).write()
+        try:
+            self.see("selectednode.first")
+        except tkinter.TclError:
+            pass # current may not have been written
 
         self.config(state="disabled")
 
