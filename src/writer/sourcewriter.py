@@ -86,7 +86,7 @@ class SourceWriter(metaclass = abc.ABCMeta):
         self._ground_write("\n")
         self.__character_level = 0
 
-    def _inc_indent(self, by : "How far to indent - '' to indent to character level" = "    "):
+    def _inc_indent(self, by : "How far to indent - use '' to indent to character level" = "    "):
         """Increase indentation."""
 
         if by == '':
