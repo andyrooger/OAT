@@ -545,7 +545,7 @@ an order most easy for the programmer to follow. This in turn tends to make it e
 
 Therefore we will attempt to break up these groups, splitting and reordering the statements as a whole.
 
-\subsection{Effects}
+\subsection{Effect}
 
 As stated above, these tendencies are human in nature. To a machine, the layout (grouping) of instructions will not usually
 make a difference, these will generally be converted to an abstract syntax tree that ignores human semantics present in the
@@ -565,22 +565,23 @@ the reverse obfusction automatically.
 
 We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
 grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. For example common expressions such as assignments are usually statements, or
-an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment and so are also statements.
+an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment too and so are also statements.
 
 The current implementation for our obfuscation and analysis tool reads in program source to an AST. This allows us to analyse the code easily
 but also destroys information left in the layout of the code. This is not a problem when obfuscating as we want to remove as much information
 as we can when it is not important to the running of the program.
 
 For the analyser we have slightly more trouble in losing this information. For now we will take a similar route to the obfuscator and assume this
-doesn't matter as the program will probably be obfuscated already and lacking any meaning in its layout. In actual fact, the AST when created
+does not matter as the program will probably already be obfuscated and lacking in any meaningful layout. In actual fact, the AST when created
 will still contain information about statements and line/column numbers. This could be used to recover the lost information, however as soon
-as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension.
+as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension;
+to gain grouping information from the AST.
 
 Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
 to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
 the other permutations of statments which have the same visible output. Once we have a method for this we can obfuscate or deobfuscate by our choice
 of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
-orderings hold the information will a a bridge to cross later on.
+orderings hold the information will be a bridge to cross later on.
 
 Our approach to finding possible statement orderings will be for each node in the list to build a list of every other node in the list that that
 particular node is dependant on. More simply, if the effect of statement A could change the effect of statement B, then B depends on A. For internal
@@ -619,8 +620,8 @@ worth looking at the two assignments of the same variable, \texttt{c}. If we rev
 statement list with either the local dictionary \texttt{\{a: 1, b: 2, c: []\}} or \texttt{\{a: 1, b: 2, c: 3\}}.
 
 In fact this difference does not matter. This change is internal to the program and so not visible to an observer. As we have not specified
-any future dependency on \texttt{c}, we can assume that nothing that can affect the observable behaviour of the program will use the value
-of \texttt{c} - meaning the program remains correct.
+any future dependency on \texttt{c} (actually the statement assigning to it), we can assume that nothing that can affect the observable
+behaviour of the program will use the value of \texttt{c} - meaning the program remains correct.
 
 \subsubsection{Slightly Harder}
 
@@ -637,6 +638,21 @@ c = b
 \end{lstlisting}
 
 Now we can easily go through line by line and look at which names appear on the right of the assignment to gather a list of dependencies.
+After seeing these names we read back up the list to see the first place it appears on the left hand side. This gives us our statement dependency.
+For our current model, a statement can only depend on one or zero other statements.
+
+In this particular example we see that:
+
+\begin{enumerate}
+\item depends on nothing
+\item depends on 1
+\item depends on 1
+\item depends on 2
+\end{enumerate}
+
+Therefore there is no restriction on statement 1's position, but as statement 2 and 3 depend on it they must come after and as statement 4 depends on 2
+this must also come after. So we know statement 1 must always come first. Now nothing depends on statement 4 so as long as it comes after statement 2 we
+are ok. Statements 2 and 3 only depend on 1 so this tells us we have 3 possible permutations: (1, 2, 3, 4), (1, 2, 4, 3), (1, 3, 2, 4).
 
 TODO - CONTINUE FROM HERE!-------------------------------------------------------------
 
