@@ -203,6 +203,9 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> myast = CustomAST(ast.parse("return 'Hello there'"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         return 'Hello there'
+        >>> myast = CustomAST(ast.parse("return"))
+        >>> sourcewriter.printSource(myast, BasicWriter)
+        return
 
         """
 
@@ -393,6 +396,9 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> myast = CustomAST(ast.parse("raise Exception('Bad thing happened') from Exception()"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         raise Exception('Bad thing happened') from Exception()
+        >>> myast = CustomAST(ast.parse("raise"))
+        >>> sourcewriter.printSource(myast, BasicWriter)
+        raise
 
         """
 
@@ -515,6 +521,9 @@ class BasicWriter(sourcewriter.SourceWriter):
         >>> myast = CustomAST(ast.parse("from .. sys import sys as sys2, os"))
         >>> sourcewriter.printSource(myast, BasicWriter)
         from ..sys import sys as sys2, os
+        >>> myast = CustomAST(ast.parse("from .. import sys as sys2, os"))
+        >>> sourcewriter.printSource(myast, BasicWriter)
+        from .. import sys as sys2, os
 
         """
 
