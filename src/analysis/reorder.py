@@ -29,8 +29,10 @@ def WriteRangeValuer(statements):
 
     variables = {}
     # Collect ranges for all variables
-    for i in range(len(statements)):
-        written = write.WriteMarker(statements[i]).get_mark()
+    ord_stats = list(statements.ordered_children())
+    for i in range(len(ord_stats)):
+        stat = statements[ord_stats[i]]
+        written = write.WriteMarker(stat).get_mark()
         for w in written:
             try:
                 (start, end) = variables[w]
@@ -48,9 +50,11 @@ def WriteUseValuer(statements):
     total = 0
     variables = {} # Where written
     # Collect ranges for all variables
-    for i in range(len(statements)):
-        reads = read.ReadMarker(statements[i]).get_mark()
-        written = write.WriteMarker(statements[i]).get_mark()
+    ord_stats = list(statements.ordered_children())
+    for i in range(len(ord_stats)):
+        stat = statements[ord_stats[i]]
+        reads = read.ReadMarker(stat).get_mark()
+        written = write.WriteMarker(stat).get_mark()
         for var in reads:
             try:
                 (w, r) = variables[var]
