@@ -519,9 +519,10 @@ class BasicWriter(sourcewriter.SourceWriter):
         """
 
         self._ground_write("from ")
-        if not tree.children["level"].is_empty():
+        if tree.children["level"].node():
             self._ground_write("." * tree.children["level"].node())
-        self._write(tree.children["module"])
+        if not tree.children["module"].is_empty():
+            self._write(tree.children["module"])
         self._ground_write(" import ")
 
         self._interleave_write(tree.children["names"],
