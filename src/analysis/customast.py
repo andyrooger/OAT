@@ -201,3 +201,9 @@ class CustomAST:
 
     def __iter__(self):
         return iter(self.ordered_children())
+
+    def __contains__(self, item):
+        return item in self.children
+
+    def __len__(self):
+        return len(self.children)
