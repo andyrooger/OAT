@@ -96,8 +96,8 @@ class ASTTreeview(ttk.Treeview):
 
         # Add children
         idx = 0
-        for child in tree.ordered_children():
-            self._fill_tree(tree.children[child],
+        for child in tree:
+            self._fill_tree(tree[child],
                             parent=id(tree),
                             link=child,
                             index=idx)

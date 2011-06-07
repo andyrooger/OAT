@@ -84,9 +84,9 @@ class ExploreCommand(commandui.Command):
 
         print()
         print("Fields:")
-        if current.children:
-            for field in current.ordered_children():
-                print("  " + field + " - " + str(current.children[field]))
+        if current.has_children():
+            for field in current:
+                print("  " + field + " - " + str(current[field]))
         else:
             print("  This node has no fields.")
 
@@ -99,7 +99,7 @@ class ExploreCommand(commandui.Command):
         child = None
 
         try:
-            child = current.children[field]
+            child = current[field]
         except KeyError:
             print("Field does not exist.")
             return False
