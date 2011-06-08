@@ -217,6 +217,8 @@ structures and learning about how the program works.
 Examples of techniques here include adding extra layers of inheritance into a class's inheritance tree or traversing arrays
 in unexpected orders.
 
+While this type of obfuscation can be useful, our focus will be primarily on the next type of obfuscation.
+
 \subsubsection{Control-flow Obfuscation}
 
 Control flow obfuscation alters or obscures the control flow of the original code. This will confuse an analyser as to the
@@ -245,7 +247,7 @@ though only by distributing bytecode rather than raw source.
 Alternatively pyobfuscate \cite{pyobf} will scramble a subset of the identifiers used in programs as well as performing
 some other layout transformations. It has its limitations however \cite{pyobf}, so is not powerful enough for real use cases.
 
-Pyobfuscate, along with many of the other tools, has not been updated in a long time and so is likely to be unable to cope with
+pyobfuscate, along with many of the other tools, has not been updated in a long time and so is likely to be unable to cope with
 recent versions of Python code.
 
 \subsubsection{Analytic Tools}
@@ -291,7 +293,7 @@ The end product of this project is intended to be a usable source to source Pyth
 to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
 know the ins and outs of the language well. This way we can easily pick up on language features that may contradict our
 expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
-variable would be free of side effects. This is not the case, depending on the code the assignment can run absolutely
+variable would be free of side effects. This is not the case, depending on the actual code an assignment can run absolutely
 anything \cite{pyprop} and doesn't even have to assign the given value to a variable.
 
 To learn the language to the desired degree we will also use it to write our software. The hope being that heavy use will help to
@@ -305,11 +307,11 @@ blocks. Specifically the following:
 \item A Python parser/lexer to read and make sense of Python source files.
 \item Implementations of a number of obfuscating transformations.
 \item Implementations of a number of analytic techniques.
-\item A Python writer to take my abstract representation of the source code and output a file.
+\item A Python writer to take our abstract representation of the source code and output a file.
 \item A user interface.
 \end{itemize}
 
-The most fundamental parts here in the workflow are the readers and writers for the source files.
+The most fundamental parts here in the workflow are the parser/lexer and the writers for the source files.
 Without these the other parts are useless, so this is where the implementation will begin.
 
 \subsection{Reading and Writing Source}
