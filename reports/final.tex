@@ -558,7 +558,7 @@ an order most easy for the programmer to follow. This in turn tends to make it e
 We need not worry about breaking up the groups, these are lost during conversion from source to abstract syntax tree.
 Therefore we will only be dealing in this section with reordering the statements in our programs.
 
-\subsection{Effects}
+\subsection{Effect}
 
 As stated above, the tendency to insert this extra information in the order of statements is human in nature. To a machine the
 order of instructions, if they are still correct, will not usually make a difference to a programatic analysis. We still have an
@@ -574,16 +574,17 @@ can be quite difficult to perform the reverse obfusction automatically.
 
 We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
 grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. For example common expressions such as assignments are usually statements, or
-an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment and so are also statements.
+an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment too and so are also statements.
 
 The current implementation for our obfuscation and analysis tool reads in program source to an AST. This allows us to analyse the code easily
 but also destroys information left in the layout of the code. This is not a problem when obfuscating as we want to remove as much information
 as we can when it is not important to the running of the program.
 
 For the analyser we have slightly more trouble in losing this information. For now we will take a similar route to the obfuscator and assume this
-doesn't matter as the program will probably be obfuscated already and lacking any meaning in its layout. In actual fact, the AST when created
+does not matter as the program will probably already be obfuscated already and lacking in any meanful layout. In actual fact, the AST when created
 will still contain information about statements and line/column numbers. This could be used to recover the lost information, however as soon
-as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension.
+as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension;
+to gain grouping information from the AST.
 
 Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
 to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
