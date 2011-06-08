@@ -382,10 +382,102 @@ Information such as comments are also dropped from the representation. These see
 using Python's \texttt{ast} module and writing our own AST to source writer is the option we will use. It gives a lot of freedom, whilst
 being fast to write.
 
+Before we start to design our source writers, we should think about the data structures we will be using to store information. As we don't have
+control of the \texttt{ast} module, we cannot decide what format will be output when parsing a file. In fact, the value we should receieve from
+a successfully parsed file will be derived from the \texttt{ast.AST} class. More specifically it will be a child of \texttt{ast.mod}, either
+\texttt{ast.Module}, \texttt{ast.Interactive}, \texttt{ast.Expression} or \texttt{ast.Suite} depending on the context in which we are parsing.
+
+It may be tempting to use this format throughout our software, however it does have its drawbacks. We will take a look at the design first to see why.
+
+An object of any class derived from \texttt{ast.AST} represents a node in the AST grammar given in the documentation for the \texttt{ast} module. The
+type of the node is the name of the class it belongs to. Each of these nodes can have a number of attributes or children, these are either of basic
+types such as strings and integers or they are single or lists of other \texttt{ast.AST} nodes.
+
+For most types of node the names of these children vary so it is useful to be able to find out their names from the object we are inspecting. For this we
+look at the \texttt{\_fields} attribute, which is a tuple of all fields names. Using this we can look through the whole tree without worrying about the type
+of individual nodes. There is also an \texttt{\_attributes} attribute giving the names of attributes. These are \texttt{lineno} and \texttt{col\_offset} where
+available. We access field or attributes as normal attributes of the class.
+
+This is a nice system and will help with tasks such as exploring or displaying the tree, however it creates problems as it is not stored as a tree of the same
+type. Instead it is stored as a tree of \texttt{ast.AST} nodes, lists, and basic types. Unfortunately this means any tree traversal will have to be designed to
+cope with either having or not having a proper \texttt{ast.AST} node and cannot rely on being able to find or read a \texttt{\_fields} attribute. Additionally we
+cannot add new attributes onto lists, and we see later that we need to do this for any node.
+
+As there are a lot of positives for this data structure, and as we are forced at least to begin with an \texttt{ast.AST} node, it does not make sense
+to start again from scratch. Instead our solution will be to create a wrapper class. This will hold our actual node, but provide a new set of children - the
+wrapped version of each of our original children.
+
+The wrapper class will be called \texttt{CustomAST} and provide a number of helpful methods:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(node)}] \hfill \\
+Stores the given original \texttt{ast.AST} (or basic or list) type node in the attribute \texttt{\_node} and creates a dictionary mapping field names
+to \texttt{CustomAST} children in the attribute \texttt{children}.
+
+The dictionary is created by first taking string names for each of the node's children if they exist. For an \texttt{ast.AST} node this is easy.
+Otherwise the node is a basic type and has no children, or the node is a list and we use string versions of indices into the list. Now we can
+easily map these names to the children they refer to, and place the \texttt{CustomAST} versions of them into the dictionary.
+
+We can also give a hybrid node to this constructor. This would be either a list containing normal nodes and \texttt{CustomAST} nodes, or an
+\texttt{ast.AST} node with some \texttt{CustomAST} nodes as children. Children that are already \texttt{CustomAST} nodes will not be rewraped
+and the given node will be altered to contain only normal nodes. This allows us to easily transform or create new nodes from \texttt{CustomAST}
+nodes without dissecting them first.
+
+\item[\texttt{type(asclass)}] \hfill \\
+Gives either the class of the node used to create this \texttt{CustomAST} node, or the string name of that class. This is helpful to easily distinguish
+the node type.
+
+\item[\texttt{node()}] \hfill \\
+Returns the original node used during creation. This is in case we need to use a function designed for \texttt{ast.AST} nodes.
+
+\item[\texttt{is\_ast()}, \texttt{is\_basic()} and \texttt{is\_list()}] \hfill \\
+Allows checking of the broad category that the node falls into. These say, respectively, whether the nodes is derived from \texttt{ast.AST}, whether
+it is a basic type such as a string or integer, or whether it is a list.
+
+\item[\texttt{is\_empty()}] \hfill \\
+Checks whether this node actually represents the lack of a node. If a parent node has an optional field, rather than just deleting field when the child does
+not exist, the child will be set to \texttt{None}. This will then become an empty node. Likewise, if a parent has a field that can hold multiple children, an
+empty list would represent that none exist and so this is also an empty node.
+
+\item[\texttt{temp\_list(*vargs)}] \hfill \\
+When translating or transforming nodes, it is often useful to concatenate lists to each other. New lists of single \texttt{CustomAST} nodes can easily be
+created using hybrid nodes as so: \texttt{CustomAST([node1, node2, ...])}.
+
+Actually concatenating list nodes is harder, so this function will create a new \texttt{CustomAST} list node starting with this node. Each argument will either be
+concatenated or appended to the new node, depending on whether the argument is a list or a single node.
+
+\item[\texttt{become(node)}] \hfill \\
+When transforming an AST we may want to edit the \texttt{CustomAST} node in place. This will make sure any and all parents still reference the correct
+object. This function will replace the node it wraps by that of the given node to do just that.
+
+\item[\texttt{ordered\_children()}] \hfill \\
+Often we will want to iterate over all children in a specific order. This is especially important for a list node where we want to iterate from 0 to 1.
+Unfortunately, after filling our \texttt{children} dictionary with fields and nodes, we cannot simply iterate over the keys. The iteration order will
+depend on the hashing function used internally by the dictionary.
+
+Instead we use this function to generate a list of fields in the correct order. This is also used later to generate iterators for the node.
+
+\item[\texttt{location()}, \texttt{desc()} and \texttt{\_\_str\_\_()}] \hfill \\
+These provide a tuple with line number and column number, a text description of the node and a combination of both respectively.
+
+By providing \texttt{\_\_str\_\_}, we allow conversion from node to string using \texttt{str(node)}. This means we can program in a much more
+descriptive manner.
+
+\item[\texttt{\_\_getitem\_\_(item)}, \texttt{\_\_iter\_\_()}, \texttt{\_\_contains(item)\_\_} and \texttt{\_\_len\_\_()}] \hfill \\
+These functions all work towards a more natural interaction with node objects. We can access children like a dictionary using \texttt{node["field"]}, or
+iterate using \texttt{for field in node}.
+
+We also have a membership test using \texttt{field in item} and number of children using \texttt{len(node)}. These can be used together by Python to provide
+a lot of other useful functionality.
+
+\end{description}
+
+Now we can parse Python source code and we have produced the data structures as well as the conversion methods needed to represent the output. The next
+step is to provide a writer for our structure to enable us to write back to source code.
+
 \subsubsection{Implementing an AST to Source Code Writer}
 
-Having made these decisions we can see we only need to design and write our AST to source writer. We shall now describe a solid design and
-extendable implementation for this. The design is fairly simple.
+We shall now describe a solid design and extendable implementation for this. The design is fairly simple.
 
 We begin with an abstract class called \texttt{SourceWriter}. Any code wishing to write an AST to source code can expect to be given a writer
 class that looks similar to this, and any writer classes should be derived from this base. \texttt{SourceWriter} will define a number of functions
