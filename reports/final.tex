@@ -718,52 +718,129 @@ the project to develop a graphical interface, we can now call it 'Graphical Obfu
 
 Having decided on the tools to create the interface, as well as its style and tasks it is required to perform, we now need to begin creating it.
 
-In our implementation, the standard Python command interface offering has been extended to make it easy to plug new commands in as
-objects, allowing easy extensions with new analytic techniques or new obfuscating transformations. Obviously the
-interface is worthless without actually plugging in some commands. Before we start to look at the obfuscation and analysis of code, the set of commands
-available from the interface is as follows:
+As described briefly above, we will be developing using the \texttt{cmd} library. This will mean our starting point is the \texttt{cmd.Cmd} class.
+This class can be started using the \texttt{cmdloop} method and will proceed to act as like a normal shell with only the command 'help' available.
 
-\paragraph{Help}
+Obviously we will want to add other available commands to this, and we can do this by creating a subclass implementing methods called
+\texttt{do\_\{command\}}. These can be documented for the help command by either implementing \texttt{help\_\{command\}}, or providing
+\texttt{do\_\{command\}} with a docstring.
+
+There is also a huge item missing from the default \texttt{cmd.Cmd} class. By default any command run will return a value which is passed to a
+hook method called \texttt{postcmd}. If this method returns \texttt{True} then we exit. As the only method defined by default, 'help', does not
+cause the program to exit, the only way to quit is to cause an exception!
+
+Our first task in writing the interface is then to create \texttt{CommandUI}, a subclass of \texttt{cmd.Cmd} and provide a way to quit the program.
+This is very easy and just involves implementing a \texttt{do\_quit} method that returns \texttt{True} and hence quits the program. For ease we will
+also implement a \texttt{do\_EOF} method that does the same and allows the user to quit using Ctrl\^{}D.
+
+One useful function often present when working on the command line is the ability to cancel a long running operation using Ctrl\^{}C. If we try this
+currently with our \texttt{CommandUI}, we will cause a \texttt{KeyboardInterrup} exception and kill the entire program. To fix this, we will
+override the \texttt{cmdloop} method, enclosing the call in a \texttt{try-catch} block that catches any \texttt{KeyboardInterrupt} exceptions and
+restarts the command loop.
+
+We have the basic setup now, but we still need to provide commands for parsing, writing, analysing and obfuscating. It does not make sense to modify
+our \texttt{CommandUI} class, creating \texttt{do\_\{command\}} methods every time we want to add a new command to the console. Instead we will write
+a method, \texttt{add\_command}, that we can pass any \texttt{Command} object to add its functionality to the console.
+
+Writing the \texttt{Command} class is now our new task. This will need to expose any functionality that the \texttt{CommandUI} class needs to use. The
+most important methods are listed below.
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(id)}] \hfill \\
+This gives the command a name. It will be used by \texttt{CommandUI} as the name to type when running the command.
+
+As this is a constructor, it also initialises an \texttt{argparse.ArgumentParser} object which is used by subclasses to parse their arguments and
+provide standard help messages. By expecting all commands to use an argument parser of this type, we are attempting to help standardise the user
+experience.
+
+\item[\texttt{do(line)}] \hfill \\
+When a command is run from \texttt{CommandUI} it will, by default try to call \texttt{do\_\{command\}}. We override that functionality to search
+through the list of added commands and run this method instead on the appropriate object.
+
+This method will try to parse the arguments given on the command line. If successful, it will feed the result through to the \texttt{run} method,
+otherwise it will print the help message and return.
+
+\item[\texttt{complete(text, line, begidx, endidx)}] \hfill \\
+If the user presses the tab key while typing, the \texttt{cmd.Cmd} will try to autocomplete the command by calling a specific set of functions. We
+override this behaviour in \texttt{CommandUI} to outsource the work to a specific \texttt{Command} object, calling the \texttt{complete} method.
+
+When this function is called, it is passed information that can be used to calculate possible completions of the line. At this point this information
+is difficult to use and not very helpful to us. The information we should be returning is also non-intuitive.
+
+To make this easier when programming later we translate this information into three strings; all text typed before the current word, all text after,
+and everything that has been typed of the current word. This is then handed to the \texttt{autocomplete} method from which we
+expect to receive a number of words that the current word could become. This is then translated back into the format needed by \texttt{cmd.Cmd} to
+return and complete the loop.
+
+\item[\texttt{help()}] \hfill \\
+As suggested by the name, this method will print a help message from the command. This is generated using the argument parser initialised inside
+the constructor. This will be called by the overridden help method in \texttt{CommandUI}.
+
+\item[\texttt{status()}] \hfill \\
+Another method we will add to \texttt{CommandUI} is \texttt{do\_status}, allowing us to use the command 'status'. This will be built into the
+class rather than added with \texttt{add\_command} so that it has access to all of the other commands. It may then iterate over each and call
+this status method to display the status of each command in turn. We expect this method to be overridden in an actual \texttt{Command} class.
+
+\item[\texttt{run(args)}, \texttt{autocomplete(before, arg, after)}] \hfill \\
+These are both designed to be overridden when implementing a concrete command, along with \texttt{status}. \texttt{run} is called to run the
+command as described in \texttt{do}, and \texttt{autocomplete} is called to generate autocompletions as described in \texttt{complete}.
+\end{description}
+
+Now we know how to create and plug in the commands, we can start to create them. The initial commands we will implement are described below:
+
+\paragraph{help}
 
 This will list help for the program as a whole as well as individual commands. It is an essential tool for a user to find their way around a
 command based program such as this one.
 
-\paragraph{Quit}
+Most of this command is implemented by \texttt{cmd.Cmd}, but we have extended the functionality to forward the calls for individual commands
+to the \texttt{Command} objects.
 
-Used to leave the program. Also very necessary as this is not built in to the default interpreter.
+\paragraph{quit}
 
-\paragraph{Status}
+Used to exit the program as described earlier. This can also be achieved by using Ctrl\^{}D.
 
-This will send a message to all other commands asking them to relay their status if they have anything to contribute. It can be
-used to check the state of certain parts of the program.
+\paragraph{status}
 
-\paragraph{Parse}
+Again this has already been described. When run, it will send a request to all added \texttt{Command} objects asking them to print
+their statuses if they have anything useful to contribute. A user can use this command to check the state of certain parts of the
+program.
 
-Actual parsing of Python source files is done using this command. It uses the Python library functions to do the parsing but also
-deals with problems like finding the files and handling incorrect syntax. Once a correct source file is parsed, the resulting AST
-is stored in memory for use by the other commands. It is also possible to save and load a previously edited AST, so long as the original
-source file is retained.
+\paragraph{parse}
 
+Actual parsing of Python source files is done using this command, as well as loading and saving of the resulting ASTs. Most of the processing
+is performed inside of the \texttt{ASTStorage} class. This class can be initialised, given a file name, by either parsing the source file, or
+loading a saved version.
 
-\paragraph{Explore}
+Parsing is performed by the Python standard library, \texttt{ast}, and then transformed into a \texttt{CustomAST} node as described earlier.
+If we choose to load the AST, the \texttt{pickle} library is used to load the \texttt{CustomAST} node tree directly from the .ast file
+corresponding to the Python source file. This is the same library used to save the AST in the first place.
 
-This is used to explore an AST generated by the parse command. It will always point to a particular node in the tree and allows
-inspection of any of the nodes properties. It is also possible to traverse the tree, moving between any of the current node's parents or
-children freely.
+We also record information to identify changes to the tree. When we save or load a file, we also record a SHA-224 hash of the file. This
+is used to ensure we are loading the correct tree when we request the file later. We also keep track of a \texttt{modified} flag that tells
+us if the tree structure is changed, and an \texttt{augmented} flag that lets us know whether any other information has been added to the tree.
 
-\paragraph{Format}
+\paragraph{explore}
 
-The integration point for the source writers. This can print either the whole abstract syntax tree or the subtree pointed to by
-explore. The printing style can also be changed between basic or pretty, and possibly other styles if the writers for these are created in future.
-If the user chooses, output from this command may be written to disk.
+This is used to explore an AST generated by the parse command. Whenever there is a parsed tree, this command will point to a specific node within it.
 
-\paragraph{Mark and Reorder}
+By typing this command with no arguments we can view a description of the node we are looking at, as well as any children it contains. We can move
+our pointer to a child node by using the child's name as an argument, or to the parent node by using the argument '--parent'.
 
-Will be introduced later.
+It is also possible to view information such as the node's line number and column in the source by adding the '--attributes' flag.
 
-Where possible all of these commands implement auto-completion to guide the user and save time.
+\paragraph{format}
 
-The following is an example session:
+The integration point for the source writers. This command can print either the whole AST using the flag '--top' or the subtree pointed
+to by explore by default. The printing style can also be changed by choosing to use \texttt{BasicWriter} or \texttt{PrettyWriter} with
+the argument '--style \{basic, pretty\}'.
+
+If the user chooses, output from this command may be written to disk using the flag, '--write FILE'.
+
+Other commands will be added to this list as we develop the functionality to make them necessary and all of the commands implemented
+should employ autocompletion wherever possible. This helps to guide the user and speeds up the use of oat.
+
+Now we can look at an example session:
 
 \begin{lstlisting}[language=obftool,basicstyle=\small]
 andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
