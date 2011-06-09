@@ -247,8 +247,8 @@ though only by distributing bytecode rather than raw source.
 Alternatively pyobfuscate \cite{pyobf} will scramble a subset of the identifiers used in programs as well as performing
 some other layout transformations. It has its limitations however \cite{pyobf}, so is not powerful enough for real use cases.
 
-pyobfuscate, along with many of the other tools, has not been updated in a long time and so is likely to be unable to cope with
-recent versions of Python code.
+pyobfuscate has not been updated since 2005, and is unable to run on any Python version since 2.6. Many of the other tools are in
+a similar situation and so it is unlikely these will be able to cope with recent versions of Python code.
 
 \subsubsection{Analytic Tools}
 
@@ -403,9 +403,11 @@ type. Instead it is stored as a tree of \texttt{ast.AST} nodes, lists, and basic
 cope with either having or not having a proper \texttt{ast.AST} node and cannot rely on being able to find or read a \texttt{\_fields} attribute. Additionally we
 cannot add new attributes onto lists, and we see later that we need to do this for any node.
 
-As there are a lot of positives for this data structure, and as we are forced at least to begin with an \texttt{ast.AST} node, it does not make sense
-to start again from scratch. Instead our solution will be to create a wrapper class. This will hold our actual node, but provide a new set of children - the
-wrapped version of each of our original children.
+\subsubsection{Implementing Internal Data Structures}
+
+As there are a lot of positives for using \texttt{ast.AST} nodes as our data structure, and as we are forced at least to begin with one of these nodes after parsing,
+it does not make sense to start again from scratch. Instead our solution will be to create a wrapper class. This will hold our actual node, but provide a new set of
+children - the wrapped version of each of our original children.
 
 The wrapper class will be called \texttt{CustomAST} and provide a number of helpful methods:
 
@@ -586,29 +588,99 @@ Output from \texttt{PrettyWriter}
 
 All of these writers will be held in the \texttt{writer} package.
 
-\subsection{User Interface}
+\subsection{Interacting with the Software}
 
-The next important part to think about is the user interface. This tool would be difficult to use without one.
+The next important part to think about is the how the user will interact with the software. Without some form of front end, the
+user would need to write their own program each time they want to use our obfuscation code. Let us first discuss the type of
+interaction we, or a user, would will need to have with the software.
 
-Current tools such as pyobfuscate or BitBoost's obfuscator are automated. This means that while a user does have a little control
-over what happens, they really just insert a file and are returned an unreadable one. We want to be able to effectively
-evaluate what our tool is doing to the source code, so we need control over what gets changed and which transformations are
-performed. Therefore this is not really an approach we can use.
+\subsubsection{Interaction Method}
+
+Current tools such as pyobfuscate or BitBoost's obfuscator are automated. In pyobfuscate, which is one of the more interactive
+of the tools, user interaction and control is limited to not much more than the choice of file to obfuscate, and indentation style. This means
+that while a user does have a little control over what happens, they really just insert a file and are returned an
+unreadable one.
+
+We want to be able to effectively evaluate what our tool is doing to the source code. For this we need to be able to intimately control
+which parts of the program are affected, and by which obfuscations. This would be unfeasable to attempt with an automatic program,
+even one with tweakable parameters, therefore it is not really an approach we can use.
 
 Knowing we have to be able to direct and control transformations, there are a few different ideas of how. In general, these fit into
 either solutions that involve us interactively looking through the AST and choosing how to transform or analyse certain
-nodes, or those that let us mark pieces of the code for obfuscation.
+nodes, or those that let us insert tags into the source code that mark structures and techniques for obfuscation.
 
-There are methods already used in other tools that we could use to mark code. For example the doctest module in the standard
-library uses docstrings (programmatically accessible comments) to specify unit tests for the code. Another possibility would
-be to use empty decorators to mark functions or classes for transformation. These are usually used to transform the code in
-some way at run time, but could easily do nothing and be picked up as flags for the obfuscator.
+There are methods already used in other tools that we could employ to tag code. For example the doctest module in the standard
+library uses docstrings (programmatically accessible comment strings) to specify unit tests for the code. Instead of unit tests,
+we could place some form of markup into the comments. This would allow us to specify transformations in text form, but we should
+remember to remove the docstrings at the end of the obfuscation.
+
+For example we could try the following format to indicate a function should have all of its statements reordered:
+
+\begin{lstlisting}
+def func(param1, param2, param2):
+    """Reorder Statements: all
+       I am a normal docstring.
+    """
+
+    statement_1
+    statement_2
+    ...
+    statement_n
+\end{lstlisting}
+
+Another possibility would be to use empty decorators to mark functions or classes for transformation. These are usually used to
+transform the code in some way at run time, but could easily do nothing and be picked up as flags for the obfuscator. Using this
+method we would need to specify the decorators elsewhere and could write the above examples as:
+
+\begin{lstlisting}
+import obfuscate
+
+@obfuscate.reorder("all")
+def func(param1, param2, param3):
+    """I am a normal docstring."""
+
+    statement_1
+    statement_2
+    ...
+    statement_n
+\end{lstlisting}
+
+This would require a separate file, called obfuscate here, that defines the decorators. Also we would need to remember to
+remove these decorators after obfuscation, just like in the docstring example.
 
 The trouble with these methods is that transformations would be restricted to single nodes that support either docstrings or
-decorators. For the fine control we need when evaluating the product, we will actually use an interactive explorer.
-Transformations or analysis may then be performed at which ever part of the code the user is currently pointing to.
+decorators. By placing this constraint on any obfuscations we want to make, we would be rejecting a huge range of options.
 
-This brings a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
+We can also try to create our own system to tag source code or nodes in an AST. If we choose to tag source code, we need
+to either make sure our solution is valid Python syntax and so will translate cleanly into an AST using the \texttt{ast}
+module, or that we can strip any tags out before parsing and still be able to match them up afterwards.
+
+It then makes much more sense, if we are tagging code, to tag the AST directly. This way we are free to modify \texttt{CustomAST}
+nodes in whatever way we like. Parsing will still work as normal as we do not have the AST yet, and we can feel safe that our AST
+to source writers will still work as we create them ourselves.
+
+Actually if we were to enable a user to browse and tag an AST, we would already have already created an interactive explorer for
+the tree. It seems unreasonable to expect a user to use software such as this to tag their tree and then have to feed this tagged
+tree into a separate application to perform the obfuscation.
+
+This leads us back to an earlier suggestion of of obfuscating directly from the explorer. This way
+a user can merely browse to a node of interest and tell the software immediately to perform the transformations they want. Any
+parameters needed can be set at this point, and the user will be able to see the effect of their command as soon as they have issued
+it.
+
+There is also the possibility that some obfuscations may involve multiple nodes or require more complicated parameters. To cope with
+this we can provide the interface, but allow a different method of interaction to be defined for each type of obfuscation.
+
+At this point we have decided on the method we will use to interact with our software. The interface is expected to allow a user to
+explore an AST generated from the program source. For any obfuscation type implemented, we will define and implement a bespoke method
+of interaction from the AST explorer.
+
+As well as browsing and obfuscating the AST, we also need to be able to generate the AST and convert it back to source code afterwards.
+For this reason we will also need to include some way of parsing and writing the file.
+
+\subsubsection{Designing the User Interface}
+
+These decisions bring a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
 Python contains tools to make both much easier. These come in the form of libraries such as the cmd library \cite{pycmd} for command
 interpreters or Tkinter \cite{pytkinter} for GUIs.
 
