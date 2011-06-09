@@ -681,15 +681,42 @@ For this reason we will also need to include some way of parsing and writing the
 \subsubsection{Designing the User Interface}
 
 These decisions bring a new question, one of how the explorer will look. The two main choices are a command line tool or a GUI. Again
-Python contains tools to make both much easier. These come in the form of libraries such as the cmd library \cite{pycmd} for command
-interpreters or Tkinter \cite{pytkinter} for GUIs.
+Python contains tools to make both much easier. These come in the form of libraries such as the \texttt{cmd} library \cite{pycmd} for command
+interpreters or \texttt{tkinter} \cite{pytkinter} for GUIs.
 
-In the interest of speed of development, and as user friendliness is not the main focus for us, we will use a command interface.
-More specifically we will implement an interactive interpreter designed to be similar to to a generic Unix shell.
+First, let us look at the \texttt{tkinter} library. This contains the standard Python interface to the Tk GUI toolkit. While being
+a very simple and friendly toolkit to use, there is still a large amount to learn before starting to develop. As the developer is
+not familiar with this library, this would add a moderate delay before beginning development work.
 
-Both the obfuscation and analytic parts of the software will be accessible from this interface, and so it will be named
-oat (Obfuscation and Analysis Tool). As well making it easier for us to refer to the inteface, we have also opened the possibility
-of creating a graphical interface to the toolset named goat.
+After the initial learning curve however, a GUI may present some significant advances over a command line interface. For a lot of interactive
+tasks the graphical interaction is more intuitive for the user. This would also allow a more natural presentation of information. Data like
+the AST tree structure could be displayed in a widget such as \texttt{Treeview}, designed specifically for this type of data. It is hard to
+understand how a command interface could provide these natural displays.
+
+Now we can discuss the benefits of using the \texttt{cmd} library. Again the developer is not familiar with this library, but unlike
+\texttt{tkinter}, it is very simple to begin. Even at it's bare minimum functionality, the provided command console offers a help
+function and support for autocompletion. All other functionality is easily addable by subclassing and implementing functions at various
+hook points.
+
+It is true that some information will be difficult to display naturally using only text, but our focus is on the obfuscation rather than
+the interface. Time is restricted for this task so as long as this interface provides adequate access to the back end software, speed
+of development is the main factor here.
+
+For this reason we shall be creating a command interface to our back end. The style of the interface will be designed to imitate a
+Unix style shell, with Unix style commands. This means that the large user base of Unix style operating systems will be already familiar
+and find learning to use this tool much easier than it would be otherwise.
+
+We should leave the option of having graphical components open. If we find later in the project that some operations or information would
+be clearer in graphical environment, then we can still write commands to open a GUI for the task. The back end code should be completely
+separate from the interface so it should be easy to replace the command line with a full GUI later if the time is available.
+
+This command line interface will be the point of entry for users who want to obfuscate their code as well as those who want to analyse
+already obfuscated code. For this reason, we shall name it simply 'Obfuscation and Analysis Tool', or oat. If we do find time later in
+the project to develop a graphical interface, we can now call it 'Graphical Obfuscation and Analysis Tool', or goat.
+
+\subsubsection{Implementing the User Interface}
+
+Having decided on the tools to create the interface, as well as its style and tasks it is required to perform, we now need to begin creating it.
 
 In our implementation, the standard Python command interface offering has been extended to make it easy to plug new commands in as
 objects, allowing easy extensions with new analytic techniques or new obfuscating transformations. Obviously the
