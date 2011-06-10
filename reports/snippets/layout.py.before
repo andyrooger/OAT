@@ -1,0 +1,11 @@
+def perform(text): # Twist and shout
+    # This is the twist
+    text = reversed(text)
+
+    # This is the shout
+    print("".join([
+        c for c in text # Need to convert reverse into string
+    ]))
+
+# To inspect whether or not we have a palindrome
+perform("never odd or even")

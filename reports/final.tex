@@ -772,9 +772,10 @@ Parsing is performed by the Python standard library, \texttt{ast}, and then tran
 If we choose to load the AST, the \texttt{pickle} library is used to load the \texttt{CustomAST} node tree directly from the .ast file
 corresponding to the Python source file. This is the same library used to save the AST in the first place.
 
-We also record information to identify changes to the tree. When we save or load a file, we also record a SHA-224 hash of the file. This
-is used to ensure we are loading the correct tree when we request the file later. We also keep track of a \texttt{modified} flag that tells
-us if the tree structure is changed, and an \texttt{augmented} flag that lets us know whether any other information has been added to the tree.
+We also record information to identify changes to the tree. When we save or load a file, we record with it a SHA-224 hash of the file. This
+is used to ensure that we are loading the correct tree when we request the file later. As well as this information, we keep a \texttt{modified}
+flag that tells us if the tree structure has been changed, and an \texttt{augmented} flag that lets us know whether any other information has
+been added to the tree.
 
 \paragraph{explore}
 
@@ -793,32 +794,96 @@ the argument '--style \{basic, pretty\}'.
 
 If the user chooses, output from this command may be written to disk using the flag, '--write FILE'.
 
-Other commands will be added to this list as we develop the functionality to make them necessary and all of the commands implemented
+Other commands will be added to this list as we develop the functionality to make them necessary, and all of the commands implemented
 should employ autocompletion wherever possible. This helps to guide the user and speeds up the use of oat.
 
-Now we can look at an example session:
+Now we can look at an example session, to see how the user will interact with the tool:
 
 \lstinputlisting[language=obftool,basicstyle=\small]{../snippets/commandsession.log}
 
+At this point we have created an interface, and we are able to parse, store, inspect and write Python source
+files. It is time to begin designing the code that oat will use to obfuscate these programs.
 
+\section{Developing Obfuscating Code}
 
+As mentioned in the background research there are 3 main types of obfuscation; layout obfuscation, data
+obfuscation and control-flow obfuscation. Of these we will focus on one, control-flow, although we shall
+first digress to describe the layout obfuscation that we inadvertently perform.
 
+\subsection{Layout Obfuscation}
 
+This type of obfuscation involves modifying the layout of code, changing variable names and
+generally making the program harder to read for a human. We have previously discussed programs that will
+perform this type of obfuscation such as pyobfuscate.
 
+The reason we are looking at layout obfuscation in our software is that we actually perform a very basic
+form of this during the parsing and writing of our Python source. We will look at the transformation of the
+program code to see why.
 
+When writing a program there are many things a developer will include, often without even noticing, that
+help a human reader to follow the program but do not affect the manner in which the code is run. Some of
+these are obvious and designed for this purpose such as meaningful variable identifiers and program comments.
 
+There are also more subtle features to the program source code. Whitespace is very helpful in many progamming
+languages, this is especially true in Python as indentation is the method of identifying blocks of code, rather than
+the familiar '\texttt{\{}' and '\texttt{\}}' or '\texttt{begin}' and '\texttt{end}' that we often see in other
+languages. 
 
+We do not just use whitespace to illustrate a program's nesting structure. This can be used for breaking long lines
+into shorter readable ones, or for separating blocks of statements that perform separate tasks. For example, a block
+of \texttt{import} statements in a source file will usually be followed by one of more blank lines to separate them
+from the rest of the code.
 
+While it is not strictly a layout issue, we can also see that the order a programmer writes code in is also important
+to the human understanding of the program. There are often many different ways the software could have been written.
+A machine would be indifferent to this, but one ordering may be much more intuitive that another. This will be discussed
+in more detail when we come to reorder program statements.
 
+Our contact with these matters begins when we parse a source file. By doing this we do not generate a representation of
+the source code. Instead we create a representation of the program structure where the only information transferred to the
+new representation is that which is necessary to run the program.
 
+This means most importantly that we will lose comments. Immediately we have destroyed one of the most helpful tools
+for understanding a complicated program. Of course, any comments contained in a docstring will still exist as these
+affect the running of the program, however we will lose a great deal of information in spite of this.
 
+All layout and whitespace will also be lost, although we will retain the nesting structure and the tokens that the
+whitespace was used to separate. As the results of the whitespace is retained, we can try to guess what combination
+of characters generated our result, but we can never be sure.
 
+So the only pieces of information retained from the source code are docstring comments, identifier names and the actual
+program code, including structures and some meaningful statement order. These will be printed by our writers, along with
+an estimation of how the layout used to look.
 
-\section{Reordering Instructions}
+The information during this process is actually obfuscating the transformed code. In fact we saw earlier the difference
+in readability between our \texttt{BasicWriter} and \texttt{PrettyWriter} classes. Let us look at how much a source file
+can be obfuscated just by passing it through \texttt{BasicWriter}.
 
-In the previous section we saw the basic blocks of oat fall into place. The code
-is already set to read, inspect, and write out Python source. Now we can move
-on to fulfilment of the project aims; to analyse and obfuscate the code.
+We start with this contrived program:
+
+\lstinputlisting[basicstyle=\small]{../snippets/layout.py.before}
+
+After we pass this through \texttt{BasicWriter}, we end up with:
+
+\lstinputlisting[basicstyle=\small]{../snippets/layout.py.after}
+
+Without the information given in the comments, this code snippet no longer makes much sense. The change in layout also
+makes the program harder to understand. We can see from previous examples and discussion that some of this obfuscation
+can be mitigated by writing the program using \texttt{PrettyWriter}, therefore we also have a partial reverse obfuscator.
+
+If we were to invest our efforts into actively creating a layout obfuscator, we could do much better just by implementing
+a different writer class. For example a simple change would be to suites containing only simple statements all on a single
+line, separating each by a semicolon. Alternatively we could instruct a writer not to write any docstrings, removing more
+commenting, but possibly breaking the program.
+
+This discussion will now be left as a possible extension of the software, and we can concentrate on our main goal;
+control-flow obfuscation.
+
+\subsection{Control-flow Obfuscation}
+
+As we have discussed already, there are a number of examples of control-flow obfuscation that we could implement.
+
+\section{Reordering Program Statements}
 
 The first technique we will seek to implement is the reordering of instructions. As it is required that
 any implemented obfuscating transformations have an accompanying analysis that can be used to (attempt to)

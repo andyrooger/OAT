@@ -1,0 +1,4 @@
+def perform(text):
+    text = reversed(text)
+    print(''.join([c for c in text]))
+perform('never odd or even')
