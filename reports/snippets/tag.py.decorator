@@ -1,0 +1,10 @@
+import obfuscate
+
+@obfuscate.reorder("all")
+def func(param1, param2, param3):
+    """I am a normal docstring."""
+
+    statement_1
+    statement_2
+    ...
+    statement_n

@@ -1,0 +1,8 @@
+if item == "alice":
+    gender = "female"
+elif item == "bob":
+    gender = "male"
+elif isname(item):
+    gender = "unknown"
+else:
+    raise ValueError

@@ -1,0 +1,10 @@
+if item == "alice":
+    gender = "female"
+else:
+    if item == "bob":
+        gender = "male"
+    else:
+        if isname(item):
+            gender = "unknown"
+         else:
+             raise ValueError

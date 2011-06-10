@@ -1,0 +1,72 @@
+andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py
+Welcome to this little obfuscation tool.
+If you're confused, type help!
+--) help
+
+Documented commands (type help <topic>):
+========================================
+help  quit  status  parse  explore  format
+
+
+--) help parse
+usage: parse file
+
+Parse a source file to an AST.
+
+positional arguments:
+  file  File to parse.
+
+--) parse
+interactive    quickstart.py  thirdparty     writer
+--) parse quickstart.py
+
+--) status
+Parsed tree: <_ast.Module object at 0x1bdab90> : quickstart.py
+Viewing node: Module
+
+--) explore
+Looking at: Module
+
+Fields:
+  body - Block of statements
+
+--) explore body
+Looking at: Block of statements
+
+--) explore
+Looking at: Block of statements
+
+Fields:
+  0 - Expr (line 7, col -1)
+  1 - ImportFrom (line 9, col 0)
+  2 - FunctionDef (line 11, col 0)
+  3 - If (line 19, col 0)
+
+--) explore 3
+Looking at: If (line 19, col 0)
+
+--) explore
+Looking at: If (line 19, col 0)
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) explore -a
+Looking at: If (line 19, col 0)
+
+Attributes:
+  lineno - 19
+  col_offset - 0
+
+Fields:
+  test - Compare (line 19, col 3)
+  body - Block of statements
+  orelse - Block of statements
+
+--) format -f
+if __name__ == '__main__':
+    go()
+
+--) quit

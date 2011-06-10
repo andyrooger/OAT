@@ -1,0 +1,9 @@
+def func(param1, param2, param2):
+    """Reorder Statements: all
+       I am a normal docstring.
+    """
+
+    statement_1
+    statement_2
+    ...
+    statement_n

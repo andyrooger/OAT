@@ -276,10 +276,7 @@ can be used for easy dissection. Python's standard library comes with modules fo
 There are also tools for creating interactive sessions within the program. For example by inserting the following code at any point
 in the program:
 
-\begin{lstlisting}
-from code import InteractiveConsole
-InteractiveConsole(locals()).interact()
-\end{lstlisting}
+\lstinputlisting{../snippets/breakpoint.py}
 
 We can effectively create a breakpoint and launch an interactive shell to inspect and possibly modify the current local
 variables. The program will continue as soon as the shell is closed.
@@ -350,32 +347,12 @@ side to an AST and back, writing the result on the right.
 
 \begin{minipage}[b]{0.4\linewidth}
 \centering
-\begin{lstlisting}[basicstyle=\small]
-if item == "alice":
-    gender = "female"
-elif item == "bob":
-    gender = "male"
-elif isname(item):
-    gender = "unknown"
-else:
-    raise ValueError
-\end{lstlisting}
+\lstinputlisting[basicstyle=\small]{../snippets/nest.py.before}
 \end{minipage}
 \hspace{1cm}
 \begin{minipage}[b]{0.5\linewidth}
 \centering
-\begin{lstlisting}[basicstyle=\small]
-if item == "alice":
-    gender = "female"
-else:
-    if item == "bob":
-        gender = "male"
-    else:
-        if isname(item):
-            gender = "unknown"
-         else:
-             raise ValueError
-\end{lstlisting}
+\lstinputlisting[basicstyle=\small]{../snippets/nest.py.after}
 \end{minipage}
 
 Information such as comments are also dropped from the representation. These seem to be reasonable compromises however and so
@@ -576,15 +553,15 @@ To illustrate the differences between the two solid implementations of \texttt{S
 
 Sample Program
 
-\lstinputlisting[basicstyle=\tiny]{../../example/example.py}
+\lstinputlisting[basicstyle=\tiny]{../snippets/writer.py}
 
 Output from \texttt{BasicWriter}
 
-\lstinputlisting[basicstyle=\tiny]{../../example/example.py.basicformat}
+\lstinputlisting[basicstyle=\tiny]{../snippets/writer.py.basicformat}
 
 Output from \texttt{PrettyWriter}
 
-\lstinputlisting[basicstyle=\tiny]{../../example/example.py.prettyformat}
+\lstinputlisting[basicstyle=\tiny]{../snippets/writer.py.prettyformat}
 
 All of these writers will be held in the \texttt{writer} package.
 
@@ -616,34 +593,13 @@ remember to remove the docstrings at the end of the obfuscation.
 
 For example we could try the following format to indicate a function should have all of its statements reordered:
 
-\begin{lstlisting}
-def func(param1, param2, param2):
-    """Reorder Statements: all
-       I am a normal docstring.
-    """
-
-    statement_1
-    statement_2
-    ...
-    statement_n
-\end{lstlisting}
+\lstinputlisting{../snippets/tag.py.docstring}
 
 Another possibility would be to use empty decorators to mark functions or classes for transformation. These are usually used to
 transform the code in some way at run time, but could easily do nothing and be picked up as flags for the obfuscator. Using this
 method we would need to specify the decorators elsewhere and could write the above examples as:
 
-\begin{lstlisting}
-import obfuscate
-
-@obfuscate.reorder("all")
-def func(param1, param2, param3):
-    """I am a normal docstring."""
-
-    statement_1
-    statement_2
-    ...
-    statement_n
-\end{lstlisting}
+\lstinputlisting{../snippets/tag.py.decorator}
 
 This would require a separate file, called obfuscate here, that defines the decorators. Also we would need to remember to
 remove these decorators after obfuscation, just like in the docstring example.
@@ -842,80 +798,21 @@ should employ autocompletion wherever possible. This helps to guide the user and
 
 Now we can look at an example session:
 
-\begin{lstlisting}[language=obftool,basicstyle=\small]
-andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
-Welcome to this little obfuscation tool.
-If you're confused, type help!
---) help
-
-Documented commands (type help <topic>):
-========================================
-help  quit  status  parse  explore  format
+\lstinputlisting[language=obftool,basicstyle=\small]{../snippets/commandsession.log}
 
 
---) help parse
-usage: parse file
 
-Parse a source file to an AST.
 
-positional arguments:
-  file  File to parse.
 
---) parse 
-interactive    quickstart.py  thirdparty     writer         
---) parse quickstart.py
 
---) status
-Parsed tree: <_ast.Module object at 0x1bdab90> : quickstart.py
-Viewing node: Module
 
---) explore
-Looking at: Module
 
-Fields:
-  body - Block of statements
 
---) explore body
-Looking at: Block of statements
 
---) explore
-Looking at: Block of statements
 
-Fields:
-  0 - Expr (line 7, col -1)
-  1 - ImportFrom (line 9, col 0)
-  2 - FunctionDef (line 11, col 0)
-  3 - If (line 19, col 0)
 
---) explore 3
-Looking at: If (line 19, col 0)
 
---) explore
-Looking at: If (line 19, col 0)
 
-Fields:
-  test - Compare (line 19, col 3)
-  body - Block of statements
-  orelse - Block of statements
-
---) explore -a
-Looking at: If (line 19, col 0)
-
-Attributes:
-  lineno - 19
-  col_offset - 0
-
-Fields:
-  test - Compare (line 19, col 3)
-  body - Block of statements
-  orelse - Block of statements
-
---) format -f
-if __name__ == '__main__':
-    go()
-
---) quit
-\end{lstlisting}
 
 \section{Reordering Instructions}
 
