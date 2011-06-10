@@ -214,8 +214,45 @@ This type of obfuscation transforms data layout and can help to obfuscate the st
 particularly helpful in Python as the language makes it very easy to inspect programs as they run, dissecting data
 structures and learning about how the program works.
 
-Examples of techniques here include adding extra layers of inheritance into a class's inheritance tree or traversing arrays
-in unexpected orders.
+We can look towards Collberg 1998 \cite{dataobf} to see some different types of data obfuscation, these are summarised here:
+
+\begin{description}
+\item[Classes] \hfill \\
+Classes are a great tool for data abstraction and can often tell us a large amount about the organisation of a program. This is
+especially important in an object-oriented language such as Java, but is also true for Python.
+
+To break this information we have a number of options, often used together. The Chidamber metric says a class becomes more complex,
+the further it resides down the inheritance tree. This means we can complicate the program by increasing this depth, either by adding
+false classes along the tree, or by splitting classes into two or more that inherit from each other.
+
+We could also complicate the structure by using 'false refactoring', which involves merging unrelated classes to form a new parent
+class.
+
+\item[Arrays] \hfill \\
+Often program code will iterate over an array. There are a number of ways we can alter the structure of the arrays to complicate
+this.
+
+A single array can be folded or flattened, this increases or decreases its dimensions. We can also split one array into multiple
+arrays, or merge multiple arrays into a single one.
+
+\item[Functions] \hfill \\
+These can be obfuscated by applying similar techniques as for classes. Methods can be combined by inlining, or split by outlining.
+We can also clone methods, duplicating the original function so to make it hard for a reverse engineer to see that the same
+functionality is being used in different places.
+
+We could also use table interpretation, converting the contents of the function into a virtual machine code and using an internal
+interpreter to run it when the function is called.
+
+\item[Basic Types] \hfill \\
+We can replace basic types such as strings with methods that produce them. As with most other structures we have looked at, we can
+also merge or split variables. For example a boolean variable may be split into multiple boolean values that are combined with a
+logical expression.
+
+An example from Collberg describes merging multiple integers into one single integer by using the upper bits for one and the lower
+bits for the other. This technique can also work in Python, but as integer types are of unlimited precision \cite{intprec} in Python
+3.x we need to make sure we can bound the values an integer can take at any point during our program.
+
+\end{description}
 
 While this type of obfuscation can be useful, our focus will be primarily on the next type of obfuscation.
 
