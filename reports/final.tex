@@ -214,7 +214,7 @@ This type of obfuscation transforms data layout and can help to obfuscate the st
 particularly helpful in Python as the language makes it very easy to inspect programs as they run, dissecting data
 structures and learning about how the program works.
 
-We can look towards Collberg 1998 \cite{dataobf} to see some different types of data obfuscation, these are summarised here:
+We can look towards Collberg 1998 \cite{dataobf} to see some different types of data obfuscation. These are summarised here:
 
 \begin{description}
 \item[Classes] \hfill \\
@@ -259,15 +259,89 @@ While this type of obfuscation can be useful, our focus will be primarily on the
 \subsubsection{Control-flow Obfuscation}
 
 Control flow obfuscation alters or obscures the control flow of the original code. This will confuse an analyser as to the
-true control flow of the program. For example, a transformation may introduce a conditional branch to dead or broken code
-that never happens, however the value of this condition is hard for the analyser to prove or evaluate before runtime.
+true control flow of the program.
 
-Reversal of this type of transformation can require careful analysis and can be difficult to perform. Often the reversal
-of this type of transformation could result in optimisation of the code.
+This time we can look to Collberg 1997 \cite{taxobftrans} for examples of control flow obfuscations. Many of these will use the idea
+of an opaque predicate, a variable whose value is known by the obfuscator but hard for a deobfuscator to calculate.
 
-These are the type of transformations we will attempt to implement first.
+By depending on the value of an opaque predicate, a transformation can be made more resilient against a deobfuscator. As the
+deobfuscator finds it difficult to calculate the value of this predicate, it cannot reduce the tranformation or possibly
+remove it.
 
-\subsection{Tools}
+We will see this used in the following types of control-flow obfuscaton:
+
+\begin{description}
+\item[Inserting Dead Code] \hfill \\
+Here we branch the code at some point during a sequence of statements based on some opaque predicate. The branch will either
+direct the program flow to the rest of the statements, or to some other code of our choosing.
+
+If we know the value of the opaque predicate we can make sure that the program still follows the same flow, otherwise we
+ensure both branches contain the same code or at least code that performs the same action.
+
+We can disguise this branch by making sure any dead code we insert is similar to but possibly a broken version of our real code.
+
+\item[Modifying Loop Conditions] \hfill \\
+This is suggested in Collberg in reference to the Java programming language. The idea is to extend the loop condition using a
+complex opaque predicate that will not affect the truth value of the condition.
+
+This will translate to a \texttt{while} loop in Python, however it will not work inside a \texttt{for} loop. This is due to
+Python \texttt{for} loops iterating over some iterable data type, rather than the familiar C-like for loop that iterates
+through indices until a condition turns false.
+
+We could try to apply a similar transformation to Python \texttt{for} loops by inserting or appending one or more special values
+into our iterable object. Inside the loop we would need to make sure any of these special values are ignored, but use further
+obfuscation to ensure the modification is well-hidden.
+
+\item[Removing Idioms and Library Calls] \hfill \\
+The benefit of doing this is obvious. These are both common parts of program source code that a reverse-engineer can look at
+to gain their bearing. Common idioms will indicate the intention of a section of code much more strongly than other arbitrary
+code.
+
+Likewise library calls, especially in Python, are usually very well documented. This documentation gives the reverse enginner
+a great deal of information relating to the values of variables around the call. The danger of these library calls can be
+mitigated somewhat by obfuscating the names of imported libraries, but it still may be better to replace them with calls
+to undocumented custom libraries.
+
+\item[Table Translation and Inlining or Outlining Functions] \hfill \\
+These methods have already been described in the data obfuscation section. While they obfuscate the structure of a procedure,
+they also obfuscate the control flow inside of it so we will include them here too.
+
+\item[Adding Redundant Operations] \hfill \\
+This applies to any expressions where we may add an operation that does nothing. For instance, any integer expression may
+be multiplied by $1$ or added to $0$, and any boolean expression may be replaced by its conjunction with \texttt{True}.
+
+Of course rather than using simple integers or boolean values, we can complicate the expressions by using opaque predicates
+that we know evaluate to these values.
+
+\item[Parallelising Code] \hfill \\
+If we can be sure we won't create any of the issues faced by concurrent programmers, we can take two independent parts of
+the code and parallelise them. Alternatively we could introduce an entirely new process to run along side our current code.
+
+When they run concurrently, it is difficult for an analyser to split these again. This could be made even more complicated
+by introducing one or more shared variables whose value we do not care about between the processes.
+
+\item[Program Locality] \hfill \\
+A programmer will usually write code in which logically related parts of the program are situated close together. This information
+can be used by a reverse-engineer, so our task it to try and randomise the location of each component of the program.
+
+Collberg makes a distinction here between the level of a program we are looking at. The reason being that, in Java, moving components of
+a program is very different depending on whether you are moving classes between files, methods inside classes, or statements around
+inside a method.
+
+As we are working in Python we still will need to make a distinction if we want to move components between different files. Other
+than this, most levels of the program act very similarly. At module level, class level or function level you can run code, define
+classes or functions, or import other modules. The only difference is how that level interacts with the levels below it.
+
+\end{description}
+
+As we can see, there are a broad range of different possibilities when it comes to control-flow obfuscation. Reversal of this type
+of transformation can require careful analysis, and can be difficult to perform. This would involve analysing the program to recognise
+opaque predicates and variable dependencies. It is very possible that the same code used to reverse a control-flow obfuscation will
+actually optimise the program it is deobfuscating.
+
+These are the type of transformations we will attempt to implement first, due to the sheer range of options to choose from.
+
+\subsection{Existing Tools}
 
 We have previously seen that there are tools to do similar obfuscation in Python already. We will now discuss some
 examples of these, as well as other tools to try to reverse the transformations.
@@ -884,7 +958,8 @@ This means most importantly that we will lose comments. Immediately we have dest
 for understanding a complicated program. Of course, any comments contained in a docstring will still exist as these
 affect the running of the program, however we will lose a great deal of information in spite of this.
 
-All layout and whitespace will also be lost, although we will retain the nesting structure and the tokens that the
+All layout and whitespace will also be lost\footnote{Actually we retain column and line numbers for many nodes. We could
+use these to recreate much of the original formatting, although the result would not be perfect.}, although we will retain the nesting structure and the tokens that the
 whitespace was used to separate. As the results of the whitespace is retained, we can try to guess what combination
 of characters generated our result, but we can never be sure.
 
