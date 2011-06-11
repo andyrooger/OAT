@@ -697,7 +697,7 @@ Knowing we have to be able to direct and control transformations, there are a fe
 either solutions that involve us interactively looking through the AST and choosing how to transform or analyse certain
 nodes, or those that let us insert tags into the source code that mark structures and techniques for obfuscation.
 
-There are methods already used in other tools that we could employ to tag code. For example the doctest module in the standard
+There are methods already used in other tools that we could employ to tag code. For example the \texttt{doctest} module in the standard
 library uses docstrings (programmatically accessible comment strings) to specify unit tests for the code. Instead of unit tests,
 we could place some form of markup into the comments. This would allow us to specify transformations in text form, but we should
 remember to remove the docstrings at the end of the obfuscation.
@@ -801,7 +801,7 @@ This is very easy and just involves implementing a \texttt{do\_quit} method that
 also implement a \texttt{do\_EOF} method that does the same and allows the user to quit using Ctrl\^{}D.
 
 One useful function often present when working on the command line is the ability to cancel a long running operation using Ctrl\^{}C. If we try this
-currently with our \texttt{CommandUI}, we will cause a \texttt{KeyboardInterrup} exception and kill the entire program. To fix this, we will
+currently with our \texttt{CommandUI}, we will cause a \texttt{KeyboardInterrupt} exception and kill the entire program. To fix this, we will
 override the \texttt{cmdloop} method, enclosing the call in a \texttt{try-catch} block that catches any \texttt{KeyboardInterrupt} exceptions and
 restarts the command loop.
 
@@ -1044,9 +1044,103 @@ once and can be stored and recalled whenever needed.
 
 This can be done by 'marking' the AST with our calculated results.
 
-\section{Marking the AST}
+\section{Marking the Abstract Syntax Tree}
+
+Before concentrating on the design and implementation of analytic tools for our program, we shall provide a method of storing
+the results. By attaching data straight onto individual nodes in the AST, or 'marking' them, we make it very easy to extract
+relevant information as we process that particular node.
+
+It is worth noting at this point that the design of the marker code was created before the \texttt{CustomAST} class was. This
+means that we are working on ASTs where nodes may be either \texttt{ast.AST} nodes, lists or basic types such as strings or
+integers.
+
+\subsection{Implementing Marking}
+
+When thinking of how to attach the data to these nodes, we cannot alter the underlying class or type as these are generated directly
+from the \texttt{ast} module's \texttt{parse} method. Instead we expect to add new attributes to individual objects that we can read
+and write to.
+
+The difficulty in this assumption is that not all nodes support adding these. In fact only the \texttt{ast.AST} nodes will allow this
+addition and while they do make up the majority of most ASTs, this will cause difficulty for many algorithms trying to process the
+nodes in a standard way.
+
+To deal with these differences and with all of the work involved in deciding if a node has been marked and by which type of markings,
+we will create a new class; \texttt{BasicMarker}. To clarify, a type of marking is defined by the information it stores, for example
+we will create a 'reads' marking that contains a set of identifiers a node reads.
 
 
+\texttt{BasicMarker} is designed as disposable class through which a specific node can be temporarily viewed. It is designed as a base
+class with functions common to any type of marking, allowing other classes to inherit the functionality and add methods specific to a
+type of marking. While subclasses for each type of marking will be separate, multiple types of marking should be able to coexist on the
+same node. \texttt{BasicMarker} exposes the following functionality:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(mark, node)}] \hfill \\
+This constructor is designed for a subclass to call, supplying the name of their specific type of marking and a node to view. The only
+processing done here is to test if the given node is \texttt{None}, and if so to replace it with a \texttt{DummyAST} node.
+
+\texttt{DummyAST} is merely an identical subclass of \texttt{ast.AST}. This allows markings to be created without a node and applied later,
+without causing errors when a node derived from \texttt{ast.AST} is expected.
+
+\item[\texttt{supports\_markings()}] \hfill \\
+This checks whether the given node supports markings. As we have seen, this is true if and only if we are looking at an \texttt{ast.AST}
+node.
+
+\item[\texttt{has\_markings()}] \hfill \\
+All types of markings will be stored together in an dictionary attribute called \texttt{\_markings}. This should map the name of the marking
+type to an arbitrary object that completely describes the data attached. We can see if the node has ever been marked by testing for the
+existence of this attribute.
+
+\item[\texttt{\_get\_markings(create)}] \hfill \\
+This is a private method, designed only for use inside this class. For convenience, this will retrieve the \texttt{\_markings} attribute
+from the node if it exists, otherwise it will return \texttt{None}. If \texttt{create} is set to \texttt{True} and the node supports
+markings, then we we can first add this attribute and then return it.
+
+\item[\texttt{is\_marked()}, \texttt{get\_mark()} and \texttt{set\_mark(val)}] \hfill \\
+These are designed to be called from derived classes. The first two will try to find the name of this particular type of marking inside
+the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if this was successful, and \texttt{get\_mark} will return either the
+corresponding value, or a safe default on failure. \texttt{set\_mark(val)} will try instead to set the value and return a boolean value
+indicating if it was successfull
+
+Only \texttt{is\_marked} is designed to be public. \texttt{get\_mark} should be used for convenience in subclasses that will provide
+customised interfaces to help interpret the particular type of marking.
+
+\item[\texttt{detach()}] \hfill \\
+If we begin viewing a specific node we can use this method to forget about that node, transplanting the current markings onto a new
+\texttt{DummyAST} node.
+
+Again this method should be used only from derived classes. It will not move the entire set of markings, just the type defined
+in the constructor. We rely on the \texttt{duplicate} method to properly clone the markings.
+
+\item[\texttt{get\_default()}] \hfill \\
+We can use this method to find a safe default for the given type of marking. It is actually an abstract method that needs implementing by
+subclasses.
+
+\item[\texttt{duplicate()}] \hfill \\
+Another abstract method. When implemented, this should clone the data returned by \texttt{get\_mark} in a way that allows updating the
+data without altering our original node.
+
+\end{description}
+
+After the introduction of the \texttt{CustomAST} class as our AST storage vessel we can modify this design subtly. Really this just
+involves replacing \texttt{DummyAST} with \texttt{CustomAST(None)} and allowing \texttt{supports\_markings} to always return
+\texttt{True} as all nodes should be \texttt{CustomAST} nodes.
+
+There would be more sensible ways to redesign the marking code now that we are using \texttt{CustomAST}. Unfortunately we do not have the
+time to do this, so we will continue to use the slightly ill fitting original design.
+
+It should be clear that this class is useless on its own. Solid subclasses will be defined and created as we need them; during the
+development of the analysis that requires them.
+
+We can now create a command for oat to extend this functionality to the user. This means that we can experiment and alter markings without
+the prior programmatic analysis.
+
+\subsection{Extending Marking Functionality to the User}
+
+\# Develop mark command, don't mention automarker parts, we can add these later
+\# Develop automarker
+\# Find some way to tie these in and make them sensible while still not having any real marking types
+\# Possibly suggest some examples of marking types earlier on
 
 \section{Reordering Program Statements}
 
