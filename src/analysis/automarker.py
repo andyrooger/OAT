@@ -4,12 +4,12 @@ Contains code for auto-marking AST nodes.
 """
 
 import ast
+from .customast import CustomAST
 
 import analysis.markers.breaks
 import analysis.markers.visible
 import analysis.markers.read
 import analysis.markers.write
-import analysis.markers.indirectrw
 
 class AutoMarker:
     """Tries to find correct markings for each node."""
@@ -42,8 +42,6 @@ class AutoMarker:
             self.defaults["reads"] = (lambda: analysis.markers.read.ReadMarker().duplicate())
         if "writes" not in self.defaults:
             self.defaults["writes"] = (lambda: analysis.markers.write.WriteMarker().duplicate())
-        if "indirectrw" not in self.defaults:
-            self.defaults["indirectrw"] = (lambda: analysis.markers.indirectrw.IndirectRWMarker().duplicate())
 
 ########################################################
 # Resolution functions                                 #
@@ -53,7 +51,7 @@ class AutoMarker:
 # - Should never alter return value from resolve_marks #
 ########################################################
 
-    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks", "reads", "writes", "indirectrw"}):
+    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks", "reads", "writes"}):
         """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
 
         result = {}
@@ -85,18 +83,7 @@ class AutoMarker:
                 analysis.markers.read.ReadMarker(node).set_mark(result["reads"])
             if "writes" in needed:
                 analysis.markers.write.WriteMarker(node).set_mark(result["writes"])
-            if "indirectrw" in needed:
-                analysis.markers.indirectrw.IndirectRWMarker(node).set_mark(result["indirectrw"])
 
-        return result
-
-    def resolve_group(self, nodes, needed):
-        """Resolve each of the nodes in the set. Avoids pretending they are a new node."""
-
-        result = self._base_marks(needed)
-        for node in nodes:
-            n_marks = self.resolve_marks(node, needed)
-            self._combine_marks(result, n_marks, needed)
         return result
 
     def _base_marks(self, needed):
@@ -107,7 +94,6 @@ class AutoMarker:
             "breaks": set(),
             "reads": set(),
             "writes": set(),
-            "indirectrw": {}
         }
 
         try:
@@ -115,24 +101,6 @@ class AutoMarker:
         except KeyError:
             raise ValueError("Unknown marking type")
 
-    def _combine_marks(self, marks, addition, needed):
-        """Modify marks to account for having also performed an execution resulting with the marks in addition."""
-
-        for n in needed:
-            if n == "visible":
-                marks["visible"] |= addition["visible"]
-            elif n == "breaks":
-                marks["breaks"].update(addition["breaks"])
-            elif n == "reads":
-                marks["reads"].update(addition["reads"])
-            elif n == "writes":
-                marks["writes"].update(addition["writes"])
-            elif n == "indirectrw":
-                for ns in addition["indirectrw"]:
-                    nr, nw = marks["indirectrw"].get(ns, (False, False))
-                    r, w = addition["indirectrw"][ns]
-                    marks["indirectrw"][ns] = (nr or r, nw or w)
-        return marks
 
 #########################################
 # Resolution Methods                    #
@@ -148,7 +116,6 @@ class AutoMarker:
             "breaks": analysis.markers.breaks.BreakMarker,
             "reads": analysis.markers.read.ReadMarker,
             "writes": analysis.markers.write.WriteMarker,
-            "indirectrw": analysis.markers.indirectrw.IndirectRWMarker,
         }
 
         result = {}
@@ -170,72 +137,151 @@ class AutoMarker:
     def calculate_marks(self, node, needed):
         """Calculate markings for the given mark types on node."""
 
-        # Assume we don't know about reads/writes/indirectrw
-        needed = needed.copy()
-        needed.discard("reads")
-        needed.discard("writes")
-        needed.discard("indirectrw")
-
-        # Lists are always treated the same, we hard code it!
-        if node.is_list():
-            marks = self._base_marks(needed)
-            for stmt in node:
-                other = self.resolve_marks(node[stmt], needed)
-                self._combine_marks(marks, other, needed)
-            return marks
-
         try:
-            act = MARK_CALCULATION[node.type()]
+            desc = MARK_CALCULATION[node.type()]
         except KeyError:
             return {}
         else:
-            if hasattr(act, "__call__"):
-                return self._calc_dict(act(node), node, needed)
-            elif isinstance(act, dict):
-                return self._calc_dict(act, node, needed)
-            elif isinstance(act, list):
-                marks = self._base_marks(needed)
-                for a in act:
-                    other = self._calc_dict(a, node, needed)
-                    self._combine_marks(marks, other, needed)
-                return marks
-            else:
-                return {} # Don't know what to do
+            return self._run_task_description(desc, node, needed)
 
-    def _calc_dict(self, act, node, needed):
-        if "transform" in act:
-            new_node = act["transform"](node)
+# Calculation / task description methods
+
+    def _run_task_description(self, desc, node, needed):
+        """Run the given task description on the node to generate a set of markings."""
+
+        if isinstance(desc, dict):
+            return self._desc_dict(desc, node, needed)
+        elif hasattr(desc, "__call__"):
+            return self._run_task_description(desc(node), node, needed)
+        elif isinstance(desc, list):
+            return self._combine_sequence((self._run_task_description(d, node, needed) for d in desc), needed)
+        elif isinstance(desc, set):
+            return self._combine_all((self._run_task_description(d, node, needed) for d in desc), needed)
+        elif isinstance(desc, tuple):
+            if len(desc) < 2:
+                return self._combine_any(
+                    [self._base_marks(needed)] + [self._run_task_description(d, node, needed) for d in desc],
+                    needed)
+            else:
+                return self._combine_any((self._run_task_description(d, node, needed) for d in desc), needed)
+        elif isinstance(desc, str) and desc in node:
+            return self.resolve_marks(node[desc])
+        else:
+            return {} # Received an invalid task description
+
+    def _combine_any(self, marks, needed):
+        """Combine each of the given marks assuming we could choose any one of them."""
+
+        marks = list(marks)
+
+        # What can we calculate
+        calculates = {"visible", "breaks", "reads", "writes"}.intersection(needed)
+        for m in marks:
+            calculates.intersection_update(m.keys())
+        if "writes" not in calculates:
+            calculates.discard("reads")
+
+        combined = {}
+        if "visible" in calculates:
+            combined["visible"] = any(m["visible"] for m in marks)
+
+        if "breaks" in calculates:
+            combined["breaks"] = set.union(*[m["breaks"] for m in marks])
+
+        if "writes" in calculates:
+            combined["writes"] = set.union(*[m["writes"] for m in marks])
+
+        if "reads" in calculates:
+            combined["reads"] = set.union(*[m["reads"] for m in marks])
+            adding_writes = set.intersection(*[m["writes"] for m in marks])
+            adding_writes = combined["writes"].difference(adding_writes)
+            combined["reads"].update(adding_writes)
+
+        return combined
+
+    def _combine_sequence(self, marks, needed):
+        """Combine each of the given marks in sequence."""
+
+        marks = list(marks)
+
+        # What can we calculate
+        calculates = {"visible", "breaks", "reads", "writes"}.intersection(needed)
+        for m in marks:
+            calculates.intersection_update(m.keys())
+        if "writes" not in calculates:
+            calculates.discard("reads")
+
+        combined = {}
+        if "visible" in calculates:
+            combined["visible"] = any(m["visible"] for m in marks)
+
+        if "breaks" in calculates:
+            combined["breaks"] = set.union(*[m["breaks"] for m in marks])
+
+        if "reads" in calculates:
+            combined["reads"] = set()
+            cumulative_writes = set()
+            for m in marks:
+                n_reads = m["reads"].difference(cumulative_writes)
+                cumulative_writes.update(m["writes"])
+                combined["reads"].update(n_reads)
+
+        if "writes" in calculates:
+            combined["writes"] = set.union(*[m["writes"] for m in marks])
+
+        return combined
+
+    def _combine_all(self, marks, needed):
+        """Combine each of the given marks assuming we are choosing all of them. The sets of marks should not overlap."""
+
+        combined = {}
+        for m in marks:
+            if set(combined).intersection(set(m)): # Overlap = fail
+                return {}
+            combined.update(m)
+        return combined
+
+    def _desc_dict(self, desc, node, needed):
+        """Run a dictionary task description."""
+
+        if "transform" in desc:
+            new_node = desc["transform"](node)
             if new_node != None:
                 return self.resolve_marks(new_node, needed)
 
-        if "known" in act:
-            needed = needed.intersection(act["known"])
-        elif "unknown" in act:
-            needed = needed.difference(act["unknown"])
+        if "marks" in desc and "nomarks" in desc:
+            if desc["marks"].intersect(desc["nomarks"]):
+                return {} # Overlap invalid
 
-        marks = self._base_marks(needed)
+        if "marks" in desc:
+            needed = needed.intersection(desc["marks"])
+        if "nomarks" in desc:
+            needed = needed.difference(desc["nomarks"])
 
-        if "local" in act:
-            for field in act["local"]:
-                if field in node:
-                    sub = node[field]
-                    if not sub.is_empty():
-                        other = self.resolve_marks(sub, needed)
-                        self._combine_marks(marks, other, needed)
+        if "combine" in desc:
+            c_marks = [node[f] for f in desc["combine"] if f in node and not node[f].is_empty()] # Keeps order
+            c_marks = [self.resolve_marks(c, needed) for c in c_marks]
+            if c_marks:
+                marks = self._combine_sequence(c_marks, needed)
+            else:
+                marks = self._base_marks(needed)
+        else:
+            marks = self._base_marks(needed)
 
-        if "localg" in act:
-            for field in act["localg"]:
-                if field in node:
-                    sub = node[field]
-                    for s in sub:
-                        other = self.resolve_marks(sub[s], needed)
-                        self._combine_marks(marks, other, needed)
+        # Marking type specific
+        if "breaks" in needed and "breaks" in marks:
+            if "rem_breaks" in desc:
+                marks["breaks"].difference_update(desc["rem_breaks"])
+            if "add_breaks" in desc:
+                marks["breaks"].update(desc["add_breaks"])
 
-        if "rem_break" in act and "breaks" in needed:
-            marks["breaks"].difference_update(act["rem_break"])
+        if "reads" in needed and "reads" in marks:
+            if "add_reads" in desc:
+                marks["reads"].update(node[f].node() for f in desc["add_reads"])
 
-        if "add_break" in act and "breaks" in needed:
-            marks["breaks"].update(act["add_break"])
+        if "writes" in needed and "writes" in marks:
+            if "add_writes" in desc:
+                marks["writes"].update(node[f].node() for f in desc["add_writes"])
 
         return marks
 
@@ -271,7 +317,7 @@ def _trans_func_decorators(node):
     assname = CustomAST(ast.Name(node["name"], ast.Store()))
     calls = CustomAST(ast.Name(node["name"], ast.Load()))
     dlist = node["decorator_list"]
-    for dec in reversed(dlist):
+    for dec in reversed(list(dlist.ordered_children())):
         calls = ast.Call(dlist[dec], [calls], [], None, None)
         calls = CustomAST(calls)
     return CustomAST([func, ast.Assign([assname], calls)])
@@ -325,44 +371,83 @@ def _try_except_dict(node):
     # Will not catch anything unless the handler is straight except:
     # This is because it is hard to match type for a name
 
-    d = {"local": {"body"}}
+    d = {"combine": ["body"]}
 
     for h in node["handlers"]:
         if node["handlers"][h]["type"].is_empty():
             d["rem_break"] = {"except"}
             break
 
-    return [d, {"localg": {"handlers"}, "local": {"orelse"}}]
+    return [d, ("handlers",), ("orelse",)]
 
-def _unpack_dict(self, node, needed):
-    # Normal ctx stuff plus think about unpacking
-    d = {"localg": {"elts"}, "local": {"ctx"}}
-    if node["ctx"].type() == "Store":
-        d["add_break"] = {"except"}
-    return d
+def _trans_iter_only(node):
+    """Take node with iterator and give just the iterator call."""
+    return CustomAST(ast.Call(ast.Name("iter", ast.Load()), [node["iter"]], [], None, None))
+
+def _trans_next_only(node):
+    """Take a node with a target and an iterator supposedly written to '._.' and return the next call."""
+    nxt_call = ast.Call(ast.Attribute(ast.Name("._.", ast.Load()), "next", ast.Load()), [], [], None, None)
+    return CustomAST(ast.Assign([node["target"]], nxt_call))
+
+def _trans_dict_zipper(node):
+    """Transform dict keys, values to a list of all."""
+    return CustomAST([n for t in zip(node["keys"], node["values"]) for n in t])
+
+def _context_sensitive(base, load={}, store={}):
+    """Returns a different dict depending on context of a node."""
+    def f(node):
+        d = {k:base[k] for k in base}
+        if node["ctx"].type() == "Load":
+            d.update(load)
+        if node["ctx"].type() == "Store":
+            d.update(store)
+        return d
+    return f
+
+def _list_dict(node):
+    """Returns a task desc holding the list's children."""
+    return list(node.ordered_children()) if len(node) else ()
 
 ###################################
 # Actual mark calculation methods #
 ###################################
 
 MARK_CALCULATION = {
-    "Module": {"local": {"body"}},
-    "Interactive": {"local": {"body"}},
-    "Expression": {"local": {"body"}},
-    "Suite": {"local": {"body"}},
+    "Module": "body",
+    "Interactive": "body",
+    "Expression": "body",
+    "Suite": "body",
 
     # stmt
-    "FunctionDef": {"transform": _trans_func_decorators, "local": {"returns", "args"}},
-    "ClassDef": {"transform": _trans_class_decorators, "local": {"body", "starargs", "kwargs"}, "localg": {"bases", "keywords"}}, # Evaluates body as annotations
-    "Return": {"local": {"value"}, "add_break": {"return"}},
+    "FunctionDef": {"transform": _trans_func_decorators, "add_writes": {"name"}, "combine": ["args", "returns"]},
+    "ClassDef": [
+        {"transform": _trans_class_decorators, "add_writes": {"name"}, "combine": ["bases", "keywords", "starargs", "kwargs"]},
+        {"combine": ["body"], "nomarks": {"reads", "writes"}},
+    ],
+    "Return": {"combine": ["value"], "add_break": {"return"}},
 
-    "Delete": {"localg": {"targets"}}, # NameError covered in ctx
-    "Assign": {"localg": {"targets"}, "local": {"value"}},
+    "Delete": "targets", # NameError covered in ctx
+    "Assign": ["value", "targets"],
     "AugAssign": {"transform": _trans_aug_assign},
 
-    "For": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],
-    "While": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],
-    "If": {"local": {"test", "body", "orelse"}},
+    # ._. = iter(iter)
+    # while notbreak:
+    #   try:
+    #     target = ._..next()
+    #   except StopIteration: do orelse
+    "For": [
+        {"transform": _trans_iter_only},
+        {"transform": _trans_next_only},
+        ([{"combine": ["body"], "rem_breaks":{"continue", "break"}}, {"transform": _trans_next_only}],),
+        ("orelse",)
+        ],
+
+    "While": [
+        "test",
+        ([{"combine": ["body"], "rem_breaks": {"break", "continue"}}, "test"]),
+        ("orelse",),
+        ],
+    "If": ["test", ("body", "orelse")],
 
     # TODO - think about calls made, should be:
     # Evaluate node.context_expr for now I call this e
@@ -376,34 +461,37 @@ MARK_CALCULATION = {
     #
     # We could assume same as evaluating ctx expression and executing body
     # but we will be safe
-    "With": {"known": {}},
+    "With": {"marks": {}},
 
-    "Raise": {"local": {"exc", "cause"}, "add_break": {"except"}}, # Same as evaluating the exceptions and raising
+    "Raise": {"combine": ["exc", "cause"], "add_breaks": {"except"}}, # Same as evaluating the exceptions and raising
     "TryExcept": _try_except_dict,
-    "TryFinally": {"local": {"body", "finalbody"}}, # Same as running both try and finally body
-    "Assert": {"local": {"test", "msg"}, "add_break": {"except"}}, # Eval test and msg, raise exception
+    "TryFinally": ["body", "finalbody"], # Same as running both try and finally body
+    "Assert": [
+        "test",
+        ({"combine": ["msg"], "add_breaks": {"except"}},)
+        ], # Eval test and msg, raise exception
 
-    "Import": {"known": set()}, # Can do anything we could import! # TODO - Check imported module?
-    "ImportFrom": {"known": set()}, # Again we have no idea! # TODO - Check imported module?
+    "Import": {"marks": set()}, # Can do anything we could import! # TODO - Check imported module?
+    "ImportFrom": {"marks": set()}, # Again we have no idea! # TODO - Check imported module?
 
-    "Global": {}, # Any exceptions are thrown at parsing. Not runtime.
-    "Nonlocal": {}, # Any exceptions are thrown at parsing. Not runtime.
-    "Expr": {"local": {"value"}},
-    "Pass": {},
-    "Break": {"add_break": {"break"}},
-    "Continue": {"add_break": {"continue"}},
+    "Global": (), # Any exceptions are thrown at parsing. Not runtime.
+    "Nonlocal": (), # Any exceptions are thrown at parsing. Not runtime.
+    "Expr": "value",
+    "Pass": (),
+    "Break": {"add_breaks": {"break"}},
+    "Continue": {"add_breaks": {"continue"}},
 
     # expr
-    "BoolOp": {"localg": {"values"}}, # Don't see that boolop can throw exceptions, it doesn't care about type etc
-    "BinOp": {"local": {"left", "right"}, "add_break": {"except"}}, # As above with extra exception
-    "UnaryOp": {"local": {"operand"}, "add_break": {"except"}},
-    "Lambda": {"local": {"args"}}, # Doesn't run it, just defines it. Eval args.
-    "IfExp": {"local": {"test", "body", "orelse"}},
-    "Dict": {"localg": {"keys", "values"}},
-    "Set": {"localg": {"elts"}},
-    "ListComp": {"local": {"elt"}, "localg": {"generators"}},
-    "SetComp": {"local": {"elt"}, "localg": {"generators"}},
-    "DictComp": {"local": {"key", "value"}, "localg": {"generators"}},
+    "BoolOp": ("values",), # Don't see that boolop can throw exceptions, it doesn't care about type etc
+    "BinOp": {"combine": ["left", "right"], "add_breaks": {"except"}}, # As above with extra exception
+    "UnaryOp": {"combine": ["operand"], "add_breaks": {"except"}},
+    "Lambda": "args", # Doesn't run it, just defines it. Eval args.
+    "IfExp": ["test", ("body", "orelse")],
+    "Dict": {"transform": _trans_dict_zipper},
+    "Set": "elts",
+    "ListComp": ["generators", "elt"],
+    "SetComp": ["generators", "elt"],
+    "DictComp": ["generators", "value", "key"],
 
     # Turns from: (node.elt, node.generators)
     #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
@@ -418,14 +506,14 @@ MARK_CALCULATION = {
     # del __gen
     # Too difficult, say we don't know
     # TODO - check we do not have similar problems for list/set/dict comp
-    "GeneratorExp": {"known": set()},
+    "GeneratorExp": {"marks": set()},
 
     # PEP 0342 describes yield expression.
     # Not mentioned to be accepted but experimentation tells me it probably was.
-    "Yield": {"local": {"value"}, "add_break": {"except", "yield"}},
+    "Yield": {"combine": ["value"], "add_breaks": {"except", "yield"}},
 
-    "Compare": {"local": {"left"}, "localg": {"comparators"}, "add_break": {"except"}},
-    "Call": {"known": set()}, # No idea what we'd be calling # TODO - think harder
+    "Compare": [{"combine": ["left"], "add_breaks": {"except"}}, ("comparators",)],
+    "Call": {"marks": set()}, # No idea what we'd be calling # TODO - think harder
     "Num": {},
     "Str": {},
     "Bytes": {},
@@ -434,29 +522,29 @@ MARK_CALCULATION = {
     # Eval node.value
     # Now we treat like a search for a simple name in node.value
     # TODO - store and denied?
-    "Attribute": {"local": {"value", "ctx"}},
+    "Attribute": ["value", "ctx"],
 
     # Similar to above
     # TODO - store and denied?
-    "Subscript": {"local": {"value", "slice", "ctx"}},
+    "Subscript": ["value", "slice", "ctx"],
 
-    "Starred": {"local": {"value", "ctx"}},
-    "Name": {"local": {"ctx"}},
-    "List": _unpack_dict,
-    "Tuple": _unpack_dict,
+    "Starred": ["value", "ctx"],
+    "Name": _context_sensitive({"combine":["ctx"]}, load={"add_reads":{"id"}}, store={"add_writes":{"id"}}),
+    "List": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}), # Exception splitting
+    "Tuple": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}),
 
     # expr_context
-    "Load": {"add_break": {"except"}}, # if not found
-    "Store": {}, # TODO - think about storing to a class and being denied
-    "Del": {"add_break": {"except"}}, # if not found
-    "AugLoad": {"known": set()}, # Don't appear to be used, so don't know
-    "AugStore": {"known": set()}, # Don't appear to be used, so don't know
-    "Param": {"known": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
+    "Load": {"add_breaks": {"except"}}, # if not found
+    "Store": (), # TODO - think about storing to a class and being denied
+    "Del": {"add_breaks": {"except"}}, # if not found
+    "AugLoad": {"marks": set()}, # Don't appear to be used, so don't know
+    "AugStore": {"marks": set()}, # Don't appear to be used, so don't know
+    "Param": {"marks": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
 
     # slice
-    "Slice": {"local": {"lower", "upper", "step"}},
-    "ExtSlice": {"local": {"dims"}},
-    "Index": {"local": {"value"}},
+    "Slice": ["lower", "upper", "step"],
+    "ExtSlice": "dims",
+    "Index": "value",
 
 # These binary operators are not currently used by me
 #  - the boolop or binop nodes already covered it
@@ -501,22 +589,25 @@ MARK_CALCULATION = {
     "NotIn": None,
 
     # comprehension
-    "comprehension": {"local": {"target", "iter"}, "localg": {"ifs"}, "add_break": {"except"}}, # for non-iterable iter 
+    "comprehension": {"combine": ["target", "iter", "ifs"], "add_break": {"except"}}, # for non-iterable iter
 
     # excepthandler
-    "ExceptHandler": {"local": {"type", "body"}},
+    "ExceptHandler": ["type", ("body",)],
 
     # arguments
-    "arguments": {"localg": {"args", "kwonlyargs", "defaults", "kw_defaults"}, "local": {"varargannotation", "kwargannotation"}},
+    "arguments": ["kw_defaults", "defaults", "args", "kwonlyargs", "varargannotation", "kwargannotation"],
 
     # arg
-    "arg": {"local": {"annotation"}},
+    "arg": "annotation",
 
     # keyword
-    "keyword": {"local": {"value"}},
+    "keyword": "value",
 
     # alias
-    "alias": {},
+    "alias": {"marks": set()},
+
+    # LISTS!
+    "list": _list_dict,
 }
 
 class UserStop(Exception): pass
