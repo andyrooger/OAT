@@ -1130,17 +1130,128 @@ There would be more sensible ways to redesign the marking code now that we are u
 time to do this, so we will continue to use the slightly ill fitting original design.
 
 It should be clear that this class is useless on its own. Solid subclasses will be defined and created as we need them; during the
-development of the analysis that requires them.
+development of the analysis that requires them. We can now begin to design and implement the tools for this analysis.
 
-We can now create a command for oat to extend this functionality to the user. This means that we can experiment and alter markings without
-the prior programmatic analysis.
+\subsection{Automatic Marking}
 
-\subsection{Extending Marking Functionality to the User}
+During this period of design, we will assume that we already know of two types of markings that wish to mark nodes with. These are visible nodes
+and flow-breaking nodes. Saying that a node is visible loosely means that it can produce output that a user will see, for instance an \texttt{ast.Call}
+node that calls the \texttt{print} method. Being a flow-breaking node means that the node can cause a break from the linear flow of the program. These
+will be described in more detail in the next section.
 
-\# Develop mark command, don't mention automarker parts, we can add these later
-\# Develop automarker
-\# Find some way to tie these in and make them sensible while still not having any real marking types
-\# Possibly suggest some examples of marking types earlier on
+While both the visibility and flow-breaking markings can be queried for a boolean 'yes' or 'no' value, the total data stored relating to breaks is much
+larger. Rather than just recording whether a node can break linear flow, we also record how; either by an escaped \textbf{except}ion,
+\textbf{return}ing or \textbf{yield}ing a value, or performing a \textbf{break} or \textbf{continue} from a loop. This eases our task of automatically
+marking nodes, as parent nodes will react differently depending on the type of break.
+
+Now we can use these two marking types to guide our creation of an automatic marking tool. First we should think about which options are available
+to us when choosing the value for these markings. A simple start would be a safe default, this would the the same for any node in any position,
+depending only on the type of marking. Also simple would be asking a user to decide the value, allowing them to inspect details of the node before
+making the decision.
+
+Of course if the node could possibly have already been marked, we can just take these current markings. The final option we will think about is
+that we could calculate the values based on those of any child nodes. Any of these four options may be combined into a hybrid automarker, and actually
+this is what we will do.
+
+The idea is that to calculate the value for marks on a single node, we should first order the discussed methods of choice into a mark resolution
+list. We can then proceed through these one by one until we are provided with an answer. They will be labelled in the software as
+\textbf{default}, \textbf{user}, \textbf{mark} and \textbf{calc}. It is worth noting that \textbf{calc} is the only recursive resolution method,
+and that it will check the markings on child nodes by proceeding through our entire resolution list again.
+
+To see how this will work, we will set up an example with a resolution order of \textbf{mark}, \textbf{user}, \textbf{calc}, \textbf{default}.
+We want to add visibility and flow-breaking markings to a \texttt{list} node representing the following sequence of statements:
+
+\lstinputlisting{../snippets/automark.py}
+
+We can now run the algorithm to discover the appropriate set of markings to use.
+
+First we look at the resolution order. This begins with \textbf{mark} so we check for existing markings. As we haven't marked this node before,
+we have none and so must check the next method in the list. This tells us to ask the user who informs us that they do not know or they would not
+have used an automatic marker.
+
+Now the next resolution method is \textbf{calc}. We will need to know the value of the markings on each of the children to work this out. These
+are the assignment and the \texttt{if}-\texttt{else} statement, so we must perform the same calculation for both of these.
+
+\begin{description}
+  \item[\texttt{ast.Assign}: \texttt{wound = get\_wound()}] \hfill \\
+  Again we check markings and see that there are none. This will be the case for all nodes here and so we will not write this step again.
+  Next we ask the user, who does not want to think about this so again we turn to \textbf{calc}.
+  \begin{description}
+    \item[\texttt{ast.Name}: \texttt{wound}] \hfill \\
+    Actually the real child would be a list of targets for the assignment. As there is only one we have skipped a step for simplicity.
+    
+    We ask the user for markings who assumes they know that a basic name will not cause visible output or break flow. Out of interest they still
+    decide to pass and see what \textbf{calc} has to say.
+    \begin{description}
+      \item[\texttt{str}: \texttt{wound}] \hfill \\
+      The user decides to follow their previous instinct and decides that a simple string cannot really produce anything by itself. This node is
+      marked as non-visible and non-breaking.
+
+      \item[\texttt{ast.Store}] \hfill \\
+      The user has no idea what this node is so passes. Now our knowledgeable automarker knows that this type of node is used to represent the context
+      a name is used in. This particular node is describing a name being used to store data and so could cause an exception if the name is not writable.
+      
+      Now we can mark this node as non-visible but possibly breaking with an exception.
+    \end{description}
+
+    As neither child is visible we can probably assume that our \texttt{ast.Name} node is also non-visible. However as one of the children could cause an
+    exception that we will definitely not catch (as this node is not a \texttt{try}-\texttt{catch} node), we will mark this node with the possibility
+    of causing an exception.
+
+    \item[\texttt{ast.Call}: \texttt{get\_wound()}] \hfill \\
+    Now our user does not know about the \texttt{get\_wound} function so passes the marking to our automarker. Our automarker knows it does not have
+    the ability to resolve the name being called and so also passes.
+
+    This means we will mark this node with safe default values which are set in the corresponding marker classes. Hence our node will be marked
+    as visible and possibly flow-breaking by exception.
+  \end{description}
+  This assignment contains both a visible child and a flow-breaking child. If we let these markings bubble through, then we can mark our assignment
+  as both visible and flow-breaking by exception. 
+
+  \item[\texttt{ast.If}] \hfill \\
+  Now we could calculate the markings for this \texttt{if} statement here. Unless it turns out to be flow-breaking due to something other than an
+  exception, we will find this task to be pointless and unable to affect our parents markings. It may be possible to use this type of reasoning
+  during the implementation to avoid excess work.
+
+  In this case however, we will allow the user to mark the node simply as non-breaking but visible due to the \texttt{print} statement.
+\end{description}
+
+We have now returned to our original node. We know that we have a visible child and a flow-breaking child, so again we let these bubble through
+and have a final marking of visible and flow-breaking by exception.
+
+Some readers may have noticed a few problems with this example, mainly that a sequence of statements that we would not expect to cause an exception
+have been marked to indicate that they could. The reason for this is that actually there are a number of places this small program \textit{could} cause
+exceptions, most notably at any point where we need to resolve a name, or when unknown functions are called.
+
+If fact almost any line in most Python programs could raise exceptions and most will not be marked in any way within the code. This is not usually a
+problem for humans, as a programmer tends to program in a way that avoids implicitly raised exceptions such as those raised by using an undefined name,
+and explicitly raise exceptions are easy to spot. Humans will also tend to ignore system exceptions when programming, such as those raised when we run
+out of memory as these indicate that something is actually broken and tend to stop the program immediately.
+
+Unfortunately our automarker does not benefit from this human intuition. The last thing we wish to do is to break a program by assuming something that
+could happen does not. This means that if a node could break flow or produce visible output we must mark them as so, even if it would be unlikely to ever
+happen. Of course if we can somehow prove that an exception will not be caused, such as by showing that a name is assigned to before it is read from,
+then we can mark the node as such.
+
+Most forms of analysis required for this type of proof will be difficult to perform, so for now at least we will be reliant on our users. During the
+algorithm described above, we are currently asking the user only once to provide a set of markings for the node. We will now introduce a review step
+after markings are generated for a node, but before they are written to it. This allows a user to inspect the generated markings and reject them if
+they feel them to be incorrect.
+
+As well as the user review step, we will also allow the user to edit markings completely manually. This gives us the benefit of both the expert
+knowledge and speed of the automarker, but also of the intuition of the user. As the automarker improves, reliance on the user will diminish, allowing
+gradual evolution of the tool.
+
+Now we must implement our algorithm, clarifying our ideas in the software.
+
+\subsection{Implementing the Automarker}
+
+\# We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
+\# without prior programmatic analysis.
+
+\# \subsection{Extending Marking Functionality to the User}
+
+\# Develop mark command
 
 \section{Reordering Program Statements}
 
