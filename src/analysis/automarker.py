@@ -170,72 +170,91 @@ class AutoMarker:
     def calculate_marks(self, node, needed):
         """Calculate markings for the given mark types on node."""
 
-        # Assume we don't know about reads/writes/indirectrw
         needed = needed.copy()
         needed.discard("reads")
         needed.discard("writes")
         needed.discard("indirectrw")
 
-        # Lists are always treated the same, we hard code it!
-        if node.is_list():
-            marks = self._base_marks(needed)
-            for stmt in node:
-                other = self.resolve_marks(node[stmt], needed)
-                self._combine_marks(marks, other, needed)
-            return marks
-
         try:
-            act = MARK_CALCULATION[node.type()]
+            desc = MARK_CALCULATION[node.type()]
         except KeyError:
             return {}
         else:
-            if hasattr(act, "__call__"):
-                return self._calc_dict(act(node), node, needed)
-            elif isinstance(act, dict):
-                return self._calc_dict(act, node, needed)
-            elif isinstance(act, list):
-                marks = self._base_marks(needed)
-                for a in act:
-                    other = self._calc_dict(a, node, needed)
-                    self._combine_marks(marks, other, needed)
-                return marks
-            else:
-                return {} # Don't know what to do
+            return self._run_task_description(desc, node, needed)
 
-    def _calc_dict(self, act, node, needed):
-        if "transform" in act:
-            new_node = act["transform"](node)
+    def _run_task_description(self, desc, node, needed):
+        """Run the given task description on the node to generate a set of markings."""
+
+        if isinstance(desc, dict):
+            return self._desc_dict(desc, node, needed)
+        elif hasattr(desc, "__call__"):
+            return self._run_task_description(desc(node), node, needed)
+        elif isinstance(desc, list):
+            return self._combine_sequence((self._run_task_description(d) for d in desc), needed)
+        elif isinstance(desc, set):
+            return self._combine_all((self._run_task_description(d) for d in desc), needed)
+        elif isinstance(desc, tuple):
+            return self._combine_any((self._run_task_description(d) for d in desc), needed)
+        else:
+            return {} # Received an invalid task description
+
+    def _combine_any(self, marks, needed):
+        """Combine each of the given marks assuming we could choose any one of them."""
+
+        # TODO: Correct this!
+        combined = self._base_marks(needed)
+        for m in marks:
+            self._combine_marks(combined, m, needed)
+        return combined
+
+    def _combine_sequence(self, marks, needed):
+        """Combine each of the given marks in sequence."""
+
+        combined = self._base_marks(needed)
+        for m in marks:
+            self._combine_marks(combined, m, needed)
+        return combined
+
+    def _combine_all(self, marks, needed):
+        """Combine each of the given marks assuming we are choosing all of them. The sets of marks should not overlap."""
+
+        combined = {}
+        for m in marks:
+            if set(combined).intersection(set(m)): # Overlap = fail
+                return {}
+            combined.update(m)
+        return combined
+
+    def _desc_dict(self, desc, node, needed):
+        """Run a dictionary task description."""
+
+        if "transform" in desc:
+            new_node = desc["transform"](node)
             if new_node != None:
                 return self.resolve_marks(new_node, needed)
 
-        if "known" in act:
-            needed = needed.intersection(act["known"])
-        elif "unknown" in act:
-            needed = needed.difference(act["unknown"])
+        if "known" in desc and "unknown" in desc:
+            if desc["known"].intersect(desc["unknown"]):
+                return {} # Overlap invalid
+
+        if "known" in desc:
+            needed = needed.intersection(desc["known"])
+        if "unknown" in desc:
+            needed = needed.difference(desc["unknown"])
 
         marks = self._base_marks(needed)
 
-        if "local" in act:
-            for field in act["local"]:
-                if field in node:
-                    sub = node[field]
-                    if not sub.is_empty():
-                        other = self.resolve_marks(sub, needed)
-                        self._combine_marks(marks, other, needed)
+        if "combine" in desc:
+            for field in [f for f in desc["combine"] if f in node]: # Keeps order
+                child = self.resolve_marks(node[field], needed)
+                self._combine_marks(marks, child)
 
-        if "localg" in act:
-            for field in act["localg"]:
-                if field in node:
-                    sub = node[field]
-                    for s in sub:
-                        other = self.resolve_marks(sub[s], needed)
-                        self._combine_marks(marks, other, needed)
-
-        if "rem_break" in act and "breaks" in needed:
-            marks["breaks"].difference_update(act["rem_break"])
-
-        if "add_break" in act and "breaks" in needed:
-            marks["breaks"].update(act["add_break"])
+        # Marking type specific
+        if "breaks" in needed:
+            if "rem_breaks" in desc:
+                marks["breaks"].difference_update(desc["rem_breaks"])
+            if "add_breaks" in desc:
+                marks["breaks"].update(desc["add_breaks"])
 
         return marks
 
