@@ -1246,6 +1246,77 @@ Now we must implement our algorithm, clarifying our ideas in the software.
 
 \subsection{Implementing the Automarker}
 
+The main class to be implemented is the \texttt{AutoMarker} class, this implements all of the functionality needed to create a hybrid automarker.
+We define the class as so:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(res\_order, mark, user, review, defaults)}] \hfill \\
+The constructor takes a large number of arguments, but nevertheless is fairly simple.
+
+\texttt{res\_order} defines the resolution order we will use. Rather than ordering all four of \textbf{mark}, \textbf{user}, \textbf{calc} and
+\textbf{default}, we cleverly notice that \textbf{default} will always return to us a value for the markings. This means that any resolution methods
+occuring after \textbf{default} will never be used and can be forgotten. We also decide to make sure that \textbf{default} is always implicitly in
+our list, allowing our recursive marking method to always return a value. Thus we order only \textbf{mark}, \textbf{user} and \textbf{calc},
+represented by a list of strings.
+
+We also take the parameter \texttt{mark}, indicating what to do when have calculated a set of markings for a node. Any markings should be gathered using
+the \texttt{resolve\_marks} method rather than reading from the node, so we do not necessarily need to write the markings once they are calculated. By
+setting this parameter to \texttt{False}, we can calculate markings without affecting the tree in any way.
+
+\texttt{user} and \texttt{review} are two functions that will be used to ask the user for markings, and to review those markings, respectively. These
+cannot be included in the class as \texttt{AutoMarker} is designed to be interface-independent so interaction with a user needs to be dealt with by
+the calling code.
+
+Finally \texttt{defaults} is a dictionary mapping marking types to functions that generate default values. We cannot simply provide the default values,
+as they may be mutable. This would mean that if node's markings are ever changed after being given this default, all other markings with these default
+markings would be changed too.
+
+\item[\texttt{resolve\_marks(node, needed)}] \hfill \\
+This is the method that should be used both internally and externally to resolve markings on a specific node. We supply \texttt{needed}, a set of strings
+indicating all of the types of marking we wish to resolve. The returned value is a dictionary that is guaranteed to contain markings for each of the
+needed types.
+
+The internal workings of this method are simple. First we create an empty dictionary of markings. For each resolution method in our specified resolution
+order, we look at all the types of markings we already have and remove them from \texttt{needed}. Now we ask the current resolution method for all the
+markings in the \texttt{needed} set that it can give us, add these to our marking dictionary and repeat.
+
+Once we have been through the resolution list, recall we implicitly finish with \textbf{default} so now remaining needed markings are filled by defaults.
+To finish we call the user review function and if marking was turned on in the constructor, we will write the calculated markings to the node. We can now
+return our results.
+
+\item[\texttt{\_base\_marks(needed)}] \hfill \\
+This should return the set of markings that we would use to mark an empty program. These should be able to be used as an identity element for
+\texttt{\_combine\_marks}, meaning that their combination should not affect the original markings. Obviously only those marks whose types are in
+\texttt{needed} will be returned, we will assume this is true for all functions taking this parameter.
+
+\item[\texttt{\_combine\_marks(marks, addition, needed)}] \hfill \\
+Often we will have to combine the markings from many nodes into a single set of markings. This method assumes we have already combined a number of nodes
+which result in the markings represented by \texttt{marks}. Now we expect that the next node to be interpreted or executed would generate the markings
+in \texttt{addition} when executed by itself. This method will combine both of these sets of markings and return the result.
+
+\item[\texttt{default\_marks(node, needed)}] \hfill \\
+This implements the \textbf{default} resolution method. It will call the default methods we gave in the contructor to generate a dictionary containing
+markings for all \texttt{needed} types.
+
+\item[\texttt{get\_marks(node, needed)}] \hfill \\
+This is a very simple function, implementing the \textbf{mark} resolution method. All we do is retrieve the \texttt{needed} types of markings from the
+given \texttt{node} if they exist and return a dictionary containing them. This method is not required to return a marking for every \texttt{needed}
+marking type, just like \texttt{calculate\_marks} below.
+
+\item[\texttt{calculate\_marks(node, needed)}] \hfill \\
+Here we implement the resolution method, \texttt{calc}. This is an indirectly recursive method but is guaranteed to terminate so long as the node
+given contains no reference cycles. This should be true as the node should represent a tree.
+
+We can quickly show this property as \texttt{calculate\_mark} calls itself through \texttt{resolve\_marks}, but only on child nodes. Therefore we have
+a base case where our node has no children and so \texttt{calculate\_mark} must terminate. As the AST does not loop and it must be of finite size,
+eventually at some level of recursion we will reach a terminal node, whichever path we take down the tree. Working back up the call tree we can see
+that any call to \texttt{calculate\_marks} must terminate.
+
+There are multiple phases of design for this function which we can now describe.
+\end{description}
+
+\subsubsection{Implementing Marking Calculation - First Try}
+
 \# We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
 \# without prior programmatic analysis.
 
