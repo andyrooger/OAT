@@ -1307,7 +1307,7 @@ marking type, just like \texttt{calculate\_marks} below.
 Here we implement the resolution method, \texttt{calc}. This is an indirectly recursive method but is guaranteed to terminate so long as the node
 given contains no reference cycles. This should be true as the node should represent a tree.
 
-We can quickly show this property as \texttt{calculate\_mark} calls itself through \texttt{resolve\_marks}, but only on child nodes. Therefore we have
+We can quickly show this property as \texttt{calculate\_marks} calls itself through \texttt{resolve\_marks}, but only on child nodes. Therefore we have
 a base case where our node has no children and so \texttt{calculate\_mark} must terminate. As the AST does not loop and it must be of finite size,
 eventually at some level of recursion we will reach a terminal node, whichever path we take down the tree. Working back up the call tree we can see
 that any call to \texttt{calculate\_marks} must terminate.
@@ -1315,7 +1315,30 @@ that any call to \texttt{calculate\_marks} must terminate.
 There are multiple phases of design for this function which we can now describe.
 \end{description}
 
-\subsubsection{Implementing Marking Calculation - First Try}
+\subsubsection{Implementing Marking Calculation - First Attempt}
+
+We already know the structure we expect from our mark calculation. The process starts by calling \texttt{calculate\_marks}, and this function will
+need to try and produce markings for each type in \texttt{needed}. To do this we expect to use the markings from various children, depending on the
+type of node we are looking at, to work out the markings for the whole node.
+
+As our method of marking differs based on the type of node, it makes sense to think back to where we have used this pattern previously. We will begin
+implementing this function in the style we used to produce our \texttt{SourceWriter} and derived classes. Therefore \texttt{calculate\_marks} becomes
+a dispatcher function, passing any work onto a method named \texttt{\_marks\_\{node type\}}.
+
+One of these methods is implemented for every type in our AST. If we have forgotten or decided not to implement one of these then rather than raising
+and exception as we would in \texttt{SourceWriter}, we just return no markings. This allows us to just ignore node types we are unsure of and allow
+the other methods in the resolution list to fill the gap.
+
+While this design works correctly, and is flexible enough to allow almost any processing we would like to do, we soon notice flaws for the developer.
+Flexibility is a useful attribute to have, but it is wasted once we notice that most of these nodes are processed in very similar manners, only using
+different child names.
+
+We also have the problem that having this many tiny functions creates a very messy codebase. Most of these may be written in one or two lines, and those
+that take more can usually have their contents outlined into a common function. These problems give rise to our second design.
+
+\subsubsection{Implementing Marking Calculations - Second Attempt}
+
+
 
 \# We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
 \# without prior programmatic analysis.
