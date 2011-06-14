@@ -1426,54 +1426,240 @@ original design for a user reading the code, the actual design is not simple at 
 
 \section{Reordering Program Statements}
 
-The first technique we will seek to implement is the reordering of instructions. As it is required that
-any implemented obfuscating transformations have an accompanying analysis that can be used to (attempt to)
-reverse the modification, we will also try to implement this.
+We are now able to think about implementing our first type of obfuscation; reordering program statements. This will involve two steps,
+firstly we need to decide on a definition for a legal reordering and be able to generate these. Following this we can decide on how to
+choose the 'best' order to either obfuscate of deobfuscate the program.
 
-\subsection{Aims}
+\subsection{Why Reorder Statements?}
 
-Usually a (well-written) program is ordered in such a way as to make it easy for the reader to follow.
+As discussed in previous sections, a well-written program will usually contain many clues to indicate the programmer's thought process
+at the time. This is not a problem, in fact it helps other developers to follow the code and contribute with their own input. 
 
-There are two aspects of the layout we could inspect here; the order of statements, and their grouping (i.e. blocks of statements
-separated, for example, by blank lines). More often than not, the grouping (in a well written program) indicates
-to the reader that all statements in a single group are aimed towards achieving a common goal.
-Knowing this, it is easier for a human reader to read the program with a higher level understanding
-of its function.
+Unfortunately, when the software is distributed in source form, this will help a reverse engineer to do the very same thing. As we do not want
+this to happen, we will try to remove as many of these clues as possible. We shall start by looking at the organisation of the program source.
+This falls broadly into two categories; the layout of of the source code in each file, and the location and order of its components. 
 
-Likewise, the ordering of statements in a program often guides a reader through a human thought process. There may
-be many other valid and equally correct orders for the statements, however the program will tend to be written in
-an order most easy for the programmer to follow. This in turn tends to make it easier for the reverse engineer to follow.
+We have already seen that most of the layout is destroyed during parsing, any whitespace will only be recoverable as an estimate of the original.
+Therefore we may focus on how to change the order and location of program components, restricted by the design of our tool to performing these
+changes within a single source file.
 
-We need not worry about breaking up the groups, these are lost during conversion from source to abstract syntax tree.
-Therefore we will only be dealing in this section with reordering the statements in our programs.
+The reason we are reordering statements becomes apparent when we start to think about what each program component is. We may first think about
+program source at module level, the top level of a source file. This will usually contain a combination of \texttt{import} statements from
+other files, class definitions, function definitions, and normal program code.
 
-\subsection{Effect}
+In Python, a function or class definition is considered to be a compound statement, just like an \texttt{if} or \texttt{for} statement is. This
+means that the entire module level is made up of a series of statements. In fact this is exactly what the Python language reference tells us, that
+any line may be either blank or a statement \cite{fileformat}.
 
-As stated above, the tendency to insert this extra information in the order of statements is human in nature. To a machine the
-order of instructions, if they are still correct, will not usually make a difference to a programatic analysis. We still have an
-equivalent program as we have not removed or added any extra steps into the code, only changed the order.
+Now we can reorder a program at module level just by reordering individual statements. It would be possible to implement this and be satisfied with
+ourselves, but we can do much better. Each statement can be classified as a simple statement such as an assignment or \texttt{import} statement,
+which are of no further use to us, or as a compound statement.
 
-This means it is mainly human analysis and understanding we will be hindering by removing this information. However good
-our obfuscation is, depending on the particular code being obfuscated, a competent reverse engineer may well find it possible
-understand still, or even be able to reorder the statements in such a way that they are closer the original program and clearer
-to the human thought process. The positive token we take from the programatic analyser's blindness to these matters is that it
-can be quite difficult to perform the reverse obfusction automatically.
+Compound statements on the other hand are very useful to us. These include \texttt{if} or \texttt{while} statements and each includes a suite, or
+a list of statements, exactly as the module did. Now using the tools we will implement to reorder the module level of a program, we can also reorder
+the body of any compound statement. This will allow us to rearrange most of the program by thinking only of a much simpler case.
+
+Up until this point we have been thinking about reordering statements as a way to take information away from a reverse engineer. The idea was that
+the original source code would be organised in a logical order, and that related components of the program would likely be close together, in an intuitive
+order for a human. By reordering the program we are destroying that information, and also making it difficult to recreate the original source structure. For
+example it would be difficult to separate logical sections of code with whitespace when each section is interleaved with the others. While it is true that we
+are mostly mystifying a human, we should also see benefits of our obfuscation against a deobfuscator.
+
+Notice that there is no single correct order to write a program in. As long as the ordering produces the correct results, it is valid. One may argue that
+some orderings are better than others, for instance one ordering may be easier to understand or read, or may run faster than another, but there is not
+a single correct answer. This means that a deobfuscator cannot find a single correct ordering, and even if it looks for the best, this may not result in
+the program we started with. We can then say that this type of obfuscation is irreversible in general, a very nice propery for any obfuscation. 
+
+Now being irreversible is very good, but actually we would not care if it did not also bring some benefit in terms of obfuscating the code. Actually
+reordering statements comes in very handy when combined with other types of obfuscation. We will illustrate this with an example, from the background
+research, of an obfuscation technique involving replacing common convenient constructs with more complex representations of themselves.
+
+If this obfuscation was performed by itself, an analyser should find it very easy to recognise the common pattern of the deconstructions of each of these
+constructs. This gives the obfuscation by itself a very low resilience, as there is little effort invested in removing it. Instead may we choose to replace
+these constructs and then reorder all of the statements in that block. Suddenly it is much more difficult to recognise the common pattern, and as we cannot
+accurately reverse the reordering, it is difficult to reverse the steps to find the original program.
+
+\subsection{Specifying the Problem}
+
+So far we have been rather vague about the task we wish to perform. If we are to implement tools for reordering program statements we must now
+define exactly what we mean to do.
+
+During the previous section we discussed the meaning of a program statement, this can be anything from an assignment to a function definition.
+In terms of our AST we can say that any node derived from the \texttt{ast.stmt} class is one which represents some form of statement. From Python's
+abstract grammar \cite{pyagrammar} we can see these are:
+
+\begin{description}
+\item[\texttt{ast.FunctionDef}] \hfill \\
+Definition of a function. Possibly multiline: \texttt{def f(params): pass}
+\item[\texttt{ast.ClassDef}] \hfill \\
+Definition of a class. Possibly multiline: \texttt{class C(bases): pass}
+\item[\texttt{ast.Return}] \hfill \\
+Simple return statement: \texttt{return x}
+\item[\texttt{ast.Delete}] \hfill \\
+Removal of a name binding: \texttt{del x}
+\item[\texttt{ast.Assign} and \texttt{ast.AugAssign}] \hfill \\
+Normal or augmented assignment: \texttt{x = 1} or \texttt{x += 1}
+\item[\texttt{ast.For} and \texttt{ast.While}] \hfill \\
+For or while loop. Possibly multiline: \texttt{for x in range(y): pass} or \texttt{while x: pass}
+\item[\texttt{ast.If}] \hfill \\
+If statement. Possibly multiline: \texttt{if x: pass}
+\item[\texttt{ast.With}] \hfill \\
+With statement, used for convent set up/tear down such as when opening files. Possibly multiline: \texttt{with open(x) as file: pass}
+\item[\texttt{ast.Raise}] \hfill \\
+Raise statement, raises exception: \texttt{raise x}
+\item[\texttt{ast.TryExcept} and \texttt{ast.TryFinally}] \hfill \\
+Exception catching. Possibly multiline: \\
+\texttt{try: pass} \\
+\texttt{except: pass} \\
+\texttt{finally: pass}
+\item[\texttt{ast.Import} and \texttt{ast.ImportFrom}] \hfill \\
+Import other files: \texttt{import tkinter} or \texttt{from tkinter import ttk}
+\item[\texttt{ast.Global} and \texttt{ast.NonLocal}] \hfill \\
+Assign a specific scope to an identifier: \texttt{global x} or \texttt{nonlocal x}
+\item[\texttt{ast.Expr}] \hfill \\
+Simple expression: \texttt{x}
+\item[\texttt{ast.Pass}] \hfill \\
+Do nothing: \texttt{pass}
+\end{description}
+
+Now we will define our reordering operation to be on any list of these statements, so long as the list represents the serial execution of each in turn.
+Such lists are found representing suites in any compound statement, or the body of a module for instance.
+
+\subsection{Defining Legal Orderings}
+
+We know now that we are focusing solely on reordering a linear sequence of statements. At this point we must try to form a definition of a legal ordering
+for the sequence. From this definition, we may draw an implementation of a generator for such orderings.
+
+Let us think about what happens when we run the following sequence of $n$ statements.
+
+$$S_1 \; S_2 \; S_3 \; \ldots \; S_{n-2} \; S_{n-1} \; S_n$$
+
+Beginning at some specified state inside and outside of the program, usually each $S_i$ is executed in turn until we reach $S_n$. There are certain cases where
+this does not happen, the first being in the event we encounter a flow-breaking statement. These are statements that will jump from the linear flow, for
+example a \texttt{return} statement or any statement that can cause an exception. The other case occurs when a statement does not ever terminate.
+
+For now we will only consider sequences such that for any initial state, the sequence will always terminate, and statements will never be flow-breaking. This also
+means that each of the individual statements must terminate. We prove this by assuming one or more of them do not. As we execute each statement in a linear
+order, and there are no flow breaking statements, we must eventually execute the first of these non-terminating statements, hanging the program indefinitely.
+As the sequence terminates this is a contradiction, meaning that every statement must terminate.
+
+We consider the following sequence of statements to be of this type.
+
+$$T_1 \; T_2 \; T_3 \; \ldots \; T_{m-2} \; T_{m-1} \; T_m$$
+
+Again we consider the execution of this sequence, starting with a specified world state and executing each statement in turn. As these statements all terminate,
+and there are no flow-breaking statements, we can see that every single statement is executed in order. During this execution, we will may notice changes to state
+outside of the program, as well as the time between these changes. At the end of the execution we can see the total time of execution and the rest of the program
+will see the internal state left by the executions.
+
+As execution time is very much dependent on the execution environment and difficult to measure without running the program, we have decided to ignore this aspect
+of our statement sequences. Thus during the execution of any legal ordering of the sequence, we wish to preserve changes to the outside world, and their order,
+as well as the internal state left after the execution.
+
+The first part of our definition of a legal reordering of $T_i$ now says:
+
+\begin{description}
+\item[Rule 1] \hfill \\
+For any reordering, all $T_i$ that make changes to the world outside of the program must remain in the same order relative to each other.
+\end{description}
+
+Given this part of the definition, we just need to ensure two more things for our legal ordering; for any reordering we must preserve the final internal
+state as well as the effects of every $T_i$ on the outside world.
+
+Both of these constraints can be tackled using the same method. This will be to ensure that before any statement in the sequence is executed, any internal
+or external state that is read by the statement is identical to that which we would have seen in the original ordering. Then we can be sure that any statement
+will produce exactly the same effect before and after the reordering. We can ensure that the final state is preserved by treating the end of the sequence as
+a stationary statement that reads everything. We do this without any knowledge of the outer world or of the inner workings of the statement.
+
+Let us now add two empty pseudo-statements $T_{start}$ and $T_{end}$ either side of our current statement sequence. $T_{start}$ is assumed to write to every
+region and $T_{end}$ is assumed to read every region. These statements will not be reordered with the rest, and we can now write our sequence as:
+
+$$T_{start} \; T_1 \; T_2 \; T_3 \; \ldots \; T_{m-2} \; T_{m-1} \; T_m \; T_{end}$$
+
+The only information that have about these statements tells us which parts of the internal state each $T_i$ reads or writes during its execution. We will
+also assume that we know if a statement reads or writes to the outside world, but do not care which part of this is interacted with. To record this we
+will split the internal state into separate regions, and assume that every write will replace the entire region with what it is writing. If this is not
+the case then we can think of the statement as first reading the region and then using this data to write to its entirety.
+
+We look at the external state first, noticing that the statements that change it are all those $T_i$s mentioned in \textbf{rule 1}. If any statements
+read from the external state, each of these will need to remain in order relative to the $T_i$s above. We will place a slightly stronger constraint on these
+and instead write:
+
+\begin{description}
+\item[Rule 2] \hfill \\
+For any reordering, all $T_i$ that make changes \textit{or read changes} to the world outside of the program must remain in the same order relative to each other.
+
+Call these statements \textbf{visible} statements.
+\end{description}
+
+Now we see that as a write to any region rewrites the entire region, our initial state condition can be simply fulfilled. First we will define for some region
+$r$ and a statement $T_i$, that the \textbf{providing} statement of $r$ to $T_i$ is the closest statement to be executed before $T_i$ that writes to $r$. Now
+we can write:
+
+\begin{description}
+\item[Rule 3] \hfill \\
+Fix $i \ne {start}$ then for any region $r$ read by $T_i$, the providing statement of $r$ to $T_i$ should be the same before and after reordering.
+\end{description}
+
+These 3 rules alone will now give us a valid ordering, ensuring that changes to the outside world will be performed in order and exactly as they were before.
+This will also ensure that the internal state left after the sequence has executed will be the same before and after the reordering. This assumes we are working
+on our $T_i$s including $T_{start}$ and $T_{end}$, so all statements must terminate and cannot be flow-breaking.
+
+Now we must extend our set of rules to cover sequences of statements that are possibly non-terminating or flow-breaking. It is possible to introduce non-termination
+simply by treating non-terminating statements as visible statements. If a non-terminating statement is encountered, we can guarantee that all visible statements that
+would have been executed by this point in the original ordering still will have been in a legal reordering.
+
+Treating statements that execute slowly as being visible too also solves a problem we would have gained by ignoring execution time earlier. A common
+pattern in software would be to warn user that a slow operation is about to occur, perform the operation, and then possibly let the user know the
+operation is finished. We would usually expect that the user warnings would be visible statements, but they would not rely in any way on the slow
+operation and so would have no reason to stay either side of it. By treating the slow operation as visible, we create this relationship and preserve
+the order. This does make sense as a slow operation will usually become very apparent or visible to the user.
+
+The way we will introduce flow-breaking statements is slightly more complicated, though not by much. If we assume that a flow-breaking statement
+\textit{always} breaks the linear flow, we may decide legal orderings for the statements following could be anything. This works for most types of
+breaks, although a \texttt{yield} statement will break flow while allowing execution to resume from the point at which we left. This means if our
+breaking statement is breaking due to a \texttt{yield}, we have to make sure the ordering following this statement is legal as defined earlier.
+For convenience we will treat all breaking statements the same as our \texttt{yield} statement as it is also how we will treat statements for which
+breaking flow is only a possibility.
+
+We know how we will treat statements following a flow-breaking statements, now we think about those before. We know we have to make sure visible
+statements before or after the break stay before or after the break. Also we know that program state should be left the same when the program breaks
+in whichever legal order we have placed the statements. To achieve this we will use the following final rule:
+
+\begin{description}
+\item[Rule 4] \hfill \\
+Rules 1 to 3 apply only to non-breaking statements. For a sequence containing flow-breaking statements, partition the sequence so that each partition
+contains either a continuous run of non-breaking statements or a single breaking statement. A legal ordering is now some combination of legal orderings
+of each individual partition.
+\end{description}
+
+To illustrate this imagine the following sequence of statements:
+
+$$S_1 \; S_2 \; B_3 \; S_4 \; \ldots \; S_{n-4} \; B_{n-3} \; S_{n-2} \; S_{n-1} \; S_n$$
+
+where $S_i$ and $B_i$ represent non-breaking and breaking statements. These would be partitioned into:
+
+$$S_1 \; S_2 \text{ and } B_3 \text{ and } S_4 \; \ldots \; S_{n-4} \text{ and } B_{n-3} \text{ and } S_{n-2} \; S_{n-1} \; S_n$$
+
+Legal orderings will now be
+
+$$\text{reorder}(S_1 \; S_2) \; B_3 \; \text{reorder}(S_4 \; \ldots \; S_{n-4}) \; B_{n-3} \; \text{reorder}(S_{n-2} \; S_{n-1} \; S_n)$$
+
+We can see that this rule works because the execution of any legal reordering of a partition will result in the same final inner and outer state.
+This happens to be exactly the state required by the following partition. Also we can see visible statements will remain in the same order as
+partitions are not moved relative to each other.
+
+While we have shown that these rules produce correct orderings for any statement list, with respect to the definition of correct we gave earlier,
+we will not always produce a complete set of orderings. This is due to a number of small concessions we made during the reasoning process. While
+this is not perfect, it is a reasonable compromise as to gather a complete set of reorderings for any sequence could require very thorough analysis,
+calculating variable values at various points in the program. This is simply not practical for our task so we will settle with our incomplete but
+correct set.
+
+\# Think about when things maybe read or maybe write
+
+\section{Reordering Program Statements}
 
 \subsection{Method}
-
-We have so far been talking about grouping and reordering of statements. To be clear, a statement here means any node in Python's abstract
-grammar \cite{pyagrammar} labelled as a \texttt{stmt} node. For example common expressions such as assignments are usually statements, or
-an if-else block or loop. Actually, in Python, class and function definitions are really a special form of assignment too and so are also statements.
-
-The current implementation for our obfuscation and analysis tool reads in program source to an AST. This allows us to analyse the code easily
-but also destroys information left in the layout of the code. This is not a problem when obfuscating as we want to remove as much information
-as we can when it is not important to the running of the program.
-
-For the analyser we have slightly more trouble in losing this information. For now we will take a similar route to the obfuscator and assume this
-does not matter as the program will probably already be obfuscated already and lacking in any meanful layout. In actual fact, the AST when created
-will still contain information about statements and line/column numbers. This could be used to recover the lost information, however as soon
-as we perform any other transformation on the AST, there is no guarantee line numbers exist or make sense. This could become a later extension;
-to gain grouping information from the AST.
 
 Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
 to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
@@ -1484,12 +1670,6 @@ orderings hold the information will a a bridge to cross later on.
 Our approach to finding possible statement orderings will be for each node in the list to build a list of every other node in the list that that
 particular node is dependant on. More simply, if the effect of statement A could change the effect of statement B, then B depends on A. For internal
 data such as variable assignments this means if A changes a memory region R that B accesses at some point in the future, then B depends on A.
-
-Also we must look at statements that may perform external changes such as a print statement. An observer of the program would notice immediately
-a change in order of these. Therefore all statements capable of change the world external to the program must remain in order relative to each other.
-We can make sure of this by assuming any function with external effect depends on the IO function immediately previous to it.
-
-When working out possible permutations we can now just search for options that neither add nor remove dependencies between the instructions.
 
 \subsection{Looking for dependencies}
 
