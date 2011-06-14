@@ -1692,7 +1692,7 @@ In summary, we mark a node as visible only if its execution could include the ex
 code, such as in a function call, then we may say this is definitely visible but never that it is not visible. If we cannot confirm a node's visible status
 then we should not try to guess as this is a job for the rest of the resolution order.
 
-\subsubsection{Flow-breaking statements}
+\subsubsection{Flow-breaking Statements}
 
 Flow-breaking nodes are slightly more complicated to deal with but in essence are very similar to visible nodes. Again we define a flow-breaking node
 to be a node that can break flow just like our flow-breaking statement would. Either by \textbf{except}ion, \textbf{return}, \textbf{break}, \textbf{continue},
@@ -1757,17 +1757,103 @@ of the break types for all children it executes during its own execution.
 The exceptions to this rule are that if the parent represents a \texttt{for} or \texttt{while} statement, then \textbf{break} and \textbf{continue} break types
 are dropped from the loop body. Also if the parent represents a function declaration then we drop the \textbf{return} or \textbf{yield} break types from the
 body. Finally if the parent represents a \texttt{try}-\texttt{except} statement that does not specify types of exceptions to catch, then we drop the
-\textbf{except} break type from the \texttt{try} body if it exists. 
+\textbf{except} break type from the \texttt{try} body if it exists.
+
+If we do not know whether or not an break occurs, we prefer to leave the choice up to another method of resolution. A safe default is to assume all breaks occur.
+
+\subsubsection{Discussion on Read and Write Regions for Statements}
+
+The previous two types of markings were very briefly described during the creation of the automarker, and even used for the design of the first two attempts.
+Marking read and write regions for a node is much more complex and made the final design for the automarker necessary.
+
+First we will recapitulate our discussion on read and write regions. Earlier we said that we would split the internal state of the program into these reasons,
+but we did not mention how these splits would be made, or by whom. Our aim is to make these regions as small as possible because the smaller the regions, the
+more accurate we can define our dependencies between statements. When regions start to become larger, we end up making sweeping statements about a large section
+of state that will over-constrain our system.
+
+These regions are hard to define in our system, and we will not be able to mark them completely. Let us first separate the internal state by saying that each
+individual object in program memory is a separate region. As all data in Python is made up of objects and references to objects \cite{datamodel} we can say
+this covers the whole of the internal state. These are separate as objects do not contain other objects, they merely contain references to them.
+
+During the execution of a program, objects will usually be referred to via \textit{names} as in \texttt{x} or more complex expressions built from names such
+as an attribute reference, as in \texttt{a.x}. To find the object that a name refers to we look up the binding for the name in a number of places depending
+on the \textit{scope} of the variable \cite{namebinding}. The more complex expressions are resolved by first looking up the name, and then calling various
+special methods on the object to resolve attributes or indices. When we assign to a simple name, we are not changing the object the name refers to, just
+rebinding the name to a different object.
+
+Now we think about marking regions that a statement reads or writes, remember we have chosen these to be individual objects. These could either be created
+fresh during the execution of the statement, accessed directly by name or a more complex expression involving a name or indirectly accessed through a
+function call or child node. We only wish to mark the regions created before our current node and read inside it, or those that are created or edited
+during the execution of our node and then read later.
+
+Let us think about how we can read an object following our node that was created inside our node. To do this either the object must have been assigned to a
+name, or a reference to it must have been saved in some object that we can access through a named object. This same condition must have also been true before
+our node's execution for any object that was read or written to during this execution.
+
+If we were to decide on a manner in which to represent all of these regions, we would need to be able to represent each and every object creatable during the
+program. To discover what these objects are, the analysis would effectively need to run the program, exploring all possible routes of execution. Instead of this
+we will represent only the regions defining which names map to which objects.
+
+A statement obviously relies on these names to bind the same object, or at least an object created in the same statement in the same way, once it is reordered.
+If we restrict our statements to only write to simple names then the only objects ever changed will be those defining the name bindings. Hence our restricted
+representation covers all possible writes in this case.
+
+To represent objects that are read by our statements, we see that we already cover any reads of objects binding names. For reads of objects bound or any objects
+referenced by them, we see these objects are not ever changed after they are created so we treat the whole object as well as the set of objects reachable from
+it as a single object. Now so long as the name bindings are correct, we will refer to the correct object, and this will be in the correct state.
+
+This discussion tells us that by restricting any writing performed from our statements to only write to simple names, we can represent every possible read or
+write region by the names we access them from.
+
+We have so far implicitly assumed that all reads and writes will be performed in the same block, meaning that all names will be looked up in the same manner. To
+understand why we will discuss briefly the method used to resolve a name. First we define a block as a section of the program executed as a unit, these are a
+module, a function body or a class body. Names can be bound in any of these blocks.
+
+When a name is used in a block, every use of the name inside that block will refer to the same binding in some block. If there are \texttt{global} or
+\texttt{nonlocal} modifiers inside the block for this name, it will always refer to the binding in either the module block or the nearest enclosing
+function block that uses it respectively. If these modifiers are not present and the variable is written at some point in the block, then this will
+be a local variable and looked up inside the current blocks bindings. Otherwise the references will be nonlocal if a binding exists or global.
+
+We can see from this that Python's name binding allows us to statically build a list of names used inside a block as well as the section of the program in
+which the name was bound. This means for a program like the following we can uniquely identify all reads and writes within a specific block:
+
+\lstinputlisting{../snippets/rw.py.local}
+
+It is possible that names could be bound that are not found inside our current block. Consider the following example where we cannot uniquely identify
+written regions by name.
+
+\lstinputlisting{../snippets/rw.py.nonlocal}
+
+Here we see that inside \texttt{h}'s body we are both reading and writing to two different variables named \texttt{a} due to the indirect references in
+function calls. It may appear that we can avoid this conflict by adding the block in which our variable was bound to the name, however more complex
+examples can be constructed in which it is not possible to uniquely identify the block.
+
+Instead, we choose to avoid this conflict by restricting all parts of the program that will be run directly or indirectly from our current block so that
+they only write local values. These cannot affect any statements in our block, and values that are read by other parts of the program either can be labelled
+by the names in our block, or cannot be affected by our block so the reading will not matter.
+
+Now we have restricted our valid marking domain so that we will be able to mark regions read and written by a node using names inside its enclosing block
+only if:
+
+\begin{itemize}
+\item Any node inside $B$ or that is executable by a node in $B$ must only assign only to simple names.
+\item Any node executable by a node in $B$ can only write to local variables.
+\end{itemize}
+
+Having defined our parameters, we can start to think about how to apply these marking.
+
+\subsubsection{Read and Write Regions for Statements}
+
+\# We will reason about this type of markings by starting with a very simple subset of the language and working our way upward.
 
 \# Think about when things maybe read or maybe write
+\# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
 
 \section{Reordering Program Statements}
 
 \subsection{Method}
 
-Even though we are discussing it, grouping is not a great issue as layout obfuscation is not our primary concern. We want now to learn how
-to reorder statements without breaking the program. This means we should be able to receive an ordered list of AST nodes and calculate somehow
-the other permutations of statments which have the same visible output. Once we have a method for this we can obfuscate or deobfuscate by our choice
+Once we have a method for this we can obfuscate or deobfuscate by our choice
 of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
 orderings hold the information will a a bridge to cross later on.
 

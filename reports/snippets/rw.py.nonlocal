@@ -1,0 +1,13 @@
+def f():
+    global a  # a global for whole block
+    a = 4
+
+def g():
+    global a
+    print(a)  # Prints 4
+
+def h():
+    a = 2  # local a
+    f()  # global a = 4
+    g()  # prints global a = 4
+    print(a)  # prints local a = 2

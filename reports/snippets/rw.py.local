@@ -1,0 +1,20 @@
+a = 1  # Written at global level
+b = 2  # Written at global level
+
+def f(x, y, z):
+    a = 1  # Written in f's scope
+    print(a)  # Read from f's scope
+    print(b)  # Not found in f's scope, use global
+
+    def g(x, y, z):
+        b = 3  # Written in g's scope
+        def h(x, y, z):
+            global a  # a global in entire block
+            nonlocal b  # b nonlocal in entire block
+            print(a)  # global a
+            print(b)  # b in g's scope
+            b = 4  # Assign b in g's scope
+        h(x, y, z)
+        print (b) # Will be 4
+
+    g(x, y, z)
