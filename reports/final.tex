@@ -1761,10 +1761,12 @@ body. Finally if the parent represents a \texttt{try}-\texttt{except} statement 
 
 If we do not know whether or not an break occurs, we prefer to leave the choice up to another method of resolution. A safe default is to assume all breaks occur.
 
-\subsubsection{Discussion on Read and Write Regions for Statements}
+\subsection{Marking Read and Write Regions for Statements}
 
 The previous two types of markings were very briefly described during the creation of the automarker, and even used for the design of the first two attempts.
 Marking read and write regions for a node is much more complex and made the final design for the automarker necessary.
+
+\subsubsection{Domain and Representation}
 
 First we will recapitulate our discussion on read and write regions. Earlier we said that we would split the internal state of the program into these reasons,
 but we did not mention how these splits would be made, or by whom. Our aim is to make these regions as small as possible because the smaller the regions, the
@@ -1836,13 +1838,80 @@ Now we have restricted our valid marking domain so that we will be able to mark 
 only if:
 
 \begin{itemize}
-\item Any node inside $B$ or that is executable by a node in $B$ must only assign only to simple names.
+\item Any node inside $B$ or that is executable by a node in $B$ must assign only to simple names.
 \item Any node executable by a node in $B$ can only write to local variables.
 \end{itemize}
 
 Having defined our parameters, we can start to think about how to apply these marking.
 
-\subsubsection{Read and Write Regions for Statements}
+\subsubsection{Mathematical Setup}
+
+We will not be marking all of these reads and writes, only the ones that happen directly inside our block. Other reads and writes that happen indirectly as a
+result of a function call or similar will need to be manually marked by the user. This restriction may be lifted at a later date, or we may develop tools to help
+the user perform this marking, but due to time restrictions we will not do this now.
+
+When marking our nodes we will focus on only one at a time. Writes will be marked if the name was written and can be read by the execution of a node in the
+future, before any overwriting takes place. Reads will be marked if the name is written to before our node's execution and is read by the node before any
+overwriting. For now we will assume a node either definitely writes or reads, or it definitely does not.
+
+To set up the mathematics, we assume no reads or writes are performed simultaneously, then we label each of these operations with an infinite orderable set $T$ to
+indicate a sequence of execution (lowest label is first). Note that this labels the read or write operations rather than what they write to. For any read or
+write operation $x$, we take its label using $\mathcal{T}(x)$, and we take the name it affects with $n(x)$. Say $R$ is the set of read operations and $W$ is the
+set of write operations, these are disjoint sets. Finally write $\mathcal{T}(x) = t^{-} \in T$ when $x$ is the first read or write operation in our node, and
+$t^{+} \in T$ when $x$ is the last. The we can write:
+
+$$O_N = \{x \in R \cup W \mid t^{-} \le \mathcal{T}(x) \le t^+ \}$$
+
+is the set of operations performed during the execution of our node, $N$. We also write:
+
+$$E(X) = \{x \in X \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in X \}$$
+
+is the set of earliest uses of every name in the set $X$. Using these two definitions we can see that the set $M_R = \{n(x) \mid x \in E(O_N) \cap R \}$ gives us
+all names that have reads in $O_N$ that must read values written before our node. To see this we notice:
+
+$$m \in M_R$$
+$$\implies \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R$$
+$$\implies x \in  E(O_N) \text{ and } x \in R$$
+This $x$ must be unique as the definition of $E(O_N)$ chooses $y \in O_N$ to minimise $\mathcal{T}(y)$ for each name. Labels are unique so these minimal elements
+will be also. So fix $x$.
+$$\implies \text{earliest operation on $m$ in our node is $x$ and it is a read}$$
+$$\implies \text{$m$ is read by $x$ before it is written in $O_N$}$$
+$$\implies \text{$m$ is read in $O_N$ before it is written in $O_N$}$$
+
+Also
+
+$$\text{$m$ is read in $O_N$ before it is written in $O_N$}$$
+Choose $x$ as the earliest read of $m$ in $O_N$.
+$$\implies x \in E(O_N \cap R) \text{ and $m$ is not written by some $y \in O_N$ before $x$}$$
+$$\implies x \in E(O_N \cap R) \text{ and } \not \exists y \in O_N \cap W \text{ st } n(y) = m \text{ and } \mathcal{T}(y) < \mathcal{T}(x)$$
+$$\implies x \in E(O_N \cap R) \text{ and } n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N \cap W$$
+$$\implies n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in (O_N \cap W) \cup (O_N \cap R)$$
+$$\implies n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N$$
+$$\implies x \in E(O_N)$$
+$$\implies x \in R \cap E(O_N) \text{ as $x$ is a read}$$
+$$\implies \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R$$
+$$\implies m \in M_R$$
+
+So
+
+$$m \in M_R \Leftrightarrow \text{$m$ is read in $O_N$ before it is written in $O_N$}$$
+
+Then $M_R$ is exactly the set we want to use to mark reads for our node; the set of names read in our node before they are written in our node. We also define
+$M_W = \{n(x) \mid x \in O_N \cap W \}$. These are all of the names written in our node that can be read after it. This should be obvious as the names written
+during our node's execution are exactly those that will have changed and be readable by following nodes.
+
+\subsubsection{Calculation of Node Markings}
+
+We assume that a node is executed by executing a subset of its child nodes in a definite order, for example a list usually represesents
+sequentially executed statements.
+
+
+To form our markings we will start with a very simple situation where we mark a node $N$ whose execution involves sequentially executing two nodes,
+$N_1$ and $N_2$, in the same scope.
+
+
+To begin with we will assume that any reads or writes that a node \textit{can} perform are \textit{definitely} performed.
+
 
 \# We will reason about this type of markings by starting with a very simple subset of the language and working our way upward.
 
