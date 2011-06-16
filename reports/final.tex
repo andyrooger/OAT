@@ -2005,7 +2005,181 @@ $$M_W(N) = \bigcup_i^c M_W(N_i)$$
 
 \subsubsection{Calculation of Probable Read and Write Markings}
 
-\# Think about when things maybe read or maybe write
+In the previous section we looked at how to mark statements that either definitely do or don't write or read statements. There are cases such as
+\texttt{if} statements in which we may not know which child node will be executed and so do not know if any reads or writes will take place. In this
+case we will need to convert the possible read or write into a definite read or write.
+
+First we look at the rules we defined earlier relating to read and write markings. Recall rule 3 states that the providing statement of
+any name to any statement must be the same before and after the reordering. Let us take a node $N$ whose execution involves executing a
+child with definite read and write markings, $N_D$ followed by either the execution of a second child $N_P$, or nothing. We want to define
+a set of markings on $N$ that will ensure that rule 3 is followed whichever option is taken.
+
+To do this we will not rely on the dependency between statements that is described by providing statements, but we will rely on dependency
+between providing operations which the statements themselves rely on. A providing operation is defined much the same as a providing statement,
+for some $r \in R$, the providing operation of $r$ is $p_r \in W$ such that:
+
+\begin{equation} \label{provop}
+\mathcal{T}(p_r) < \mathcal{T}(r) \text{ and } \\
+\forall y \in W \quad n(r) = n(y) \text{ and } \mathcal{T}(y) < \mathcal{T}(r) \rightarrow \mathcal{T}(p_r) \ge \mathcal{T}(y)
+\end{equation}
+
+When statements are reordered, and hence operations within them are reordered, the providing operation for every $r \in R$ will need to stay the same to
+obey rule three. This reordering is performed by relabelling each operation, so we can define this by replacing $\mathcal{T}$ with a new mapping, say
+$\mathcal{U}$.
+
+After a legal reordering, our operations will still be operating on the same names but will be in a new order. All we know about this order is that
+\eqref{provop}, with $\mathcal{T}$ replaced by some $\mathcal{U}$ still represents the same write operation for a fixed read operation. Now unless
+both of our possible execution paths have the same markings, we will be forced to choose some that are not correct, either adding fake operations
+to a node or leaving real ones.
+
+Remember it is $N$ we are marking. We want to make sure that markings on this node imply the same $p_r$ for any read that actually occurs, no matter
+which execution path is chosen. By ensuring this, we can say that after a rearrangement rule 3 will be obeyed for any path. Note that it will not
+break our logic to add a new $r \in R$ and hence a new $p_r$, but it will if we ignore a read that exists in some execution path.
+
+Now we think of our markings for $N$. Let us assume for the moment that $O_{N_P}$ contains a single read operation $z$. If we do not take
+the option to run $N_P$ then our markings for $N$ would be $M_R(N_D)$ and $M_W(N_D)$ using the previous section. If we choose to execute $N_P$ then $N$'s
+read markings will be $M_R(N_D) \cup (M_R(N_P) \setminus M_W(N_D))$. This is $M_R(N_D)$ if $N_D$ writes $n(z)$, or the same with $z$ added otherwise.
+$N$'s write markings would be $M_W(N_D)$.
+
+From this we see that we can quickly mark $N$ as reading $M_W(N_D)$, this was clear from the beginning as $N_P$ does not write anything. Now we need to choose
+how to represent the $M_R(N_D)$ with the possible union of $\{z\}$ to create $N$'s read markings. Whichever representation we choose, we will need to make sure
+that no $p_r$ is changed. If we choose to ignore $z$ and pretend we always choose not to run it then we are ignoring a read statement that occurs when $N_P$ is
+executed and breaking our logic.
+
+This means we must assume $N$ contains our read operation always. We check this does not affect any $p_r$ in the other execution path simply by noting that we
+are not changing any write operations. Due to the definition of $p_r$ this means we cannot change its value. Hence in both paths we can safely say that all
+$p_r$ remain the same write operations.
+
+Now we try the same reasoning where $N_P$ contains a single write operation, we use $z$ again to represent this. In this case, always executing $N_P$ would
+make $N$'s marks $M_R(N_D)$ and $M_W(N_D) \cup \{ z \}$. On the other hand, never executing $N_P$ would result in the markings $M_R(N_D)$ and $M_W(N_D)$.
+
+First we try using $M_R(N_D)$ as the read markings for both execution paths, and concentrate on the write markings. If we assume that $N_P$ is never executed
+we see that the conditions in \eqref{provop} are relaxed as we lose a $w \in W$ to test against. This would means that our markings would not necessarily imply
+the correctness of out $r_p$s, so instead we try assuming that $N_P$ is always executed. In this case we are an extra condition for our $p_r$:
+
+$$(n(r) = n(z) \text{ and } \mathcal{T}(z) < \mathcal{T}(r)) \rightarrow \mathcal{T}(p_r) \ge \mathcal{T}(z)$$
+
+If this becomes false for any current $p_r$ then this $p_r$ becomes $z$, breaking our conditions. For this to happen, we need to find a read of the same name
+that occurs after $z$, and whose providing operation occurs before $z$. More simply if our write is placed between a read operation $r$ and its providing operation
+of the same name as $z$, then we imply incorrect $p_r$ for that $r$ when $N_P$ is not executed.
+
+We will solve this by cleverly noticing that the reason we wish our $p_r$ so stay the same is to ensure the ordering and locality of each read and write. Our
+plan was that by making our markings imply all of the correct $p_r$ for real reads in both execution paths, we can ensure that these will be the same when we
+take out our dummy operations.
+
+We have already shown that introducing a dummy read does not affect the implication of current $p_r$. If we introduce a dummy read $q$, such that $n(q) = n(z)$,
+immediately before $z$ then we do not affect any $p_r$. If $z$ did not sit between a read and its provider then these markings will easily imply the true
+providing operations for either execution path. Otherwise we say it sits between $s$ and $p_s$ and reason about the effect of introducing our new read operation.
+
+Now before a reordering we can say the following:
+$$
+\mathcal{T}(p_s) < \mathcal{T}(q) \text{ and }
+\forall y \in W \quad n(q) = n(y) \text{ and } \mathcal{T}(y) < \mathcal{T}(q) \rightarrow \mathcal{T}(p_s) \ge \mathcal{T}(y)
+$$
+$$
+\mathcal{T}(z) < \mathcal{T}(s) \text{ and }
+\forall y \in W \quad n(s) = n(y) \text{ and } \mathcal{T}(y) < \mathcal{T}(s) \rightarrow \mathcal{T}(z) \ge \mathcal{T}(y)
+$$
+
+and as $q$ and $z$ occur in the same statement, they will not be reordered so
+
+$$\mathcal{T}(q) < \mathcal{T}(z) \text{ and } \not \exists x \text{ st } \mathcal{T}(q) < \mathcal{T}(x) < \mathcal{T}(z)$$
+
+After the reordering, these are maintained replacing $\mathcal{T}$ with $\mathcal{U}$. We have shown that when we choose the execution path that executes $N_P$,
+the correct $r_p$s will be implied. This is also true if $z$ did not sit between a providing pair. We now assume we never execute $N_P$ and so remove the dummy
+statements $q$ and $z$ from $R$ and $W$, giving us $R^\prime$ and $W^\prime$ and the equations:
+
+\begin{align}
+\mathcal{U}(p_s) < \mathcal{U}(q) \text{ and } \mathcal{U}(z) < \mathcal{U}(s) \label{uordering} \\
+\forall y \in W \quad n(q) = n(y) \text{ and } \mathcal{U}(y) < \mathcal{U}(q) \rightarrow \mathcal{U}(p_s) \ge \mathcal{U}(y) \label{uqps} \\
+\forall y \in W \quad n(s) = n(y) \text{ and } \mathcal{U}(y) < \mathcal{U}(s) \rightarrow \mathcal{U}(z) \ge \mathcal{U}(y) \label{usz} \\
+\mathcal{U}(q) < \mathcal{U}(z) \text{ and } \not \exists x \text{ st } \mathcal{U}(q) < \mathcal{U}(x) < \mathcal{U}(z) \label{uqz}
+\end{align}
+
+Any $r_p$ we have not mentioned were not affected, to show that our marking was correct, we must show that:
+
+\begin{equation} \label{conds}
+\mathcal{U}(p_s) < \mathcal{U}(s) \text{ and }
+\forall y \in W^\prime \quad n(s) = n(y) \text{ and } \mathcal{U}(y) < \mathcal{U}(s) \rightarrow \mathcal{U}(p_s) \ge \mathcal{U}(y)
+\end{equation}
+
+We can quickly see from \eqref{uordering} and \eqref{uqz} that the first part of this is true; $\mathcal{U}(p_s) < \mathcal{U}(s)$. Now we fix
+$y \in W^\prime$ and see that from \eqref{uqps} and \eqref{usz}, both:
+
+\begin{align}
+n(q) = n(y) \text{ and } \mathcal{U}(y) < \mathcal{U}(q) \rightarrow \mathcal{U}(p_s) \ge \mathcal{U}(y) \label{fixyq} \\
+n(s) = n(y) \text{ and } \mathcal{U}(y) < \mathcal{U}(s) \rightarrow \mathcal{U}(z) \ge \mathcal{U}(y) \label{fixys}
+\end{align}
+
+If $n(s) = n(y)$ then we know by definition of $q$ and $z$ that also $n(q) = n(y)$. Suppose additionally that $\mathcal{U}(y) < \mathcal{U}(s)$ then
+$\mathcal{U}(y) \le \mathcal{U}(z)$ by \eqref{fixys}. From here, using the first part of \eqref{uqz} we see that either $\mathcal{U}(q) \le \mathcal{U}(y) \le \mathcal{U}(z)$, or
+$\mathcal{U}(y) \le \mathcal{U}(q) < \mathcal{U}(z)$.
+
+$y \in W^\prime$ so is not $z$ and as $y$ is a write operation and $q$ is a read these cannot be equal either. Therefore \eqref{uqz} explicity disallows
+the first of these options, meaning that $\mathcal{U}(y) < \mathcal{U}(q) < \mathcal{U}(z)$. Feeding this into \eqref{fixyq}, we get
+$\mathcal{U}(p_s) \ge \mathcal{U}(y)$, proving \eqref{conds} and showing our marking was correct.
+
+Now we look back to our node $N$ that is executed by the execution of one of its children, $N_D$, and the possible execution of $N_P$. If $N_P$
+contains a single read operation, then
+
+\begin{align*}
+M_R(N) =& M_R(N_D) \cup M_R(N_P) \\
+M_W(N) =& M_W(N_D)
+\end{align*}
+
+If $N_P$ contains a single write operation then we can mark $N$ with
+
+\begin{align*}
+M_R(N) =& M_R(N_D) \cup M_W(N_P) \\
+M_W(N) =& M_W(N_D) \cup M_W(N_P)
+\end{align*}
+
+These are actually both equivalent to
+
+\begin{align*}
+M_R(N) =& M_R(N_D) \cup M_R(N_P) \cup M_W(N_P) \\
+M_W(N) =& M_W(N_D) \cup M_W(N_P)
+\end{align*}
+
+What we are doing here is treating both of the coming left hand examples as the right hand examples
+
+\begin{minipage}[b]{0.4\linewidth}
+\centering
+\lstinputlisting[basicstyle=\small]{../snippets/mayber.py.before}
+\end{minipage}
+\hspace{1cm}
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\lstinputlisting[basicstyle=\small]{../snippets/mayber.py.after}
+\end{minipage}
+
+\begin{minipage}[b]{0.4\linewidth}
+\centering
+\lstinputlisting[basicstyle=\small]{../snippets/maybew.py.before}
+\end{minipage}
+\hspace{1cm}
+\begin{minipage}[b]{0.5\linewidth}
+\centering
+\lstinputlisting[basicstyle=\small]{../snippets/maybew.py.after}
+\end{minipage}
+
+Now we consider an $N_P$ containing multiple read an write operations. From this node we construct a new node that just reads each name in $M_R(N_P)$ in turn
+and then writes each $M_W(N_P)$. This new node $N_P^\prime$ will have exactly the same markings as $N_P$ would by itself. Now we split $N_P^\prime$ into 
+multiple $N_r^i$ for reads and $N_w^j$ for the writes with either a single read or write operation in each.
+
+$N$'s markings can now be calculated by repeatedly using the above to merge these possible $N^*_x$'s in order with $N_D$ until we have a single set of markings.
+Eventually we can show that 
+
+\begin{align*}
+M_R(N) &= M_R(N_D) \cup \bigcup_i M_R(N_r^i) \cup \bigcup_i M_W(N_r^i) \cup \bigcup_j M_R(N_w^j) \cup \bigcup_j M_W(N_w^j) \\
+       &= M_R(N_D) \cup \bigcup_i M_R(N_r^i) \cup \bigcup_j M_W(N_w^j) \\
+       &= M_R(N_D) \cup M_R(N_P) \cup M_W(N_P) \text{ by construction} \\
+M_W(N) &= M_W(N_D) \cup \bigcup_i M_W(N_r^i) \cup \bigcup_j M_W(N_w^j) \\
+       &= M_W(N_D) \cup M_W(N_P)
+\end{align*}
+
+\subsection{Application of Read and Write Region Theory}
+
 \# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
 
 \section{Reordering Program Statements}

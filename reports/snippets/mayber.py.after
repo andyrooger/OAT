@@ -1,0 +1,7 @@
+x = 4
+if y:
+    do_something()
+x
+if y:
+    print(x)
+    do_something_else()

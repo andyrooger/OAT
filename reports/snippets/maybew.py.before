@@ -1,0 +1,5 @@
+x = 4
+if y:
+    do_something()
+    x = 3
+    do_something_else()
