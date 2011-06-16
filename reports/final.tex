@@ -1761,7 +1761,7 @@ body. Finally if the parent represents a \texttt{try}-\texttt{except} statement 
 
 If we do not know whether or not an break occurs, we prefer to leave the choice up to another method of resolution. A safe default is to assume all breaks occur.
 
-\subsection{Marking Read and Write Regions for Statements}
+\subsection{Theory for Read and Write Regions of Statements}
 
 The previous two types of markings were very briefly described during the creation of the automarker, and even used for the design of the first two attempts.
 Marking read and write regions for a node is much more complex and made the final design for the automarker necessary.
@@ -1856,64 +1856,154 @@ overwriting. For now we will assume a node either definitely writes or reads, or
 
 To set up the mathematics, we assume no reads or writes are performed simultaneously, then we label each of these operations with an infinite orderable set $T$ to
 indicate a sequence of execution (lowest label is first). Note that this labels the read or write operations rather than what they write to. For any read or
-write operation $x$, we take its label using $\mathcal{T}(x)$, and we take the name it affects with $n(x)$. Say $R$ is the set of read operations and $W$ is the
-set of write operations, these are disjoint sets. Finally write $\mathcal{T}(x) = t^{-} \in T$ when $x$ is the first read or write operation in our node, and
-$t^{+} \in T$ when $x$ is the last. The we can write:
+write operation $x$, we take its label using $\mathcal{T}(x)$, and we take the name it affects with $n(x)$.
 
-$$O_N = \{x \in R \cup W \mid t^{-} \le \mathcal{T}(x) \le t^+ \}$$
+Say $R$ is the set of read operations and $W$ is the set of write operations over the entire program, these are disjoint sets. Finally write
+$\mathcal{T}(x) = t^{-}_N \in T$ when $x$ is the first read or write operation in our node, and $t^{+}_N \in T$ when $x$ is the last. We are
+assuming that such operations exists, otherwise we can safely say that all markings for reads and writes will be empty. Now we can write:
+
+$$O_N = \{x \in R \cup W \mid t^{-}_N \le \mathcal{T}(x) \le t^+_N \}$$
 
 is the set of operations performed during the execution of our node, $N$. We also write:
 
 $$E(X) = \{x \in X \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in X \}$$
 
-is the set of earliest uses of every name in the set $X$. Using these two definitions we can see that the set $M_R = \{n(x) \mid x \in E(O_N) \cap R \}$ gives us
+is the set of earliest uses of every name in the set $X$. Using these two definitions we can see that the set $M_R(N) = \{n(x) \mid x \in E(O_N) \cap R \}$ gives us
 all names that have reads in $O_N$ that must read values written before our node. To see this we notice:
 
-$$m \in M_R$$
-$$\implies \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R$$
-$$\implies x \in  E(O_N) \text{ and } x \in R$$
+\begin{align*}
+         & m \in M_R(N) \\
+\implies & \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R \\
+\implies & x \in  E(O_N) \text{ and } x \in R \\
+\end{align*}
+
 This $x$ must be unique as the definition of $E(O_N)$ chooses $y \in O_N$ to minimise $\mathcal{T}(y)$ for each name. Labels are unique so these minimal elements
 will be also. So fix $x$.
-$$\implies \text{earliest operation on $m$ in our node is $x$ and it is a read}$$
-$$\implies \text{$m$ is read by $x$ before it is written in $O_N$}$$
-$$\implies \text{$m$ is read in $O_N$ before it is written in $O_N$}$$
+
+\begin{align*}
+\implies & \text{earliest operation on $m$ in our node is $x$ and it is a read} \\
+\implies & \text{$m$ is read by $x$ before it is written in $O_N$} \\
+\implies & \text{$m$ is read in $O_N$ before it is written in $O_N$} \\
+\end{align*}
 
 Also
 
-$$\text{$m$ is read in $O_N$ before it is written in $O_N$}$$
-Choose $x$ as the earliest read of $m$ in $O_N$.
-$$\implies x \in E(O_N \cap R) \text{ and $m$ is not written by some $y \in O_N$ before $x$}$$
-$$\implies x \in E(O_N \cap R) \text{ and } \not \exists y \in O_N \cap W \text{ st } n(y) = m \text{ and } \mathcal{T}(y) < \mathcal{T}(x)$$
-$$\implies x \in E(O_N \cap R) \text{ and } n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N \cap W$$
-$$\implies n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in (O_N \cap W) \cup (O_N \cap R)$$
-$$\implies n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N$$
-$$\implies x \in E(O_N)$$
-$$\implies x \in R \cap E(O_N) \text{ as $x$ is a read}$$
-$$\implies \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R$$
-$$\implies m \in M_R$$
+\begin{align*}
+         & \text{$m$ is read in $O_N$ before it is written in $O_N$} \\
+         & \text{Choose $x$ as the earliest read of $m$ in $O_N$.} \\
+\implies & x \in E(O_N \cap R) \text{ and $m$ is not written by some $y \in O_N$ before $x$} \\
+\implies & x \in E(O_N \cap R) \text{ and } \not \exists y \in O_N \cap W \text{ st } n(y) = m \text{ and } \mathcal{T}(y) < \mathcal{T}(x) \\
+\implies & x \in E(O_N \cap R) \text{ and } n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N \cap W \\
+\implies & n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in (O_N \cap W) \cup (O_N \cap R) \\
+\implies & n(y) = m \rightarrow \mathcal{T}(y) \ge \mathcal{T}(x) \quad \forall y \in O_N \\
+\implies & x \in E(O_N) \\
+\implies & x \in R \cap E(O_N) \text{ as $x$ is a read} \\
+\implies & \exists x \text{ st } m = n(x) \text{ and } x \in E(O_N) \cap R \\
+\implies & m \in M_R(N)
+\end{align*}
 
 So
 
-$$m \in M_R \Leftrightarrow \text{$m$ is read in $O_N$ before it is written in $O_N$}$$
+$$m \in M_R(N) \Leftrightarrow \text{$m$ is read in $O_N$ before it is written in $O_N$}$$
 
-Then $M_R$ is exactly the set we want to use to mark reads for our node; the set of names read in our node before they are written in our node. We also define
-$M_W = \{n(x) \mid x \in O_N \cap W \}$. These are all of the names written in our node that can be read after it. This should be obvious as the names written
+Then $M_R(N)$ is exactly the set we want to use to mark reads for our node; the set of names read in our node before they are written in our node. We also define
+$M_W(N) = \{n(x) \mid x \in O_N \cap W \}$. These are all of the names written in our node that can be read after it. This should be obvious as the names written
 during our node's execution are exactly those that will have changed and be readable by following nodes.
 
-\subsubsection{Calculation of Node Markings}
+\subsubsection{Calculation of Simple Node Markings}
 
-We assume that a node is executed by executing a subset of its child nodes in a definite order, for example a list usually represesents
-sequentially executed statements.
+We will assume that a node is executed by executing a subset of its child nodes in a definite order. For example a list usually represesents
+sequentially executed statements, or a function definition will evaluate all of its default arguments and then assign to the function name.
 
+To form our markings we will start with a very simple situation where we mark a node $N$ whose execution involves the sequential execution of two nodes,
+$N_1$ and $N_2$, in the same scope. If either node has empty reads or writes markings we can say it will have no effect on the overall markings so can be ignored,
+leaving us with the markings from the other node as our final markings. Otherwise we can say that
 
-To form our markings we will start with a very simple situation where we mark a node $N$ whose execution involves sequentially executing two nodes,
-$N_1$ and $N_2$, in the same scope.
+\begin{equation}\label{ncomp}
+O_N = O_{N_1} \cup O_{N_2}
+\end{equation}
 
+where $\mathcal{T}(x) < \mathcal{T}(y) \quad \forall x \in N_1, y \in N_2$
 
-To begin with we will assume that any reads or writes that a node \textit{can} perform are \textit{definitely} performed.
+The read regions for each $N_i$ are marked as $M_R(N_i)$ and the written regions are $M_W(N_i)$. We want to use these to calculate $M_R(N)$ and $M_W(N)$. Working
+from the previous section we see that
 
+\begin{align*}
+& M_W(N) \\
+=& \{ n(x) \mid x \in O_N \cap W \} \\
+=& \{ n(x) \mid x \in \{y \in R \cup W \mid t^{-}_N \le \mathcal{T}(y) \le t^+_N \} \cap W \} \\
+=& \{ n(x) \mid x \in \{y \in W \mid t^{-}_N \le \mathcal{T}(y) \le t^+_N \} \} \\
+=& \{ n(x) \mid x \in W \text{ st } t^{-}_N \le \mathcal{T}(x) \le t^+_N \} \\
+=& \{ n(x) \mid x \in W \text{ st } t^{-}_{N_1} \le \mathcal{T}(x) \le t^+_{N_1} \} \cup
+   \{ n(x) \mid x \in W \text{ st } t^{-}_{N_2} \le \mathcal{T}(x) \le t^+_{N_2} \} \\
+&  \text{(As } t^-_N = t^-_{N_1} \le t^+_{N_1} \le t^-_{N_2} \le t^+_{N_2} = t^+_N \text{ and from \eqref{ncomp})} \\
+=& \{ n(x) \mid x \in W \cap O_{N_1} \} \cup \{ n(x) \mid x \in W \cap O_{N_2} \} \\
+=& M_W(N_1) \cup M_W(N_2)
+\end{align*}
 
-\# We will reason about this type of markings by starting with a very simple subset of the language and working our way upward.
+So we can generate the write markings for this particular node by taking the union of the write markings for both children. Now we look at the read
+markings. These are defined by
+
+$$M_R(N) = \{n(x) \mid x \in E(O_N) \cap R \}$$
+
+Notice that
+
+\begin{align*}
+& E(O_N) \cap R \\
+=& \{x \in O_N \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R \\
+=& \{x \in O_{N_1} \cup O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R\\
+& \text{By \eqref{ncomp}} \\
+=& \{x \in O_{N_1} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R \\
+& \cup \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R \\
+=& \{x \in O_{N_1} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_{N_1} \} \cap R \\
+& \cup \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R \\
+& \text{As $\mathcal{T}(x) < \mathcal{T}(y) \quad \forall x \in O_{N_1}, y \in O_{N_2}$} \\
+=& (E(O_{N_1}) \cup \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \}) \cap R
+\end{align*}
+
+So that at this point 
+
+$$M_R(N) = M_R(N_1) \cup \{n(x) \mid x \in Q \}$$
+
+where $Q = \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R$.
+
+\begin{align*}
+& Q \\
+=& \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_N \} \cap R \\
+=& \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_{N_1} \} \cap R \\
+& \cap \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_{N_2} \} \cap R \\
+=& \{x \in O_{N_2} \mid n(x) \ne n(y) \quad \forall y \in O_{N_1} \} \cap R \\
+& \cap \{x \in O_{N_2} \mid n(x) = n(y) \rightarrow \mathcal{T}(x) \le \mathcal{T}(y) \quad \forall y \in O_{N_2} \} \cap R \\
+& \text{As } \mathcal{T}(y) < \mathcal{T}(x) \quad \forall y \in O_{N_1}, x \in O_{N_2} \\
+=& \{x \in O_{N_2} \mid n(x) \ne n(y) \quad \forall y \in O_{N_1} \} \cap E(O_{N_2}) \cap R \\
+=& \{x \in E(O_{N_2}) \cap R \mid n(x) \ne n(y) \quad \forall y \in O_{N_1} \} \\
+\end{align*}
+
+So now
+
+\begin{align*}
+& \{ n(x) \mid x \in Q \} \\
+=& \{ n(x) \mid x \in E(O_{N_2}) \cap R \text{ st } n(x) \ne n(y) \quad \forall y \in O_{N_1} \} \\
+=& M_R(N_2) \setminus \{ n(y) \mid y \in O_{N_1} \} \\
+=& M_R(N_2) \setminus (\{ n(y) \mid y \in O_{N_1} \cap R \} \cup M_W(N_1)) 
+\end{align*}
+
+Finally any $x \in \{ n(y) \mid y \in O_{N_1} \}$ will already be in $M_R(N)$ as they are in $M_R(N_1)$. As this also fits in with
+our initial statements about nodes with no read or write operations, we can conclude with:
+
+For a node whose execution involves executing two of its children in sequence in the same scope, the read and write markings are calculated by:
+
+$$M_R(N) = M_R(N_1) \cup (M_R(N_2) \setminus M_W(N_1))$$
+$$\text{and}$$
+$$M_W(N) = M_W(N_1) \cup M_W(N_2)$$
+
+Furthermore by using this method to collapse nodes together into one, we can show by induction that for an arbitrary number $c$ of executed children:
+
+$$M_R(N) = \bigcup_i^c (M_R(N_i) \setminus \bigcup_i^{c-1} M_W(N_i))$$
+and
+$$M_W(N) = \bigcup_i^c M_W(N_i)$$
+
+\subsubsection{Calculation of Probable Read and Write Markings}
 
 \# Think about when things maybe read or maybe write
 \# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
