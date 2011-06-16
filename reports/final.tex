@@ -2178,77 +2178,68 @@ M_W(N) &= M_W(N_D) \cup \bigcup_i M_W(N_r^i) \cup \bigcup_j M_W(N_w^j) \\
        &= M_W(N_D) \cup M_W(N_P)
 \end{align*}
 
+\subsubsection{Extending Possible Markings}
+
+Now if $N$'s execution involves executing $N_D$ followed by possibly executing each one of multiple $N_i$, our markings are
+
+\begin{align*}
+M_R(N) &= M_R(N_D) \cup \bigcup_i M_R(N_i) \cup \bigcup_i M_W(N_i) \\
+M_W(N) &= M_W(N_D) \cup \bigcup_i M_W(N_i)
+\end{align*}
+
+We can also think about another case where rather than either executing or not executing each $N_i$, we choose a single one of the
+$N_i$ to execute. To mark $N$ in this case, we convert the execution of $N_D$ followed by the execution of one $N_i$. Instead we the
+execution of $N_D$ followed by $N_R$ followed by one $N_i^\prime$ followed by $N_W$ where
+
+\begin{align*}
+M_R(N_W) &= M_W(N_R) = \emptyset \\
+M_R(N_R)        &= \bigcap_i M_R(N_i) \\
+M_W(N_W)        &= \bigcap_i M_W(N_i) \\
+M_R(N_i^\prime) &= M_R(N_i) \setminus M_R(N_R) \\
+M_W(N_i^\prime) &= M_W(N_i) \setminus M_W(N_W)
+\end{align*} 
+
+Now if we fix any $N_i$ as our choice to execute then markings for the execution of $N_R$, $N_i^\prime$ then $N_W$ will be
+
+\begin{align*}
+M_R(\ldots) &= M_R(N_R) \cup (M_R(N_i^\prime) \setminus M_W(N_R)) \cup (M_R(N_W) \setminus (M_W(M_R) \cup M_W(N_i^\prime))) \\
+            &= M_R(N_R) \cup M_R(N_i^\prime) \\
+            &= M_R(N_i) \\
+M_W(\ldots) &= M_W(N_R) \cup M_W(N_i^\prime) \cup M_W(N_W) \\
+            &= M_W(N_i^\prime) \cup M_W(N_W) \\
+            &= M_W(N_i)
+\end{align*}
+
+These are identical to the markings for $N_i$, but by fixing $N_R$ and $N_W$ we reduce the amount of unknowns. Finally we may insert these into
+the full equations to find markings for $N$.
+
+\begin{align*}
+M_R(N) =& M_R(N_D) \cup (\bigcap_i M_R(N_i) \setminus M_W(N_D)) \\
+        & \cup (\bigcup_i M_R(N_i) \setminus \bigcap_i M_R(N_i)) \cup (\bigcup_i M_W(N_i) \setminus \bigcap_i M_W(N_i)) \\
+M_W(N) =& M_W(N_D) \cup \bigcup_i M_W(N_i)\\
+\end{align*}
+
+In other words, this means that to find the read markings for $N$, we look at all reads in all $N_i$ and remove any are in all $N_i$'s reads or $N_D$'s writes.
+Now we add all of the names that $N_D$ reads and all writes in an $N_i$ that aren't common to all $N_i$. The write markings for $N$ are then just all names
+written by $N_D$ or some $N_i$.
+
 \subsection{Application of Read and Write Region Theory}
 
+Our discussion has shown how to calculate read and write markings for nodes whose execution involves executing a number of children in a sequential order inside
+the execution frame. Not all of these children have to be executed, some may only be possibilities.
+
+We will not be marking any reads or writes that work between execution frames, instead relying on a user to deduce these. This means that we will refuse to mark
+any node that can perform reads or writes that are not accessed by name in our current frame. These are nodes such as \texttt{ast.Call}.
+
+Other nodes that execute everything in the same execution frame will usually execute a number of children in some order, possibly
+with repetition. These could also execute something from their own node, but we can think of this case as having a separate child node containing
+the relevant operations.
+
+Now we have all we need to mark simple nodes such as \texttt{ast.Assign}, \texttt{ast.Return} or \texttt{ast.Expr}. Also we see that deletion of a name
+using \texttt{ast.Del} counts, in this situation, as a write. We can also mark more complicated statements such as \texttt{ast.If} by converting
+possible markings to definite ones.
+
 \# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
-
-\section{Reordering Program Statements}
-
-\subsection{Method}
-
-Once we have a method for this we can obfuscate or deobfuscate by our choice
-of permutation. An obfuscator would value orderings holding less information and a deobfuscator would favour those with more. How we decide which
-orderings hold the information will a a bridge to cross later on.
-
-\subsection{Looking for dependencies}
-
-In calculating dependencies, we will start with the simplest possible list of statements. From here we will expand our reasoning slowly until
-we can analyse a substantial portion of the Python language.
-
-\subsubsection{Simplest Case}
-
-Our simplest case would be one where none of the instructions depend on each other. We will ignore external output throughout as we already know
-all we need to do is keep any such functions in order. We allow only assignments here as possible statements, and those that bind constants to
-variables. The assignments should have no effect other than to add the constant into a new region of memory and assign the given name to
-reference this location. This should model a Python program if all identifiers on the left hand side of the assignment are simple names.
-(We also ignore the changes Python will make to certain data such as that returned by the \texttt{locals()} built-in function).
-
-An example:
-
-\begin{lstlisting}
-a = 1
-b = 2
-c = []
-c = 3
-\end{lstlisting}
-
-Here the instructions could move to any order. None of the assignments rely on the previous assignments of any other value to any other name. It's
-worth looking at the two assignments of the same variable, \texttt{c}. If we reversed the order of these two statements we would finish the
-statement list with either the local dictionary \texttt{\{a: 1, b: 2, c: []\}} or \texttt{\{a: 1, b: 2, c: 3\}}.
-
-In fact this difference does not matter. This change is internal to the program and so not visible to an observer. As we have not specified
-any future dependency on \texttt{c}, we can assume that nothing that can affect the observable behaviour of the program will use the value
-of \texttt{c} - meaning the program remains correct.
-
-\subsubsection{Slightly Harder}
-
-Now we allow assignments of values that can either be constant or other local names. We will restrict all of our names to local scope as
-we have not yet introduced the concept of scope to our model.
-
-An example:
-
-\begin{lstlisting}
-a = 1
-b = a
-c = a
-c = b
-\end{lstlisting}
-
-Now we can easily go through line by line and look at which names appear on the right of the assignment to gather a list of dependencies.
-
-TODO - CONTINUE FROM HERE!-------------------------------------------------------------
-
-Problem! What if we added one line to make:
-
-\begin{lstlisting}
-a = 1
-b = a
-d = e
-c = a
-c = b
-\end{lstlisting}
-
-Now we have a line that will cause error. 
 
 \section{Opaque Predicates}
 
