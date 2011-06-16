@@ -2223,6 +2223,8 @@ In other words, this means that to find the read markings for $N$, we look at al
 Now we add all of the names that $N_D$ reads and all writes in an $N_i$ that aren't common to all $N_i$. The write markings for $N$ are then just all names
 written by $N_D$ or some $N_i$.
 
+Notice that if all but one $N_i$ has empty markings, we get the same equation as we had in the last section for a single possibly run node.
+
 \subsection{Application of Read and Write Region Theory}
 
 Our discussion has shown how to calculate read and write markings for nodes whose execution involves executing a number of children in a sequential order inside
@@ -2237,7 +2239,58 @@ the relevant operations.
 
 Now we have all we need to mark simple nodes such as \texttt{ast.Assign}, \texttt{ast.Return} or \texttt{ast.Expr}. Also we see that deletion of a name
 using \texttt{ast.Del} counts, in this situation, as a write. We can also mark more complicated statements such as \texttt{ast.If} by converting
-possible markings to definite ones.
+possible markings to definite ones as above, with special consideration for \texttt{if-else}.
+
+Some nodes such as the loops will be more complicated. Consider the \texttt{while} loop. This has children \texttt{test}, \texttt{body} and \texttt{orelse},
+corresponding to the loop condition, the body run when this is true, and the suite run when the loop terminates normally, without a break statement. When
+an \texttt{ast.While} node is executed, the children are run in the following order:
+
+\begin{enumerate}
+\item test
+\item possibly (body, test)
+\item \ldots
+\item possibly (body, test)
+\item possibly orelse
+\end{enumerate}
+
+We start our definite markings for \texttt{test}, $M_R(test)$, $M_W(test)$. Now calculate the markings for running the \texttt{body} then \texttt{test} as
+
+\begin{align*}
+M_R(body : test) &= M_R(body) \cup (M_R(test) \setminus M_W(body)) \\
+M_W(body : test) &= M_W(body) \cup M_W(test)
+\end{align*}
+
+By repeatedly applying the possibility of running (\texttt{body}, \texttt{test}) after running test, we get
+
+\begin{align*}
+M_R(test : (body : test)^*) =& M_R(test) \cup M_W(test) \cup M_W(body) \cup M_R(body) \\
+M_W(test : (body : test)^*) =& M_W(test) \cup M_W(body)
+\end{align*}
+
+Actually these are the same markings we would get by applying (\texttt{body}, \texttt{test}) only once, which greatly simplifies our computation. Finally we
+add possibly \texttt{orelse} to get the final markings
+
+\begin{align*}
+M_R(N) =& M_R(test) \cup M_W(test) \cup M_R(body) \cup \\
+        & M_W(body) \cup M_R(orelse) \cup M_W(orelse) \\
+M_W(N) =& M_W(test) \cup M_W(body) \cup M_W(test)
+\end{align*}
+
+We can apply this same process of reasoning to a \texttt{for} loop. This has children \texttt{target}, \texttt{iter}, \texttt{body}, \texttt{orelse}
+representing an iterable object and a target to assign each of its items to, along with the loop body and a suite to run on normal exit of the loop.
+These will be executed in the order
+
+\begin{enumerate}
+\item execute and record the result of \texttt{iter(iter)} where the outer \texttt{iter} represents a function rather than the child.
+\item \texttt{target = next(object recorded above)}
+\item possibly (\texttt{body}, repeat 2)
+\item \ldots
+\item possibly (\texttt{body}, repeat 2)
+\item possible \texttt{orelse}
+\end{enumerate}
+
+Using the task descriptions defined in the automarker section, as well as the reasoning above, it should be simple to add read and write markings to
+our automarker for the \texttt{for} loop as well as most other nodes.
 
 \# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
 
