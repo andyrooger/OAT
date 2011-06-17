@@ -2389,7 +2389,81 @@ These will be executed in the order
 Using the task descriptions defined in the automarker section, as well as the reasoning above, it should be simple to add read and write markings to
 our automarker for the \texttt{for} loop as well as most other nodes.
 
-\# Suggest solution for calculating things that function calls. i.e. database of library functions and linking user functions. Should this go in automarker section?
+\subsection{Implementing a Simple Reorderer}
+
+Earlier we decided upon four rules to ensure that a reordering was legal. Before we begin to implement transformations that follow these rules, we
+will need to design the basic structure of our reorderer. This involves deciding how our transformations will be represented at different points
+during the program, as well as how we will choose our favourite. All of these basic tasks will be implemented in a class named \texttt{BasicReorderer}
+which defines the following functions:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(statements, rng, limit)}] \hfill \\
+The constructor for \texttt{BasicReorderer} will first store all of its arguments. \texttt{statements} is a list node containing the statements we wish to
+reorder. We will also store the ordered names of children of this node so that we may iterate over them later in order.
+
+During the reordering operations, a permutation will stored as a list of indices into the statement list. If we provide \texttt{rng} then this will be
+used as the initial permutation of the statements that we wish to rearrange, possibly missing some statements if we wish. Otherwise we will assume
+that we should be reordering all statements starting from the order of the statements within the original list.
+
+We will allow a limit on the number of permutations producible from the original statement list. This was introduced as the number of permutations it
+is possible to generate from an $n$ statement list is $n!$. As the possible number of permutations increases so fast, it is not hard to create a program
+that takes a vast amount of time to process completely, and often we will not want to know about all permutations.
+
+\item[\texttt{statement\_at(i)}] \hfill \\
+This allows us to quickly and simply look up the statement at an index. It does not directly access the index in the statement list, instead looking up
+the index first in our stored child order.
+
+\item[\texttt{permute(perm)}] \hfill \\
+\texttt{perm} should be a list of indices representing a permutation. This function will use the list of indices to generate a new node containing the
+permuted statements.
+
+\item[\texttt{\_gen\_limit(gen)}] \hfill \\
+To generate the permutations, we will be using generator functions. These allow us to \texttt{yield} a permutation as soon as it is calculated, pausing
+execution of the yielding function until it is told to continue and find the next one. This form of lazy evaluation allows us to save of huge amount
+of storage and processing, especially if we do not want the entire list of permutations.
+
+Rather than clouding the logic of individual functions with functionality that limits their output as specified in the constructor, we enclose any calls
+inside this function.
+
+\item[\texttt{permutations()}] \hfill \\
+Initially this is a generator function that yields rng as given in the constructor as the only valid permutation. In future it will be overridden by
+subclasses that allow it to generate every legal permutation of our statements.
+
+\item[\texttt{best\_permutation(valuer)}] \hfill \\
+Even if we can generate all legal permutations, we usually only want to look at one that is the best for the transformation we want. This function
+will generate a permuted node for every permutation we generate using \texttt{permutations}. Each of these is scored by passing it to the given
+\texttt{valuer}, and the highest score is assumed to indicate the best permutation. We return the best permutation, not the best permuted node.
+
+\item[\texttt{\_statement\_tuple(s)}] \hfill \\
+When we come to ensuring rule 3 holds for our orderings, we will need to have some way of calculating the read names and all providing statements
+of these names. This function provides an intermediate transformation for \texttt{\_statement\_dependence}, taking a node index \texttt{s} and
+returning a tuple containing the index and names that read or written from the node.
+
+\item[\texttt{\_statement\_dependence(t, before, after)}] \hfill \\
+This function will is used to calculate the providing statements for \texttt{t}. Provided with our statement, \texttt{t}, and a list of statements
+occuring \texttt{before} and \texttt{after} our statement, all in the form given by \texttt{\_statement\_tuple}, we will calculate a new representation
+for \texttt{t}.
+
+This will be a tuple, beginning with the index of \texttt{t}. The next item is a dictionary mapping read names to statement indices of their providing
+statements, or \texttt{None} if the name must have been read before our statement list begins. Recall we assumed the existence of a pseudo-statement
+following the statement list that reads all values. Our final item of the tuple is a dictionary mapping written names to whether or not this statement
+is a providing statement for the name in our final pseudo-statement.
+\end{description}
+
+Having designed the basic structure of our reorderer we would like to begin implementing the actual permutations. As is often the case, we will need to
+ensure certain preconditions of the algorithm are true. Rather than inserting this functionality with the logic of the permutations, we will create
+another class, \texttt{ReorderChecker}. Any subclass of \texttt{BasicReorderer} that also inheritd from this class will ensure that the provided node
+is confirmed as a list of statements. It will also provide a function to check that all necessary markings are provided on each statement.
+
+At this point we can begin to implement transformations that follow our rules. As our fourth rule allows us to generate permutations by splitting the
+statement list and following only rules one to three, we will first create a reorderer that follows only rules one to three. This will be implemented
+inside the \texttt{SingleOrderer} class, inheriting from both \texttt{BasicReorderer} and \texttt{ReorderChecker}.
+
+Again we will describe this implementation by the methods it provides:
+
+\begin{description}
+\item[first func] \hfill \\
+\end{description}
 
 \section{Opaque Predicates}
 
