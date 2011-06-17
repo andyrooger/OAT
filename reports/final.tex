@@ -1487,11 +1487,39 @@ and out of the program during its execution. In the future it may be possible to
 oat, to allow a user to account for slightly different sematics of different runtimes without editing our program code.
 
 We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
-without prior programmatic analysis.
+with or without prior programmatic analysis.
 
 \subsection{Extending Marking Functionality to the User}
 
-\# Develop mark command
+All we need to create to provide marking and automarking functionality is a single \texttt{Command} class called \texttt{MarkCommand}.
+This is not tied in any way to specific marking types, instead we employ the custom made \texttt{util.pluginfinder} package to search
+through the \texttt{markers} package for marking plugins. This allows us to add a new marking type to the interface just by dropping a
+file into the \texttt{markers} directory.
+
+Each marker plugin extends the abstract class \texttt{AbstractMarker}, and implements four functions.
+
+\begin{description}
+\item[\texttt{parameters()}] \hfill \\
+This will return a dictionary describing the options used to mark this particular type of marking. It will allow the \texttt{MarkCommand}
+class to provide individual options to the user for each marking type.
+\item[\texttt{translate(node, arg)}] \hfill \\
+Applies the given options given in \texttt{arg} to the markings in \texttt{node} without changing \texttt{node}'s own markings. This allows
+our main interface to be completely independent of how to use specific marking type options.
+\item[\texttt{update(node, trans)}] \hfill \\
+Applies the markings in \texttt{trans} to our node. Again this allows our interface to be free of the specifics of each marking type.
+\item[\texttt{show(node, title)}] \hfill \\
+Used to display information on this type of marking for \texttt{node}, beginning with \texttt{title}. This will be called on each marking
+type in turn to display markings.
+\end{description}
+
+From the users perspective they are now allowed to specify marking types for any marker in the correct directory, using the specific command
+line options given by the plugin. If none of these options are provided we merely print out current marking information for the node pointed to
+by the \textbf{explore} command. Otherwise by default these marks are are applied to our node, allowing the user to manually update the AST
+markings.
+
+We also provide an '--auto' option that takes the resolution order for an automatic marking. If this is specified then we use each of the
+marking options to provide default markings for each node. As the automarker requires user interaction to be implemented by the interface
+we will implement a number of functions here that ask the user about the current state of markings and possible actions.
 
 \section{Reordering Program Statements}
 
