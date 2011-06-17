@@ -1418,12 +1418,78 @@ Again we should be critical of this design. The objectives here were to design a
 However we also wanted to retain correctness and flexibility, of which we have lost flexibility. We also notice that although we have simplified the
 original design for a user reading the code, the understanding needed to write a task description is not small. So now we try again.
 
-\# We designed the structure based on the current functions, fix it for later ones!
+\subsubsection{Implementing Marking Calculations - Third Attempt}
 
-\# We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
-\# without prior programmatic analysis.
+We would like to simplify the design of task description further, as there are non-obvious components in the previous design. In addition we will
+need to provide extra functionality to process the more complicated tasks required the read/write markings we will introduce later.
 
-\# \subsection{Extending Marking Functionality to the User}
+The previous two designs were built to work only with the two types of marking we have already. These are really fairly simple and so details such
+as the order of evaluation of nodes does not matter. Once we begin to deal with reading or writing to identifiers this is something that will become
+very important.
+ 
+We shall now present our final structure for task descriptions. Again we will store these in a dictionary holding one task description per node type.
+
+The task description may be one of 5 types:
+
+\begin{description}
+\item[Dictionary] \hfill \\
+Again this maps action names to the parameters they require. During execution, this will start with markings from \texttt{\_base\_marks} and
+execute each of these actions on them in turn. Actions may be one of
+
+\begin{description}
+  \item["combine": list of child names] \hfill \\
+  Like "local" before this will combine all markings from children as if they has been executed in the given sequence. Rather than having a
+  separate list to combine lists, we allow the writer of the task descriptions decide to combine all children in order. This means lists may
+  be placed in here just like any other child type.
+  \item["marks"/"nomarks": set of marking types] \hfill \\
+  Again as "known"/"unknown" before this allows us to either restrict or reject markings we can mark. We can combine this with a set type task
+  description to calculate different marks using different tasks.
+  \item["add\_breaks"/"rem\_breaks": set of break types] \hfill \\
+  Allows us to add or remove a type of break from the markings. The set can contain any of the break types we will discuss in the Reordering
+  Program Statements section.
+  \item["transform": callable] \hfill \\
+  Executed first if it exists, this is used to transform the node into another to ease the markings of nodes such as decorated functions or
+  classes. The callable is given our current node and returns either \texttt{None} to indicate no transformation should take place, or a
+  node whose generated markings should be used as the \textit{entire} set of markings.
+  \item["add\_reads"/"add\_writes": set of children containing names to add] \hfill \\
+  This allows a node to add names to a set of read or written variables. All children specified in the set should be string type nodes. The process
+  will be described in more detail in the Reordering Program Statements section.
+\end{description}
+
+\item[Tuple] \hfill \\
+This will contain a number of task descriptions and each will be treated as if exactly \textit{one} of the generated sets of markings will be correct
+for any particular execution of the node. If there are less than two task descriptions given, the markings from \texttt{\_base\_marks} will be added.
+By doing this we can represent empty markings by \texttt{()} and the possibility of either executing or not executing the node whose markings are
+given by a task description as \texttt{(task\_desc,)}.
+
+\item[List] \hfill \\
+Lists should contain a number of other task descriptions. Each will generate their own set of markings and they will be combined assuming the nodes
+that generated them are executed sequentially.
+
+\item[Set] \hfill \\
+The final type of combining task description, again containing a number of other task descriptions. This time we require the task descriptions to
+generate a disjoint set of markings as they will be combined as different pieces of the same set of markings. We can use the "marks" and "nomarks"
+actions to ensure this.
+
+\item[Callable] \hfill \\
+Again as before this will be given a node and return a new task description, allowing dynamic creation of the task description depending on
+specific characteristics of the node.
+
+\end{description}
+
+The new design of task description has only been changed subtly from the previous one, however it is much simplified. Rather than each type of
+description being a dictionary or having to reduce immediately to a dictionary, we allow the description to reduce to \textit{any} type of 
+task description. We also allow more complex combinations of markings without the need to add extra actions to the dictionary which will
+help greatly for marking reads and writes from a node.
+
+This design will suit us for now, it allows simple definition of marking behaviour as well as allowing a user or developer to swap behaviour in
+and out of the program during its execution. In the future it may be possible to add an interface to create and edit these task descriptions from
+oat, to allow a user to account for slightly different sematics of different runtimes without editing our program code.
+
+We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
+without prior programmatic analysis.
+
+\subsection{Extending Marking Functionality to the User}
 
 \# Develop mark command
 
