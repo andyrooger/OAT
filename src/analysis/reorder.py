@@ -493,14 +493,16 @@ class SingleReorderer(BasicReorderer, ReorderChecker):
         """
         Generate a dictionary of the closest reads of any variable that occur after pos, along with the statement indices they read from.
 
-        Only entries for variables we write to are returned. Also it is only the statement indices we receieve.
+        Only entries for variables we write to are returned and only reads with a corresponding provider are considered. Also it is only
+        the statement indices we receieve.
 
         """
 
+        existing_statements = {s[0] for s in stats[:pos]}
         post_read = {}
         for i in reversed(range(pos, len(stats))):
             (s, r, w) = stats[i]
-            post_read.update(r)
+            post_read.update({nm : r[nm] for nm in r if r[nm] in existing_statements})
         # Retain only statement indices from variables that we write
         return {post_read[var] for var in ours.intersection(post_read.keys())}
 
