@@ -2459,11 +2459,108 @@ At this point we can begin to implement transformations that follow our rules. A
 statement list and following only rules one to three, we will first create a reorderer that follows only rules one to three. This will be implemented
 inside the \texttt{SingleOrderer} class, inheriting from both \texttt{BasicReorderer} and \texttt{ReorderChecker}.
 
-Again we will describe this implementation by the methods it provides:
+Again we will describe this implementation by the methods our class provides:
 
 \begin{description}
-\item[first func] \hfill \\
+\item[\texttt{\_\_init\_\_(statements, rng, precond, limit)}] \hfill \\
+The constructor only passes its arguments on to the constructors of \texttt{BasicReorderer} and \texttt{ReorderChecker}. \texttt{precond} is
+a boolean value that allows the developer to speed up execution by avoiding precondition checks.
+
+\item[\texttt{permutations(convtuple)}] \hfill \\
+This overrides the same function in \texttt{BasicReorderer} to yield each valid permutation according to our first three rules. It will do this
+by first converting the permutation \texttt{rng}, given in the constructor into a dependence tuple from \texttt{\_statement\_dependence}.
+
+Now we ensure the first two rules are covered by using \texttt{\_split\_by\_visibility} to take out any visible statements from our permutation.
+These will be kept in their original order with respect to each other, ensuring rules one and two by definition. From here we use
+\texttt{\_insert\_statements} to find all of the different ways we can insert the remaining statements into this list, following rule three.
+
+Taking all visible statements out at the beginning of the algorithm increases performance by a great deal. As well as avoiding a check for rule
+one and two every time we insert a new statement, we also have a great many statements less to insert.
+
+\item[\texttt{\_split\_by\_visibility(dependencies)}] \hfill \\
+Given a list of dependency tuples from \texttt{\_statement\_dependencies}, this function will create two lists. One will contain the tuples from
+visible statements, and the other will contain tuples from non-visible statement, both in order. This is used to jump-start the permutation
+calculations.
+
+\item[\texttt{\_insert\_statements(stats, current)}] \hfill \\
+Given the current permutation of dependency tuples, \texttt{current}, we will find all the different ways to insert all statements in
+\texttt{stats}. This is a simple recursive function, generating all the possible ways to insert the tail of \texttt{stats} and then using
+\texttt{\_insert\_statement} to find the ways to insert the head statement into each of these.
+
+\item[\texttt{\_insert\_statement(stat, stats)}] \hfill \\
+This is similar to the previous statement but inserts the single statement, \texttt{stat}, into \texttt{stats}, rather than a group of statements.
+
+A naive approach would be to try inserting the statement into every possible position and testing if it follows rule three (as rules one and two are
+already taken care of). We can do much better than this by noticing that there are certain ranges defined by our providing statements, outside of
+which we cannot insert our statement.
+
+Our first range is calculated by \texttt{\_get\_correct\_state\_range}. This is the range of indices in \texttt{stats} between which all providing
+statements for names read by \texttt{stat} have been executed, but before another statement writes over any of these names. In other words this is
+the range in which \texttt{stat} would receive the correct providing statements if they are in \texttt{stats}.
+
+The second range is  calculated by \texttt{\_get\_possible\_insert\_range}. Conversely to the previous range, this represents the range inside which
+we are the providing statement for every statement in \texttt{stats} that we should be. We now only need to try inserting statements into the
+intersection of these two ranges.
+
+We still have one final test to perform to ensure that rule three is adhered to after an insertion. We know that all providing statements involving
+\texttt{stat} and a statement in \texttt{stats} are correct. Now we have to check for each possible insertion location that the insertion of our
+new statement will not break a link between a read and a providing statement that is currently in \texttt{stats}. This will use the function
+\texttt{\_cuts\_read\_write} and any valid indices will be inserted into \texttt{stats} and yielded as a possible solution.
+
+\item[\texttt{\_get\_correct\_state\_range(reads, stats)}] \hfill \\
+As described in the previous function, this will return a tuple of indices that indicate the range in which all relevant names will use the correct
+providing statement. \texttt{reads} is a dictionary from the statement we would insert, that maps each read name to a providing statement. Relevant
+names are then those in \texttt{reads} that have their providing statement in \texttt{stats}.
+
+To evaluate this range, we take our relevant names to be any whose providing statement is in \texttt{stats}, and scan forward through \texttt{stats}
+from the implicit initial pseudo-statement. As we go we will be keeping track of the reads and writes of each statement. Once we have passed the
+providing statements for all relevant names we mark our range beginning. When we reach a statement that writes to a name whose providing statement
+has already been passed we mark our range end.
+
+These start and end indices may not be in the expected order, if they are not then we just have an empty range. Either way we can now return our calculated
+range.
+
+\item[\texttt{\_get\_possible\_insert\_range(stat\_tuple, stats)}] \hfill \\
+Again this is used inside \texttt{\_insert\_statement}, this time to generate the range of indices in \texttt{stats} where all statements that expect
+\texttt{stat\_tuple} as a providing statement will receive it as a providing statement. 
+
+We start by constructing a dictionary that maps every name that we write in \texttt{stat\_tuple}, to the first statement in \texttt{stats} that expects
+\texttt{stat\_tuple} as a providing statement for it. The earliest of these statement indices gives us the end of our range as we must have written the
+name before the statement that we are providing it to.
+
+From the end of our range we scan forward through \texttt{stats}, including the final pseudo-statement, keeping track of any of our written names that
+are overwritten by other statements. If any statement expects \texttt{stat\_tuple} to be a providing statement for a name that has been previously
+overwritten then we have an empty range.
+
+Finally we work backwards from our end point and look for the first overwrite of our written names, this will define the beginning of our range.
+
+\item[\texttt{\_cuts\_read\_write(pos, writes, stats)}] \hfill \\
+This function assumes we are inserting a statement into \texttt{stats} at the index \texttt{pos}, that writes the names in \texttt{writes}. Our aim is
+to discover if we will break the link between any reads and providing statements. We will begin the process by calculating the first read of every name
+after \texttt{pos} with a corresponding providing statement in \texttt{stats}.
+
+There is no reason to check all links as we can say that if any links are broken by a write at \texttt{pos} then a link between one of the reads we just
+calculated and their providing statement must be broken. To see this we must assume the current statement list is correct, so that all statements currently
+inserted have the correct providing statements if these statements are also inserted.
+
+If the broken link is one we just calculated the proof is trivial. Otherwise assume the link between a read $R$ and its providing statement $P$ is broken
+by a write at \texttt{pos}. Now the closest read for the same name after \texttt{pos} that has a providing statement is labelled $C$. Its providing
+statement will be at any one of the $L_i$ below.
+
+$$L_1 \ldots P \ldots L_2 \ldots \mathtt{pos} \ldots L_3 \ldots C \ldots R$$
+
+It is easy to see if that $C$'s providing statement is $L_2$ or $L_3$ then $P$'s write would be overwritten before we reach $R$ meaning that our assumption
+on the correctness of the original statement list would be wrong. If $C$'s providing statement is at $L_1$ then $C$'s provision link would be broken by $P$.
+
+Using the previous proof we can see that all we need to do here is check whether the closest reads we calculated initially have their provision links broken.
+This can be done simply by checking whether the providin statements for these reads are included in the statements before \texttt{pos}.
+
 \end{description}
+
+This concludes our design for the \texttt{SingleReorderer}. The most important part of this is to see that the three functions
+\texttt{\_get\_correct\_state\_range}, \texttt{\_get\_possible\_insert\_range} and \texttt{\_cuts\_read\_write} work together to ensure that every node that
+we insert will preserve providing nodes for all that are available at the time. By the time we have inserted all nodes we are left with a full permutation
+where rule 3 holds for all statements.
 
 \section{Opaque Predicates}
 
