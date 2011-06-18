@@ -2475,7 +2475,8 @@ These will be kept in their original order with respect to each other, ensuring 
 \texttt{\_insert\_statements} to find all of the different ways we can insert the remaining statements into this list, following rule three.
 
 Taking all visible statements out at the beginning of the algorithm increases performance by a great deal. As well as avoiding a check for rule
-one and two every time we insert a new statement, we also have a great many statements less to insert.
+one and two every time we insert a new statement, we also have a great many statements less to insert. When yielding each permutation we will
+either yield a permutation of dependence tuples, or convert to a normal permutation depending on \texttt{convtuple}.
 
 \item[\texttt{\_split\_by\_visibility(dependencies)}] \hfill \\
 Given a list of dependency tuples from \texttt{\_statement\_dependencies}, this function will create two lists. One will contain the tuples from
@@ -2553,14 +2554,60 @@ It is easy to see if that $C$'s providing statement is $L_2$ or $L_3$ then $P$'s
 on the correctness of the original statement list would be wrong. If $C$'s providing statement is at $L_1$ then $C$'s provision link would be broken by $P$.
 
 Using the previous proof we can see that all we need to do here is check whether the closest reads we calculated initially have their provision links broken.
-This can be done simply by checking whether the providin statements for these reads are included in the statements before \texttt{pos}.
+This can be done simply by checking whether the providing statements for these reads are included in the statements before \texttt{pos}.
 
 \end{description}
 
 This concludes our design for the \texttt{SingleReorderer}. The most important part of this is to see that the three functions
 \texttt{\_get\_correct\_state\_range}, \texttt{\_get\_possible\_insert\_range} and \texttt{\_cuts\_read\_write} work together to ensure that every node that
-we insert will preserve providing nodes for all that are available at the time. By the time we have inserted all nodes we are left with a full permutation
+we insert will ensure correct providing pairs wherever both nodes are inserted. By the time we have inserted all nodes we are left with a full permutation
 where rule 3 holds for all statements.
+
+To ensure that the operations implemented in \texttt{SingleReorderer} are correct, we will also implement \texttt{SafeReorderer}. This will be implemented
+as a subclass of \texttt{SingleReorderer} that also implements the naive and slow but obviously correct version of each of its methods. Each of the methods
+in \texttt{SingleReorderer} will be overridden to calculate an answer from both the original method and the naive version. If these do not match then we
+raise an \texttt{AssertionError}.
+
+Now we can implement a reorderer to follow rule four. This says that rules one to three apply only to non-breaking statements, allowing us to partition
+the statement list and order each individual partition according to rules one to three only.
+
+To implement this we will describe the \texttt{Reorderer} class that extends both \texttt{BasicReorderer} and \texttt{ReorderChecker}. From here we expose
+the following methods.
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(statements, rng, precond, safe, limit)}] \hfill \\
+This constructor uses most of its argument to pass through to the constructors of its two parent classes. All we do here is to call these constructors
+and choose a class to use for reordering each partition. If we \texttt{safe} is true then we will choose \texttt{SafeReorderer}, but by default we use
+\texttt{SingleReorderer} for the extra speed.
+
+\item[\texttt{permutations()}] \hfill \\
+We do not perform much work directly in this function. The first step is to partition our statements by the flow-breaking statements using \texttt{partition},
+then we use \texttt{\_permutations} to permute each individual partition, limiting its output with \texttt{\_gen\_limit}.
+
+\item[\texttt{\_permutations(partitions)}] \hfill \\
+This is a recursive function acting on \texttt{partitions}, a list of statement lists that may be fed into \texttt{SingleReorderer}. The aim is to find
+permutations of the head statement list using \texttt{SingleReorderer}, and permutations of the tail using \texttt{\_permutations} and combine these in every
+possible combination.
+
+If we were to use two nested for loops that simply applied all the head permutations to each tail permutation then we would find that the operation in the inner
+loop, the head permutations in our case, would be recomputed for every tail permutation. In our attempt to mitigate this we began calculating and recording the
+entire set of head permutations before we entered the loop.
+
+From speed tests that limited the output number of permutations it became apparent that this algorithm was in fact generating all permutations even if we only
+asked for the first. This removes the benefit of our lazy processing, so instead we use a dynamic algorithm. For the first tail permutation, we generate and
+record each head permutation as we need it. Then for following tail permutations we can use the recorded head permutations. By using this algorithm we do not
+generate any excess permutations but we also do not need to recompute any either.
+
+\item[\texttt{partition()}] \hfill \\
+We use this to partition a single list of statements into multiple that are split by flow-breaking statements as described in rule 4. The implementation of this
+function is trivial so will not be described.
+\end{description}
+
+We now have the ability to mark an AST with \texttt{AutoMarker}, and generate all legal permutations of a list of statements using \texttt{Reorderer}. Our task
+now is to use these classes to allow us to either obfuscate or deobfuscate our code.
+
+\subsection{Choosing a Permutation}
+
 
 \section{Opaque Predicates}
 
