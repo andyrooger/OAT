@@ -778,8 +778,8 @@ be clearer in graphical environment, then we can still write commands to open a 
 separate from the interface so it should be easy to replace the command line with a full GUI later if the time is available.
 
 This command line interface will be the point of entry for users who want to obfuscate their code as well as those who want to analyse
-already obfuscated code. For this reason, we shall name it simply 'Obfuscation and Analysis Tool', or oat. If we do find time later in
-the project to develop a graphical interface, we can now call it 'Graphical Obfuscation and Analysis Tool', or goat.
+already obfuscated code. For this reason, we shall name it simply 'Obfuscation and Analysis Tool', or OAT. If we do find time later in
+the project to develop a graphical interface, we can now call it 'Graphical Obfuscation and Analysis Tool', or GOAT.
 
 \subsubsection{Implementing the User Interface}
 
@@ -906,14 +906,14 @@ the argument '--style \{basic, pretty\}'.
 If the user chooses, output from this command may be written to disk using the flag, '--write FILE'.
 
 Other commands will be added to this list as we develop the functionality to make them necessary, and all of the commands implemented
-should employ autocompletion wherever possible. This helps to guide the user and speeds up the use of oat.
+should employ autocompletion wherever possible. This helps to guide the user and speeds up the use of OAT.
 
 Now we can look at an example session, to see how the user will interact with the tool:
 
 \lstinputlisting[language=obftool,basicstyle=\small]{../snippets/commandsession.log}
 
 At this point we have created an interface, and we are able to parse, store, inspect and write Python source
-files. It is time to begin designing the code that oat will use to obfuscate these programs.
+files. It is time to begin designing the code that OAT will use to obfuscate these programs.
 
 \section{Developing Obfuscating Transformations}
 
@@ -1484,9 +1484,9 @@ help greatly for marking reads and writes from a node.
 
 This design will suit us for now, it allows simple definition of marking behaviour as well as allowing a user or developer to swap behaviour in
 and out of the program during its execution. In the future it may be possible to add an interface to create and edit these task descriptions from
-oat, to allow a user to account for slightly different sematics of different runtimes without editing our program code.
+OAT, to allow a user to account for slightly different sematics of different runtimes without editing our program code.
 
-We can now create a command for oat to extend this functionality to the user. This will mean that a user can experiment and alter markings
+We can now create a command for OAT to extend this functionality to the user. This will mean that a user can experiment and alter markings
 with or without prior programmatic analysis.
 
 \subsection{Extending Marking Functionality to the User}
@@ -2737,7 +2737,7 @@ These methods would rely on us redefining our valuers to enable evaluation of an
 \subsection{Implementing an Interface for our Reorderer}
 
 All of the background code is now in place, to expose this to the user we only need to write another \texttt{Command} class called \texttt{ReorderCommand} and
-add our \textbf{reorder} command to oat. As this command performs such a complicated task, we will provide a number of extra options to the user or even the
+add our \textbf{reorder} command to OAT. As this command performs such a complicated task, we will provide a number of extra options to the user or even the
 developer to allow proper testing, as well as to perform the required tasks.
 
 We begin with a number of options that could cover anything we want to do. This includes choosing how to display the reordered statements with '--display',
@@ -2781,7 +2781,7 @@ the best based on the specified valuer function. If '--edit' is set then this ac
 
 Most tasks should now be simple to perform, although more complex tasks may need explaining. For instance to find a random permutation quickly and edit the
 AST to reflect this then the options we would need to set would be '--limit 1 --random --edit'. Another example would be to find the best of the first 400
-permutations using the \texttt{WriteUseValuer} which is labelled 'rwrange' in oat. For this we use '--limit 400 --valuer rwrange'.
+permutations using the \texttt{WriteUseValuer} which is labelled 'rwrange' in OAT. For this we use '--limit 400 --valuer rwrange'.
 
 \section{Opaque Predicates - COME BACK TO ME - DON'T YOU DARE LEAVE ME IN THE FINAL REPORT!}
 
@@ -2803,7 +2803,7 @@ in each piece of code. It is likely a higher level approach will be more suitabl
 the project, testing a program's validity before and after obfuscations as well as the validity
 of the analysis.
 
-\section{Introducing goat}
+\section{Introducing GOAT}
 
 \# visualiser?
 
