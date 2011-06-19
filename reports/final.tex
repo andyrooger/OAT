@@ -2736,12 +2736,54 @@ These methods would rely on us redefining our valuers to enable evaluation of an
 
 \subsection{Implementing an Interface for our Reorderer}
 
+All of the background code is now in place, to expose this to the user we only need to write another \texttt{Command} class called \texttt{ReorderCommand} and
+add our \textbf{reorder} command to oat. As this command performs such a complicated task, we will provide a number of extra options to the user or even the
+developer to allow proper testing, as well as to perform the required tasks.
 
+We begin with a number of options that could cover anything we want to do. This includes choosing how to display the reordered statements with '--display',
+either showing the permutation as statement indices, a short description of each node, or generated program code. The valuer function may be chosen by
+'--valuer' and can be any of those we created earlier, defaulting to \texttt{RandomValuer}.
 
-\# Implementation of interface
-\# visualiser?
+Next we have options seen earlier including safety checks with \texttt{SafeReorderer} using '--safetytests', random permutation generation with
+\texttt{RandomReorderer} using '--random',  and limiting the number of generated permutations using '--limit'.
 
-\section{Opaque Predicates}
+The final global option will state whether to actually edit the AST with our reordering or just display it. We set this with '--edit', which is turned
+off by default. If we do write, we will edit the current statement list node rather than replacing it so that we do not break any references within the
+program.
+
+Now we allow the user a choice of one of the following options, defaulting to '--best' if none are supplied.
+
+\begin{description}
+\item[--current] \hfill \\
+Safety checks will always be carried out to ensure that our node is of the appropriate type and that each of the statements it contains carry sufficient
+markings for the reorderer. If we choose this action then we stop at this point, informing the user whether they can reorder the current node and printing
+the status of markings for each statement.
+
+\item[--split] \hfill \\
+In this case we will only partition the statement list based on the flow-breaking statements. The chosen manner of partitioning will be displayed to the user
+depending on which display type they chose.
+
+\item[--number] \hfill \\
+This will generate all the permutations up to any limit set. Rather than doing anything with these it will count the total and display this to the user.
+
+\item[--unique] \hfill \\
+Rather than simply counting all yielded permutations, we insert each permutation into a set and display the size of the set. This can be used to calculate
+the unique permutations generated and can be used to identify bugs is the number does not match that from '--number'.
+
+\item[--permutations] \hfill \\
+This will generate each possible permutation and display them to the user using the display method they specified, waiting for confirmation before proceeding
+to the next. As this can be a very long running interaction, the user may want to cancel before it terminates by typing Ctrl\^{}C
+
+\item[--best] \hfill \\
+The main reason we have the \textbf{reorder} command and the default action to perform. This will calculate all permutations up to the limit set and display
+the best based on the specified valuer function. If '--edit' is set then this action will also write the changes to our AST.
+\end{description}
+
+Most tasks should now be simple to perform, although more complex tasks may need explaining. For instance to find a random permutation quickly and edit the
+AST to reflect this then the options we would need to set would be '--limit 1 --random --edit'. Another example would be to find the best of the first 400
+permutations using the \texttt{WriteUseValuer} which is labelled 'rwrange' in oat. For this we use '--limit 400 --valuer rwrange'.
+
+\section{Opaque Predicates - COME BACK TO ME - DON'T YOU DARE LEAVE ME IN THE FINAL REPORT!}
 
 The second obfuscation technique we will implement will insert branches into the code that depend on
 some opaque predicate \cite{taxobftrans}. This is a predicate that we as the obfuscator know the value of,
@@ -2760,6 +2802,10 @@ this has been done using Python's doc test library to write unit tests inside th
 in each piece of code. It is likely a higher level approach will be more suitable later in
 the project, testing a program's validity before and after obfuscations as well as the validity
 of the analysis.
+
+\section{Introducing goat}
+
+\# visualiser?
 
 \section{Evaluation}
 
