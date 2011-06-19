@@ -3013,7 +3013,29 @@ of the analysis.
 
 \section{Introducing GOAT}
 
-\# visualiser?
+At the beginning of this project the choice was made to implement our primary interface on the command line, primarily for the speed of development. As mentioned
+in the discussion, a GUI would provide a more natural interface to the user where the only downside would be the extra time spent in the implementation.
+
+As we have progressed through the development of OAT there are many points we have passed that could have been greatly improved by this graphical interaction.
+For instance the traversal of our AST, currently performed by our \textbf{explore} command is cumbersome and can be confusing in the command line interface. A
+much better representation would be to display all of the nodes in a form of heirarchical display commonly seen in file managers.
+
+This immediate access to all nodes in the AST would also help us with other tasks. While marking the AST we currently expect a user to manually mark any function
+calls as we cannot resolve which function they correspond to. Rather than leaving the marking entirely up to a user, it seems reasonable to allow the user to
+click on a function definition within the tree and continue our analysis in the function body. There is no natural way to do this in the current command line
+tool.
+
+Another helpful function would be to display the program code as we explore it. Currently when looking at a node we have to specifically run the \textbf{format}
+command to print the source code. In a GUI application it would not be difficult to provide a second pane where we can also see the whole program source code,
+highlighting our node's source code so that the user can view it in context. This pane would be available throughout the entire programs operation.
+
+Thankfully we do not need to reimplement any of our basic functionality to provide this graphical interface. We have followed good design principles and so have
+endevoured to keep our implementation as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
+Graphical OAT, component by component. Each component may be added and tested as commands in our current interface, OAT.
+
+\subsection{Developing a Hierarchical Display for our AST}
+\subsection{Developing a Graphical Display for Node Markings}
+\subsection{Developing an Interactive Source Code Viewer}
 
 \section{Evaluation}
 
