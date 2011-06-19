@@ -2783,17 +2783,82 @@ Most tasks should now be simple to perform, although more complex tasks may need
 AST to reflect this then the options we would need to set would be '--limit 1 --random --edit'. Another example would be to find the best of the first 400
 permutations using the \texttt{WriteUseValuer} which is labelled 'rwrange' in OAT. For this we use '--limit 400 --valuer rwrange'.
 
-\section{Opaque Predicates - COME BACK TO ME - DON'T YOU DARE LEAVE ME IN THE FINAL REPORT!}
+\section{Opaque Predicates and Irrelevant Code Insertion}
 
-The second obfuscation technique we will implement will insert branches into the code that depend on
-some opaque predicate \cite{taxobftrans}. This is a predicate that we as the obfuscator know the value of,
-but an analyser will find it difficult to evaluate. The branches we will insert will jump either to our valid
-program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
-that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
+The second obfuscation technique we will implement will insert branches into the code that depend on some opaque predicate \cite{taxobftrans}.
+As we discussed earlier these are predicates that we as the obfuscator may know the value of, but an analyser will find it difficult to evaluate.
 
-To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
-branches where we know a program will always take a certain path. The success of this analysis
-depends on both the strength of the analysis and the strength of the opaque predicate.
+When branches depend on a predicate of this nature, it will be difficult for the analyser to calculate where the execution path will lead. This allows
+us to insert complicated or confusing code into paths that we know will never be executed. As the analyser finds it difficult to know that the execution
+path will not ever be followed, it cannot safely remove our dead code.
+
+It is possible to use this type of obfuscation in conjunction with the statement reordering in the previous section. For example when branching on
+an unknown predicate we may want to disguise the fact that both branches will perform the same task. To do this we can repreatedly use a combination
+of statement reordering and irrelevant code insertion until the branches are unrecognisable.
+
+\subsection{Creating Opaque Predicates}
+
+Obviously the strength of this obfuscation will depend of the strength of our opaque predicates. If we cannot construct an opaque predicate that withstands
+the analysis of a deobfuscator we cannot insert any code that will remain after analysis.
+
+We begin by looking again to \cite{taxobftrans} for our first examples on manufacturing these constructs. Here we see an example of using a well defined
+library call to a \texttt{random} function to construct our predicate. For example we would expect the predicate \texttt{(random(7, 10) < 0)} to always
+evaluate to \texttt{False} as a random number between $7$ and $10$ will always be greater than $0$.
+
+In the paper, we are assumed to be using the Java programing language and so the predicate deemed simple to crack by an analyser. This is because a library call
+would be very easy to spot in the language, and the semantics would be well known. In our case an analyser for Python does not have the luxury of being able to
+identify imported system libraries solely by looking at import statements and class names.
+
+We can use this fact to create strong opaque predicates relying on system calls by modifying the imported part of the system library before we come to use it. As
+the imported library will be just another object in our program, we may pass it between functions, rename it or modify it as we wish. As long as we know what has
+happened to our library by the time we come to construct our opaque predicate, we are able to use library functions with only a slim chance that an analyser will
+ever know.
+
+Another paper to look at is \cite{opaquepred}, which talks in detail about using the undecidability of aliasing talked about in \cite{aliasing} to create
+sturdy opaque constructs. The idea is that more than one name may alias the same data and it is difficult to understand when this is happening. An obfuscator
+can leverage this information to provide a complex dynamic structure that will be modified during the course of the program. Various nodes in this structure
+will then be compared by the program to see if they are in fact the same object. We use the \texttt{is} operator in Python to do this.
+
+This same paper also introduces opaque constructs based on concurrency. Although it should be an easy task to create processes to do this in Python, we will not
+be implementing any parallel code. This is because our current discussions have silently assumed a single thread of control in our target program and introducing
+multiple threads could break our reasoning.
+
+It can be argued that the strength of an opaque predicate is not in its complexity but in its stealth. In \cite{exceptionpred} we have an example of using very
+simple but stealthy predicates to alter control flow. For instance a branch based on the predicate \texttt{x == 0} can be turned into a \texttt{try}-\texttt{except}
+block beginning with a benign statement containing \texttt{a / x}. If \texttt{x == 0} then an exception will be raised causing control to move to the \texttt{except}
+block. Otherwise control will continue inside the \texttt{try} block.
+
+In our software we will not yet be implementing the creation of these opaque predicates. Instead choose to ask a user to provide opaque variables and operations that
+leave them unchanged. The user should be able to save up various collections of these opaque constructs and operations and allow our obfuscator to insert them
+into the code whenever required. Automatic generation behaviour should then be very easy to implement, allowing easy extension of the tool in future.
+
+\subsection{Using Opaque Predicates}
+
+\subsection{Implementing the Transformation}
+
+\# The branches we will insert will jump either to our valid program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
+\# that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
+
+\# To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
+\# branches where we know a program will always take a certain path. The success of this analysis
+\# depends on both the strength of the analysis and the strength of the opaque predicate.
+
+-------------------------------------------------------------------
+
+add false branch to dead code
+branch and duplicate our code
+branch with while?
+branch true with our code
+insert bug to code in one branch
+
+--------------------------------------------------------------------
+
+Add very basic opaque predicate support.
+   i.e. ask user to add a variable to use, condition on it that's always true,
+   and an operation that looks complicated but won't change it. Then ask the
+   user to find a list of statements where it would be accessible and add it.
+
+\subsection{Analysis and Deobfuscation}
 
 \section{Relocate or Implement me - TODO}
 
