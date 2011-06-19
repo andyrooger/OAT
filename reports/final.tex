@@ -2983,9 +2983,25 @@ can replace it.
 
 \subsection{Analysis and Deobfuscation}
 
-\# To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
-\# branches where we know a program will always take a certain path. The success of this analysis
-\# depends on both the strength of the analysis and the strength of the opaque predicate.
+We now have implemented and provided user access to these branching insertion transformations. Earlier we decided that in order to evaluate each obfuscation
+we would create an accompanying deobfuscation. In this case, the difficulty of deobfuscation means that time constraints do not permit us an implementation.
+We can however discuss at a high level how the reverse transformation would be conducted.
+
+Notice that what we are doing by introducing each of these branches is inserting irrelevant, or 'dead' code, that either will not be executed, or does not
+need to be. To reverse this transformation we will then be performing something known as 'dead code elimination'. There are a growing number of ways to perform
+this analysis, of which we will describe only a few.
+
+Unreachable code elimination is described in \cite{codecompact}. This involves computing a control-flow graph for the program and performing a simple depth
+first search and constant propagation to decide on all of the reachable blocks of code. Any that cannot be marked readable must be unreachable and can be removed
+from the program. If our opaque predicates were not strong enough, these block of unreachable code would correspond to any dead branches we insert.
+
+More useful to us would be using constant propagation through the control-flow graph to identify branches that will always be executed. Additionally we could use
+dead code analysis to remove redundant operations; those that are executed but do not contribute to the program. This would reverse the scattering of statements
+that we perform after inserting our branches.
+
+In reality we will not be able to choose any one method for deobfuscation of these branch insertions. We will need some types of analysis for identifying dead
+code, but these will rely on other forms of analysis, possibly theorem proving algorithms or similar to crack the opaque predicates. For this reason we will not
+be implementing any deobfuscation in this section.
 
 \section{Relocate or Implement me - TODO}
 
