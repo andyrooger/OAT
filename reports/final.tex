@@ -2939,16 +2939,53 @@ instead of an \texttt{if} statement.
 Again like \texttt{if\_branch} but providing replacing the \texttt{if} structure with a \texttt{while} loop. This time we must stop the \texttt{while} loop following
 the first iteration so the last statement in the loop will be a statement from \texttt{destroying}. This can be moved inside the loop body using the reordering
 transformation from earlier.
-
 \end{description}
 
-\# Allow saving the brancher in the interface.
+Having created the \texttt{Brancher} class we can easily link it to our new \texttt{Command} object, \texttt{BranchCommand}, to create our new command
+\textbf{branch}.
+
+Called without any arguments this will display a list of the names for which it has \texttt{Brancher} objects. These names should identify the \texttt{Brancher}
+object as well as being the name used in all of its transformations. As stated earlier, future work should allow that name to change when the transformation
+is performed.
+
+If the command is given a single argument, this should be the name of a \texttt{Brancher} object. By default this will print information about the object named
+if it exists such as listing all predicates and which values they should evaluate to. Otherwise we allow one of the following actions to be specified.
+
+\begin{description}
+\item[--predicate] \hfill \\
+Without any argument this option will provide us with a space to the source code of a predicate for the \texttt{Brancher} named. Any argument given will be
+treated as an id and will either cause the predicate with this id to be displayed in detail, or will be deleted by using the '--remove' flag.
+
+\item[--exception] \hfill \\
+Again, without arguments this allows us to add an exception-causing expression to our \texttt{Brancher}. Arguments act in the same way as '--predicate', this is
+true for all other actions apart from '--save' and '--load'.
+
+\item[--initial] \hfill \\
+Allows us to add expressions that work as initial values for our name.
+
+\item[--preserves] \hfill \\
+This will add statements that preserve predicates' values. The only name this should affect is that of our \texttt{Brancher}.
+
+\item[--destroys] \hfill \\
+As above, this allows us to add statements that upset predicates' values. Again these should only affect the name of our \texttt{Brancher}.
+
+\item[--randomises] \hfill \\
+Statements added by this action should cause an unknown effect on the predicate by changing only the \texttt{Brancher}'s name.
+
+\item[--save] \hfill \\
+This action takes no arguments and will try to save the \texttt{Brancher} of the given name to a file of that name ending with '.bch'.
+If the file exists we can use '--force' to overwrite it.
+
+\item[--load] \hfill \\
+This will load the brancher of the name given from a file saved by '--save'. If the name is already in use in our program session, then '--force'
+can replace it.
+\end{description}
+
+\subsection{Analysis and Deobfuscation}
 
 \# To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
 \# branches where we know a program will always take a certain path. The success of this analysis
 \# depends on both the strength of the analysis and the strength of the opaque predicate.
-
-\subsection{Analysis and Deobfuscation}
 
 \section{Relocate or Implement me - TODO}
 
