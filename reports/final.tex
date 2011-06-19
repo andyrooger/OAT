@@ -3034,7 +3034,41 @@ endevoured to keep our implementation as separate as possible from our interface
 Graphical OAT, component by component. Each component may be added and tested as commands in our current interface, OAT.
 
 \subsection{Developing a Hierarchical Display for our AST}
+
+This is the first component we will develop for GOAT. Our intentions in designing this component are to create a reuseable component that can be used by any
+part of the interaface that needs to allow a user to browse and select nodes. We should be able to set up a node browser just by passing a root node to the
+constructor of the component.
+
+Luckily the \texttt{tkinter} module we will be using to build the GUI also contains a module called \texttt{ttk} full of extensions including a
+\texttt{ttk.Treeview} class that almost exactly fits our purpose. We will extend this class by creating the \texttt{ASTTreeview} class with the
+following modifications:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(parent, fulltree, currenttree, select\_handler, **other)}] \hfill \\
+\texttt{parent} and \texttt{other} specify the parent window and any other \texttt{ttk.Treeview} constructor arguments to allow some flexibility in the component.
+More interestingly we specify the AST to display with \texttt{fulltree} and the currently selected node with \texttt{currenttree}.
+
+After setting up two detail columns to display each node's type and value (if available), we pass both nodes to \texttt{\_fill\_tree} to populate our displayed
+tree. Two tags are set up to colour the selected node and any empty nodes. This allows the user to quickly see the selected tree, and any empty nodes are shaded
+out to emphasise the fact that they are not needed.
+
+\item[\texttt{\_selected(info)}] \hfill \\
+This is set as the selection handler for the tree and converts the information we are given about the click event on a node into the appropriate node object.
+The calculated information can then be passed on to the \texttt{select\_handler} callback method given in the constructor.
+
+\item[\texttt{\_fill\_tree(tree)}] \hfill \\
+We use this to recursively fill the displayed tree starting with our \texttt{fulltree} node. During this function's execution we build a database mapping
+identities in the displayed tree, to node objects allowing \texttt{\_selected} to convert back. We also tag the appropriate node as well as extracting
+information from the notes to display in the details column.
+\end{description}
+
+We will also create a \texttt{ScrolledASTTreeview} that contains \texttt{ASTTreeview}, allowing the large widget to scroll by adding scrollbars around
+the outside.
+
 \subsection{Developing a Graphical Display for Node Markings}
+
+
+
 \subsection{Developing an Interactive Source Code Viewer}
 
 \section{Evaluation}
