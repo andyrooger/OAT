@@ -2834,7 +2834,54 @@ into the code whenever required. Automatic generation behaviour should then be v
 
 \subsection{Using Opaque Predicates}
 
-\subsection{Implementing the Transformation}
+We have already stated that the purpose of us using opaque predicates will be to insert new branches into the control flow of our target program. There are a
+few different types of these branches we will implement, all requiring different information from the user about the opaque predicates they provide us with.
+
+A three examples in \cite{taxobftrans} are
+
+\begin{enumerate}
+\item Inserting an \texttt{if} statement relying on an opaque predicate that always evaluates to \texttt{True}. The latter part of a block of statements will
+      be enclosed by the body of the \texttt{if} statement, but the branch is irrelevant code as it is always executed.
+\item Inserting an \texttt{if}-\texttt{else} branch into sequence of statements that relies on an opaque predicate with an unknown value. The bodies of both
+      branches will both contain the same section of our sequence, but obfuscated in different ways. Provided that the enclosed part of the sequence is longer
+      than one statement we can use our reordering to do this.
+\item Inserting an \texttt{if}-\texttt{else} statement relying on an opaque predicate that always evaluates to \texttt{True}. The \texttt{False} branch of the
+      code will execute the same code as the \texttt{True} branch but with some small bug inserted.
+\end{enumerate}
+
+We will concentrate on the first two of these examples, as well as the exception handling branching described in the previous section. In addition to these
+three types we will also introduce our own branching on a \texttt{while} loop.
+
+This will behave in a very similar way to the \texttt{if} statement, in that if the predicate we rely on always evaluates to \texttt{False} then it will never
+be executed. If on the other hand our predicate evaluates to \texttt{True} then we need a way to make the predicate \texttt{False} again. This operation will
+be up to the user and can be inserted at the end of the \texttt{while} loop to ensure the loop will terminate after the first iteration. The body of the loop
+may later be reordered to hide this.
+
+These operations should be simple to implement provided we have the following information from the user:
+
+\begin{enumerate}
+\item A name to concentrate operations on. This should preferably not be used inside the block as we may decide to alter its value.
+\item Either a given predicate whose value we know given the operations and values below, or an expression that we know will or won't raise certain exceptions
+      given the values below. We could have multiple of these for the same name.
+\item One or more possible values for the name that ensure (2) is correct. These can be expressions and can be assigned to our name at any point to
+      ensure (2).
+\item One or more operations that can be performed on the name that preserve (2).
+\item One or more operations that can be performed on the name that falsify (2).
+\end{enumerate}
+
+Now we can insert one of the specified branch types into a sequence of statements using any of the predicates or exception-raising expressions given. We will
+intersperse the surrounding code with operations that do not affect our predicates or exceptions and we are able to terminate \texttt{while} loops using (5).
+
+\subsection{Implementation and User Interaction}
+
+We will implement these operations by creating a \texttt{Brancher} class. This will define the following methods:
+
+\begin{description}
+\item[\texttt{\_\_init\_\_(name)}] \hfill \\
+The brancher concentrates all operations on the value of a single name, \texttt{name}. By doing this we can be sure whether an obfuscation performed by a
+\texttt{Brancher} object will affect names defined in our program. In the future we should allow this name to be replaced by another when obfuscating, but
+we do not have the time to implement this.
+\end{description}
 
 \# The branches we will insert will jump either to our valid program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
 \# that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
