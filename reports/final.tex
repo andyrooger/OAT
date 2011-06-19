@@ -2790,7 +2790,7 @@ As we discussed earlier these are predicates that we as the obfuscator may know 
 
 When branches depend on a predicate of this nature, it will be difficult for the analyser to calculate where the execution path will lead. This allows
 us to insert complicated or confusing code into paths that we know will never be executed. As the analyser finds it difficult to know that the execution
-path will not ever be followed, it cannot safely remove our dead code.
+path will not ever be followed, it cannot safely remove our dead code. We also aim to confuse a human reader with the extra source code this will leave.
 
 It is possible to use this type of obfuscation in conjunction with the statement reordering in the previous section. For example when branching on
 an unknown predicate we may want to disguise the fact that both branches will perform the same task. To do this we can repreatedly use a combination
@@ -2837,7 +2837,7 @@ into the code whenever required. Automatic generation behaviour should then be v
 We have already stated that the purpose of us using opaque predicates will be to insert new branches into the control flow of our target program. There are a
 few different types of these branches we will implement, all requiring different information from the user about the opaque predicates they provide us with.
 
-A three examples in \cite{taxobftrans} are
+Three examples in \cite{taxobftrans} are
 
 \begin{enumerate}
 \item Inserting an \texttt{if} statement relying on an opaque predicate that always evaluates to \texttt{True}. The latter part of a block of statements will
@@ -2850,7 +2850,7 @@ A three examples in \cite{taxobftrans} are
 \end{enumerate}
 
 We will concentrate on the first two of these examples, as well as the exception handling branching described in the previous section. In addition to these
-three types we will also introduce our own branching on a \texttt{while} loop.
+three types we will also introduce our own form of branching on a \texttt{while} loop.
 
 This will behave in a very similar way to the \texttt{if} statement, in that if the predicate we rely on always evaluates to \texttt{False} then it will never
 be executed. If on the other hand our predicate evaluates to \texttt{True} then we need a way to make the predicate \texttt{False} again. This operation will
@@ -2874,36 +2874,79 @@ intersperse the surrounding code with operations that do not affect our predicat
 
 \subsection{Implementation and User Interaction}
 
-We will implement these operations by creating a \texttt{Brancher} class. This will define the following methods:
+We will implement these operations by creating a \texttt{Brancher} class. This will expose the following objects and methods:
 
 \begin{description}
 \item[\texttt{\_\_init\_\_(name)}] \hfill \\
 The brancher concentrates all operations on the value of a single name, \texttt{name}. By doing this we can be sure whether an obfuscation performed by a
 \texttt{Brancher} object will affect names defined in our program. In the future we should allow this name to be replaced by another when obfuscating, but
 we do not have the time to implement this.
+
+\item[\texttt{predicates}] \hfill \\
+This is an object that contains our stored predicates. Each predicate should be a \texttt{CustomAST} node of type "Expr" that corresponds to some value, either
+\texttt{True} or \texttt{False}. The predicate should be such that \texttt{bool(predicate)} evaluates to \texttt{value} at any point where \texttt{name} has
+been initialised properly with the values given below, and only the predicate value preserving operations have been performed on it.
+
+To add a predicate to the object we define an \texttt{add(pred, val)} method on the object that will add the predicate and return an id to reference it. We
+can use this id to reference the predicate again using \texttt{predicates[id]} which returns a tuple containing the predicate and value, or remove the
+predicate using \texttt{del predicates[id]}.
+
+We also allow iteration over the \texttt{predicates} object and define the necessary methods to allow counting the number of predicates using
+\texttt{len(predicates)}.
+
+\item[\texttt{exceptions}] \hfill \\
+This object works similarly to \texttt{predicates} although it contains expressions that may raise exceptions rather than predicates. The our add method
+will be defined as \texttt{add(expr, raises, exc*)}. This will be given an expression that could raise exceptions, and must be \texttt{CustomAST} node of
+type "Expr". \texttt{raises} indicates whether or not the expression will raise for the conditions we will give it, and \texttt{exc} represents one or more
+names of the exception types involved.
+
+Deletion, access and iteration are all the same as in \texttt{predicates}.
+
+\item[\texttt{initial}] \hfill \\
+An object containing initial values for \texttt{name}. The \texttt{add} method here just takes a single \texttt{CustomAST} node of type "Expr".
+
+\item[\texttt{preserving}] \hfill \\
+Contains operations on \texttt{name} that will preserve the given \texttt{predicates} and \texttt{exceptions}. This time we take any \texttt{CustomAST}
+node whose type derives from \texttt{ast.stmt}; a statement node.
+
+\item[\texttt{destroying}] \hfill \\
+This contains the opposite of statements in \texttt{preserving}. Instead of preserving our predicates this should give them values other to that which we
+expect.
+
+\item[\texttt{randomising}] \hfill \\
+Rather than preserving or upsetting our predicates, statements contained in this object should have an unknown effect.
+
+\item[\texttt{if\_branch(statements, start, end)}] \hfill \\
+This is the first of the actual branching methods defined on our brancher, designed to remove a section of the statements in \texttt{statements} and replace
+them with an \texttt{if} statement depending on one of our predicates that runs the missing section of statements. The statements outside of the \texttt{if}
+statement can now be scattered with statements from \texttt{preserving}, starting with one or more statements from \texttt{initial}. Inside the \texttt{if}
+statement can be scattered with statements from both \texttt{preserving} and \texttt{destroying}.
+
+Initially this method will just check to ensure we have enough of the components to perform this action. If a list of statements is provided it will then
+proceed with the transformation, otherwise it will return a boolean value indicating whether the transformation can be performed. \texttt{start} and \texttt{end}
+are indices into the statement list that indicate the range of statements to move into the \texttt{if} statement body.
+
+\item[\texttt{ifelse\_branch(statements, start, end)}] \hfill \\
+This is similar to \texttt{if\_branch} but the removed statements will be placed into both the \texttt{if} and \texttt{else} bodies. Now rather than just scattering
+the surrounding statements with statements from \texttt{preserving}, we use statements from both \texttt{preserving}, \texttt{destroying} and \texttt{randomising}
+scattered throughout the whole block.
+
+\item[\texttt{except\_branch(statements, start, end)}] \hfill \\
+Here we use the idea from \cite{exceptionpred} and produce a transformation close to \texttt{if\_branch}, but using our \texttt{try}-\texttt{except} structure
+instead of an \texttt{if} statement.
+
+\item[\texttt{while\_branch(statements, start, end)}] \hfill \\
+Again like \texttt{if\_branch} but providing replacing the \texttt{if} structure with a \texttt{while} loop. This time we must stop the \texttt{while} loop following
+the first iteration so the last statement in the loop will be a statement from \texttt{destroying}. This can be moved inside the loop body using the reordering
+transformation from earlier.
+
 \end{description}
 
-\# The branches we will insert will jump either to our valid program code, or another obfuscated version of our code or even some cleverly disguised garbage. The purpose of doing so being
-\# that the increased number of branches in the program will confuse both a human reader and a programatic analyser.
+\# Allow saving the brancher in the interface.
 
 \# To reverse the transformation, dead code analysis will be used. This means the analyser will seek to remove
 \# branches where we know a program will always take a certain path. The success of this analysis
 \# depends on both the strength of the analysis and the strength of the opaque predicate.
-
--------------------------------------------------------------------
-
-add false branch to dead code
-branch and duplicate our code
-branch with while?
-branch true with our code
-insert bug to code in one branch
-
---------------------------------------------------------------------
-
-Add very basic opaque predicate support.
-   i.e. ask user to add a variable to use, condition on it that's always true,
-   and an operation that looks complicated but won't change it. Then ask the
-   user to find a list of statements where it would be accessible and add it.
 
 \subsection{Analysis and Deobfuscation}
 
