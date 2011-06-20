@@ -3122,7 +3122,7 @@ Python obfuscator, and to detail and discuss the limitations imposed by the flex
 Whilst the first of these aims has been achieved there is still much room for improvement. We will now discuss the reasons for this and address the second
 of our aims.
 
-\subsection{Useability}
+\subsection{Software Useability}
 
 This was not a primary objective, however it needs to be discussed as useability should be an important consideration for any software project. Our system
 was developed with ease of testing and evaluation in mind rather than user friendliness and so can be difficult for a user to use productively.
@@ -3156,26 +3156,53 @@ We feel that the level of usability of our software is sufficient for its curren
 future extensions of the software can provide a better experience for an average user. For the advanced user expected currently we provide customisability
 at the expense of usability although the advent of GOAT can improve both of these.
 
-\subsection{Power and Flexibility}
+\subsection{Comparison to Similar Tools}
 
+A comparison of our work with other software is going to be difficult due to the lack of similar tools.
 
+If we look at other Python obfuscators we can relate to two; pyobfuscate \cite{pyobf} and BitBoost's
+'Python obfuscator and code size reducer' \cite{bitboost}. Of these, only one is accessible to us and
+neither can cope with Python 3.x source code. Both of these obfuscators focus on layout transformations
+and so would serve better performing complementary transformations rather than competing with our
+control-flow obfuscation software.
 
-\# Performance, limitations (such as what our automarker can and can't do), command line (useability), compare with layout obfuscators and automation
+Instead we may look to the wider range of control-flow obfuscators available for other languages such as
+Java or C. What we see is that these obfuscators will usually have a much wider range of available
+obfuscating transformations, combining data or layout obfuscation as well. These obfuscators tend to
+work in an automatic fashion of object or bytecode rather than source code.
+
+While the extra scope of these tools is likely indicitive of the extra developer manpower and time
+available to them, it also appears due to the difference in the languages. While the Python language
+employs rules that allow much flexibility, Java or C is much more restrictive.
+
+One problem that has hindered us frequently is that Python methods and classes are both treated as objects.
+This means they can be renamed, redefined, dynamically generated, or passed around the program as parameters.
+Many times in our development work we have had to sacrifice automation or flexibility to avoid resolving function
+calls or classes. This analysis would have been made much easier by being able to point directly to a class or
+function definition in Java.
+
+While similar problems exist in C where we can pass around function pointers or in Java where we have to decide which
+type of object a method is being called on, the issue is more prolific in Python. In the average Python program we will
+find many places where the developer has dynamically changed a function or class or passed them about the program during
+execution. This turns the problem of creating a simple control flow graph into a data flow problem, something that we would
+expect to solve \textit{using} the control flow graph.
+
+Problems like these work to restrict or complicate the types of analysis we are able to perform on program source code.
+While this restricts the types of obfuscation we can perform, it also increases the difficulty of reversing these
+transformations. Therefore a few simple transformations performed on Python source code can be just as difficult to reverse as
+a large amount of transformations in other languages.
+
+Our opinion is that although we provide only a limited number of available transformations for the code, with a little more work
+these can start to compete with obfuscators for other languages. As it would be misleading to compare our software with tools for
+other languages or types of obfuscation we will instead compare each type of obfuscation we implement with our own ability to reverse
+it.
+
+\subsection{Reordering Program Statements}
+\subsection{Irrelevant Branching}
+
+\# Performance, limitations (such as what our automarker can and can't do), compare with layout obfuscators and automation
 
 \subsection{How to Evaluate}
-
-Evaluation of the final product will be difficult, this is mainly due to the lack of similar tools.
-Comparison to other Python obfuscators is not viable as only the pyobfuscate tool is available to
-use. While this does perform obfuscation on Python source, it does not operate on the same version of
-the source or perform the same type of obfuscation. In fact most available obfuscators will deal with
-layout transformation rather than control flow.
-
-There are a few obfuscators that will deal with control flow obfuscation in other languages, for example
-the Kava tool for Java is discussed in detail elsewhere \cite{taxobftrans}. We could attempt to compare these
-tools with our own, however they tend to be written for much less flexible or dynamic languages than
-Python (and hence are easier analysable). Indeed, it is one of the intentions of this project to assess the
-extra difficulty a dynamic language such as Python adds when writing these tools, but to compare the final
-product to one of these existing tools from such a different base would be misleading.
 
 As well as comparing to similar tools, we have the option to assess an obfuscator's merit based on
 its ability to create output that withstands reverse engineering or analysis. In fact this should be
