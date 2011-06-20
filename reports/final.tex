@@ -3013,21 +3013,21 @@ of the analysis.
 
 \section{Introducing GOAT}
 
-At the beginning of this project the choice was made to implement our primary interface on the command line, primarily for the speed of development. As mentioned
-in the discussion, a GUI would provide a more natural interface to the user where the only downside would be the extra time spent in the implementation.
+At the beginning of this project the choice was made to implement our primary interface on the command line, the focus being on speed of development. As
+mentioned in the earlier discussion, a GUI would provide a more natural interface to the user.
 
-As we have progressed through the development of OAT there are many points we have passed that could have been greatly improved by this graphical interaction.
+As we have progressed through the development of OAT there are many places we have seen that could have been greatly improved by this graphical interaction.
 For instance the traversal of our AST, currently performed by our \textbf{explore} command is cumbersome and can be confusing in the command line interface. A
 much better representation would be to display all of the nodes in a form of heirarchical display commonly seen in file managers.
 
 This immediate access to all nodes in the AST would also help us with other tasks. While marking the AST we currently expect a user to manually mark any function
 calls as we cannot resolve which function they correspond to. Rather than leaving the marking entirely up to a user, it seems reasonable to allow the user to
-click on a function definition within the tree and continue our analysis in the function body. There is no natural way to do this in the current command line
-tool.
+click on a function definition within the tree and continue our analysis in the function body. There is no natural way to choose this function definition
+in the current command line tool.
 
 Another helpful function would be to display the program code as we explore it. Currently when looking at a node we have to specifically run the \textbf{format}
 command to print the source code. In a GUI application it would not be difficult to provide a second pane where we can also see the whole program source code,
-highlighting our node's source code so that the user can view it in context. This pane would be available throughout the entire programs operation.
+highlighting our node's source code so that the user can view it in context. This pane would be available throughout the entire program's operation.
 
 Thankfully we do not need to reimplement any of our basic functionality to provide this graphical interface. We have followed good design principles and so have
 endevoured to keep our implementation as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
@@ -3035,8 +3035,8 @@ Graphical OAT, component by component. Each component may be added and tested as
 
 \subsection{Developing a Hierarchical Display for our AST}
 
-This is the first component we will develop for GOAT. Our intentions in designing this component are to create a reuseable component that can be used by any
-part of the interaface that needs to allow a user to browse and select nodes. We should be able to set up a node browser just by passing a root node to the
+This is the first component we will develop for GOAT. Our intentions for the design are to create a reuseable component that can be used whenever some part of
+part of the interface requires a user to browse and select nodes. We should be able to set up a node browser just by passing a root node to the
 constructor of the component.
 
 Luckily the \texttt{tkinter} module we will be using to build the GUI also contains a module called \texttt{ttk} full of extensions including a
@@ -3044,13 +3044,11 @@ Luckily the \texttt{tkinter} module we will be using to build the GUI also conta
 following modifications:
 
 \begin{description}
-\item[\texttt{\_\_init\_\_(parent, fulltree, currenttree, select\_handler, **other)}] \hfill \\
-\texttt{parent} and \texttt{other} specify the parent window and any other \texttt{ttk.Treeview} constructor arguments to allow some flexibility in the component.
-More interestingly we specify the AST to display with \texttt{fulltree} and the currently selected node with \texttt{currenttree}.
-
-After setting up two detail columns to display each node's type and value (if available), we pass both nodes to \texttt{\_fill\_tree} to populate our displayed
-tree. Two tags are set up to colour the selected node and any empty nodes. This allows the user to quickly see the selected tree, and any empty nodes are shaded
-out to emphasise the fact that they are not needed.
+\item[\texttt{\_\_init\_\_(fulltree, currenttree, select\_handler)}] \hfill \\
+First we specify the AST to display with \texttt{fulltree} and the currently selected node with \texttt{currenttree}. After setting up two detail columns
+to display each node's type and value (if available), we pass both given nodes to \texttt{\_fill\_tree} to populate our displayed tree. Two tags are set
+up to colour the selected node and any empty nodes. This allows the user to quickly see the selected tree, and any empty nodes are shaded out to emphasise
+the fact that they are not needed.
 
 \item[\texttt{\_selected(info)}] \hfill \\
 This is set as the selection handler for the tree and converts the information we are given about the click event on a node into the appropriate node object.
@@ -3058,53 +3056,63 @@ The calculated information can then be passed on to the \texttt{select\_handler}
 
 \item[\texttt{\_fill\_tree(tree)}] \hfill \\
 We use this to recursively fill the displayed tree starting with our \texttt{fulltree} node. During this function's execution we build a database mapping
-identities in the displayed tree, to node objects allowing \texttt{\_selected} to convert back. We also tag the appropriate node as well as extracting
-information from the notes to display in the details column.
+identities in the displayed tree to node objects, allowing the conversion in \texttt{\_selected}. We also tag the appropriate highlighted node and extract
+information from each to display in the details column.
 \end{description}
 
-We will also create a \texttt{ScrolledASTTreeview} that contains \texttt{ASTTreeview}, allowing the large widget to scroll by adding scrollbars around
-the outside.
+As the tree may be larger than the available screen space, we will create a \texttt{ScrolledASTTreeview} that contains \texttt{ASTTreeview}. This allows a
+large widget to scroll by adding scrollbars aroundthe outside.
 
 \subsection{Developing a Graphical Display for Node Markings}
 
 This is the most basic of the components we will implement, designed solely to display a specific node's markings.
 
-We will implement this in the class \texttt{MarkPane}, whose constructor takes just a node whose markings to display. Each type of marking specified on the
-node is given a row for display and the actual mark is converted using a very primitive algorithm into text.
+We will implement this in the class \texttt{MarkPane}, whose constructor takes just a node whose markings to display. For each type of marking specified on the
+node, we create a row labelling the marking type and detailing its contents.
+
+As the widget has no knowledge of the individual mark representation, we do not detail their contents in any way specific to the marking type. Instead we perform
+a simple conversion based on the type of the contents. For instance a boolean value is converted to "Yes" or "No" and a set is converted to a comma separated
+list of its contents.
 
 \subsection{Developing an Interactive Source Code Viewer}
 
 This is the most in depth of the graphical components. We will create a text box that will display and highlight different points in the source code generated
 by a specific node. The source code may be generated by any of our writer classes.
 
-The first class we will create is \texttt{CodeBox}, a child of \texttt{tkinter.Text}. This class has a very simple constructor, taking no arguments and
-defining two tags, one for highlighting the current node (for example the one highlighted by the \textbf{explore} command), and one for highlighting
-a selected node.
+The first class we will create is \texttt{CodeBox}, a child of \texttt{tkinter}'s normal text box component, \texttt{tkinter.Text}. This class has a very
+simple constructor, taking no arguments and defining two tags, one for highlighting the current node (for example the one highlighted by the
+\textbf{explore} command), and one for highlighting some selected node.
 
-The only other function defined on this class is \texttt{fill} which is given a writer class and a node to generate the source code from, and two nodes to
-highlight with the tags we defined in the constructor. In this function we reach a difficulty when we come to tag the code we wish to highlight. The design
-of the underlying \texttt{tkinter.Text} class requires that to highlight a section of the source text we will need to either tag the whole section as we
-insert it into the text box at once, or we will need to be able to mark both ends of the highlighted section as we write it.
+The only other function defined on this class is \texttt{fill} which is used to fill the code box will the correct source code. This function is given a
+writer class and a node to generate the source code from, and two nodes to highlight using the tags we defined in the constructor. The difficulty we come to
+in this function is that we wish to apply tags to the exact region of code we wish to highlight.
+
+The design of the underlying \texttt{tkinter.Text} class requires that to highlight a section of the source text we use one of two methods. Either we will
+need to tag the entire section as we insert as a whole into the text box, or we will need to be able to mark the location at both ends of the highlighted
+section as we insert either end.
 
 We do not have any control over the writing of the source code, so this will be a difficult challenge to overcome for us. To solve this problem we will be
-using the \texttt{tagging\_writer} function to dynamically generate a subclass our our writer class. This will overwrite the \texttt{\_write} function
-to capture every node before and after it is written, generating the start and end tags. We will also generate a file-like object that allows all writes
-the be converted to inserts into the text box.
+using the \texttt{tagging\_writer} function to dynamically generate a subclass our writer class. This will overwrite the writer's \texttt{\_write} function
+to capture every node before and after it is written, generating the start and end tags. We will also generate a file-like object so that any time our writer
+writes to the object, it is converted to an insert into the text box.
 
 Now that we have created the \texttt{CodeBox} class we will create \texttt{ScrolledCodeBox} that adds scrolling functionality to the original component.
-A final class will now be created called \texttt{CodeDisplay}. This adds a radio selection to decide on the source writer, allowing the user to change
-the writer class without closing the window.
+A final class will now be created called \texttt{CodeDisplay}. This adds a radio selection to decide on the particular source writer, allowing the user
+to change the writer class without closing the window.
 
-\subsection{Growing GOAT from OAT}
+\subsection{Growing a Graphical Interface from the Command Line}
 
 As we are not creating an entire graphical interface at once, it will be helpful to test components as we create them from the original command
-line interface, OAT. For the initial three components we have created we will introduce the command \textbf{visualise}. This will combine all three
-components into a single window that allows a user to inspect the current state of their AST and its markings in the graphical interface, but will
-not allow them to change anything.
+line interface, OAT. As we said earlier this will allow us to incrementally create our graphical interface, building and testing each part individually
+and relying on the current interface for all other tasks.
 
-By creating a command to display this we are also able to test any of the graphical components ready to incorporate them into the full version of GOAT
-in the future. For an example of the use of this graphical interface, please refer to the user session in the appendix.
+For the initial three components we have created we will introduce the command \textbf{visualise}. This will combine all three components into a single
+window that allows a user to inspect the current state of their AST and its markings. While the user will be able to view a fixed state of the AST, they
+will not be able to change anything that could affect the command line program. This is to avoid complications that could arise from the command line
+being designed as the sole editor of its data. To continue using the program, the user will need to close the visualiser window.
 
+We can creating GOAT in this way, gradually building more and more components and incorporating them into OAT until we have a fully graphical interface.
+For an example user session and to see how the visualiser window looks, please refer to the appendix.
 
 \section{Evaluation}
 
