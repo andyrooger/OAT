@@ -3116,6 +3116,52 @@ For an example user session and to see how the visualiser window looks, please r
 
 \section{Evaluation}
 
+In the introduction of this report we introduced the aims for this project. These were to twofold, requiring us to create a basic functioning but extensible
+Python obfuscator, and to detail and discuss the limitations imposed by the flexibility of Python on our obfuscator or analyser.
+
+Whilst the first of these aims has been achieved there is still much room for improvement. We will now discuss the reasons for this and address the second
+of our aims.
+
+\subsection{Useability}
+
+This was not a primary objective, however it needs to be discussed as useability should be an important consideration for any software project. Our system
+was developed with ease of testing and evaluation in mind rather than user friendliness and so can be difficult for a user to use productively.
+
+If we compare our system with other tools to do similar jobs such as pyobfuscate \cite{pyobf} for Python or Kava \cite{taxobftrans} for Java, the main
+difference we see is the level of automation. Rather than our approach, involving the user explicity orchestrating the transformation of their target
+source code, simply providing the obfuscator with this target source code is sufficient. The tool will then analyse the code without outside help
+and perform different obfuscating transformations until some complexity or time quota is met.
+
+In practice this method of interaction is exactly what most users want, allowing quick and easy use without needing to learn about the tool or
+how it works. Nevertheless the software in its current state is not aimed directly towards users and so our current level of interaction is acceptable.
+It would be possible in future to extend the interface and automate the processing if needed although we would lose a great deal of power in the analysis
+and AST marking phase.
+
+Let us accept that non-automatic operation is correct for our task, then the usability of OAT is still not yet ideal. There are many parts of both the
+analysis and obfuscating parts of the program that require user interaction for tasks that could be performed by the software with no loss to flexibility or
+power. For example, while we enable the automatic marking of the AST, the user is still required to mark any function calls manually. It is reasonable
+to assume that a user would need to resolve function calls, however the software should allow a simple link to be created between the call and one or more
+possible definitions, so that it may continue the automatic marking.
+
+We also have the cumbersome use of the command line interface to think about, guiding the user through a somewhat unnatural interaction process. This will be
+solved by the gradual migration from OAT to GOAT and its graphical interface. The current graphical command \texttt{visualise} already greatly eases the
+exploration of and experimentation with the AST. Eventually we hope that the whole process of obfuscation may be carried out from a graphical interface,
+allowing a more friendly user experience that provides parallel viewing and access to multiple parts of the program.
+
+As the tool's production progresses we hope to integrate other analytic tools such as Bicycle Repair Man \cite{bikerepair} with our own tool to
+perform tasks such as resolving method calls. This will allow our software to become much more useful that it is in its current state, where certain
+missing functionality dampens the user experience.
+
+We feel that the level of usability of our software is sufficient for its current purpose. The internal code is easily accessible to a programmer so that
+future extensions of the software can provide a better experience for an average user. For the advanced user expected currently we provide customisability
+at the expense of usability although the advent of GOAT can improve both of these.
+
+\subsection{Power and Flexibility}
+
+
+
+\# Performance, limitations (such as what our automarker can and can't do), command line (useability), compare with layout obfuscators and automation
+
 \subsection{How to Evaluate}
 
 Evaluation of the final product will be difficult, this is mainly due to the lack of similar tools.
