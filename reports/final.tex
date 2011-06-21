@@ -3334,6 +3334,16 @@ flexibility. Rather than being limited by what our obfuscator can perform automa
 predicate they like. Although this library may be slow to create initially, once a user has a large base of different examples the process of obfuscating using
 them will become much quicker.
 
+To give a very loose idea of how our irrelevant branches will stand up against analysis, we can create one or more very simple example and allow analysis by
+other Python analysers. In fact by testing in all of PyDev \cite{pydev}, pylint \cite{pylint} and PyCharm \cite{pycharm} we see that even the very
+simple case below is not recognised as an unreachable branch.
+
+\lstinputlisting{../snippets/deadcode.py}
+
+As such as simple code snippet evades the efforts of dead code analysis from these established tools, we can say with reasonable confidence that even a
+simple opaque predicate will stand up to today's Python deobfuscators. Thus a user of our tool must only provide predicates sufficient to outwit a human
+analysis.
+
 \section{Conclusions and Future Work}
 
 TODO - this section, aaah
