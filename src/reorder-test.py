@@ -7,7 +7,7 @@ def test(size, visible, breaking, rprob, wprob, rand, valuer):
         stats = create_statements(size, visible=visible, breaking=breaking, rprob=rprob, wprob=wprob)
         #printSource(stats, PrettyWriter)
         time = timed_reorder(stats, timeout, rand, valuer)
-        print(",".join(str(x) for x in [size,visible,breaking,rprob,wprob,rand,valuer.__class__.__name__,time]))
+        print(",".join(str(x) for x in [size,visible,breaking,rprob,wprob,rand,valuer.__class__.__name__,testno+1,time]))
 
 if __name__ == "__main__":
     from writer.prettywriter import PrettyWriter
