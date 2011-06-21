@@ -55,7 +55,7 @@ Herbert Wikliky
 \end{titlepage}
 
 \begin{abstract}
-TODO write abstract!
+\#TODO write abstract!
 \end{abstract}
 
 \section*{Acknowledgements}
@@ -3321,7 +3321,18 @@ this obfuscation will be strongest when applied to a program without much visibl
 
 \subsection{Irrelevant Branching}
 
+Our aim in inserting new branches into the target source code was to complicate the program and make it less readable or understandable to a human. We will
+also confuse an analyser depending on the code inserted.
 
+Other discussions on performing these types of transformations \cite{taxobftrans} tell us that the that the strength and resilience of the obfuscation relies
+on the strength of the chosen opaque predicate. As we have not implemented any reverse transformation we cannot quantify the relilience of any particular
+predicates. However we can assume that the same problems that Python's flexibility has caused during other parts of our implementation will help to thwart
+any reversal efforts.
+
+While we do require the user to build up a library of expressions and statements that can be used to insert these irrelevant branches, this allows extra
+flexibility. Rather than being limited by what our obfuscator can perform automatically, a user is able to create and insert almost any form of opaque
+predicate they like. Although this library may be slow to create initially, once a user has a large base of different examples the process of obfuscating using
+them will become much quicker.
 
 \section{Conclusions and Future Work}
 
