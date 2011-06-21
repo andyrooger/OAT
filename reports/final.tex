@@ -10,6 +10,8 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{6pt plus 2pt minus 1pt}
 \setcounter{secnumdepth}{0}
+\usepackage[dvips]{graphicx}
+\usepackage{subfig}
 
 % For title page
 \newcommand{\HRule}{\rule{\linewidth}{0.5mm}}
@@ -3226,70 +3228,100 @@ let the time taken for a transformation represent effort.
 
 \subsubsection{Performance}
 
+To perform these tests we created a generator that would randomly construct sequences of statements for us. This generator relies on the following
+parameters to create its statements:
 
+\begin{description}
+\item[Length] of the sequence list. We varied this between one and ten statements long.
+\item[Visibility Probability] is the probability that any given statement will be visible. We chose this to be either $0.1$ or $0.5$.
+\item[Breaking Probability] is the probability that any given statement will be flow-breaking. Again this was chosen to be either $0.1$ or $0.5$.
+\item[Read Probability] is the probability that any given statement will read at least one name. This is either $0.1$, $0.5$ or $0.9$ and is used to create
+probabilities for each individual variable read.
+\item[Write Probability] is the probability that any given statement will write at least one name. Similar to the read probability this is $0.1$, $0.5$ or $0.9$ and
+is used to produce probabilities for each individual variable.
+\end{description}
+
+We allowed three different names to be read and written to. For every combination of the above variables, we recorded the time taken to calculate all
+permutations and the time taken to find the best permutation (according to \texttt{WriteUseValuer}), using \texttt{Reorderer} and \texttt{RandomReorderer}.
+Each individual test was performed five times and the resulting time was averaged.
+
+In comparing the difference between using the valuer and not, we see that the difference is usually negligable. This difference averaged at around a $23000\%$
+increase for the cost of running a valuer, but as $40\%$ of the tests were actually faster when using the valuer and the range of increases was between
+$-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually negligable and that random factors from other variables contributed much more to
+the overall difference. For the rest of our analysis we will look only at the unvalued results to avoid interference.
+
+Now we compare \texttt{RandomReorderer} to \texttt{Reorderer}. We expect that \texttt{RandomReorderer} will be slower because it adds extra storage and random
+shuffling to \texttt{Reorderer}. What we find is that on average \texttt{RandomReorderer} incurs a $7.68\%$ increase during our tests, however this is highly
+dependent on the length of the statement list. The following figure shows the increase of percentage increase of time taken to randomise permutation output
+as the length of the statement list increases. Note that this figure is zoomed in on the area of interest so some points may not be visible.
+
+\begin{figure}[h]
+\centering
+\scalebox{0.75}
+{\includegraphics{../randomreorderperf.eps}}
+\end{figure}
+
+While we can attribute the extra time taken in randomising output to the increasing work undertaken, the sudden increase starting at nine
+statement length could be attributed to Python's garbage collector starting to clean up the extra memory being used. We will now ignore the
+\texttt{RandomReorderer} and focus on the effects of a normal reordering using \texttt{Reorderer}.
+
+As we would expect, the average total number of permutations for each sequence length is proportionate to the average time taken to calculate these permutations.
+This is shown in the following graph
+
+\begin{figure}[h]
+\centering
+\scalebox{0.75}
+{\includegraphics{../lengthperf.eps}}
+\end{figure}
+
+An unexpected result however is the total number of permutations available on average for each sequence size. If there were no data dependencies, visible statements
+or breaking statements we would expect a sequence of length $n$ to yield $n!$ different permutations. As we see in the following graph, the number of permutations
+calculable from our generated statement lists are not even close to this limit.
+
+\begin{figure}[h]
+\centering
+\scalebox{0.75}
+{\includegraphics{../maxperms.eps}}
+\end{figure}
+
+This is likely due to the choice of each of the variables used to generate the statement list. From the following graphs we can see the large
+difference that changes in visibility, breaking, read, or write probabilities make.
+
+\begin{figure}[h]
+\centering
+\subfloat{\scalebox{0.55}{\includegraphics{../visprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../breakprob.eps}}}
+\end{figure}
+
+As we can see, more that a minimal amount of either breaking statements or visible statements severely limits the number of legal permutations we may
+generate from a sequence. Of the two types of statements, those that break flow are slightly more effective. This effect means that code with more
+visible or breaking statements will much faster to reorder and have less flexibility on the legal orders available. Similary the next two graphs show
+effect that differences in the number of reading and writing statments make.
+
+\begin{figure}[h]
+\centering
+\subfloat{\scalebox{0.55}{\includegraphics{../readprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../writeprob.eps}}}
+\end{figure}
+
+We see a similar result here to the previous two graphs. The only real difference being that not having many writes inside a sequence of statements
+has a greater effect that any of the other variables we have inspected, causing many more legal permutations to become available.
+
+Overall we see that the the maximum number of legal permutations and therefore the maximum expected execution time of a reordering grows exponentially
+with the number of statements in the sequence. We tested up to $10$ statements due to the time that testing any more could take, but we can already see
+that average number of legal permutations does not grow nearly as fast as the maximum. At $10$ statements we see that that execution time maxed at around
+$90$ seconds, but averaged only around $3.5$. In a separate test of $10$ independent statements we found that execution time rested at around $120$ seconds,
+so most reordering take only a fraction of the maximum time to compute.
+
+By applying this knowledge to our discussion of the strength of our reordering obfuscation we can see that the actual strength depends hugely on the
+particular program being obfuscated. If we remember that we can use \texttt{RandomReorderer} and limit its output to the a single permutation we can
+create an obfuscation that will stand up to an analyser and possibly a human almost instantaneously. To choose an ideal ordering with the aim of
+deobfuscation will depend on attributes we talked about above, and the more legal orderings we can allow the harder this deobfuscation will be. Therefore
+this obfuscation will be strongest when applied to a program without much visible output or many flow-breaking statements.
 
 \subsection{Irrelevant Branching}
 
-\# Performance, limitations (such as what our automarker can and can't do), compare with layout obfuscators and automation
 
-\subsection{How to Evaluate}
-
-As well as comparing to similar tools, we have the option to assess an obfuscator's merit based on
-its ability to create output that withstands reverse engineering or analysis. In fact this should be
-a much better analysis of the product as we can say if the software is good at what it is designed to do, rather
-than whether it is just better at performing the same function as another tool.
-
-To aid in this form of evaluation we will need tools to analyse the obfuscated source code. There are plenty
-mentioned in the background section, however these tend to be designed to optimise code or detect possible bugs and so
-are not ideal.
-
-The solution proposed for this project is to write tools for analysis along side the tools for obfuscation.
-By doing this we can really target the analysis at detecting and reversing the particular transformations
-that our obfuscator implements. Hopefully this should not create a great deal of extra work as the analysis
-needed for reversing a transformation is often likely to be the same form of analysis performed to make that
-transformation in the first place, so the work is already done.
-
-Of course this is not a perfect solution. Ideally analytic tools would be written by someone else without
-knowledge of the specific obfuscator. This would move closer to representing a reverse-engineer or analytic
-tool in the real world, as hopefully neither would be able to ascertain the software used to perform the obfuscation
-or the specific techniques used on specific code locations. In theory this should give the analytic tool an
-advantage, lowering our expected potency for the obfuscator.
-
-Another problem caused by the same author writing both sides of a competing set of software is that the competition
-may not be so fierce as in the real world. Any design oversights in one half of the software will likely show up
-in the other, rather than being exploited as would hopefully be the case with two free thinking developers. As a real
-example, the Java decompiler Mocha will crash if it finds extra statements after a function has returned
-\cite{hosemocha}[p4]. The bytecode obfuscator HoseMocha uses this to prevent Mocha from decompiling programs. Had these two
-pieces of software been written by the same developer, one whose decompiler doesn't check for the unlikely case described,
-then it is probable that this case would never have been thought of for the obfuscator - and HoseMocha would never have
-been created.
-
-We do not have the option of contracting a separate developer to help with this evaluation. The best solution to mitigate the effect
-of this is to compare the development of the analysis tool to the available analytic tools discussed in the background section. Although
-these have different primary functions, at least some functionality will overlap and allow a loose comparison. From this it
-should be possible to determine if our analysis tool is sub-par or better than average and to judge the obfuscator
-accordingly.
-
-\subsection{What to Evaluate}
-
-We have looked at how we can evaluate the software, and we know the tools we will use to do so. What we don't know yet is
-the specific criteria that we will be evaluating. 
-
-As we already know, the aim of obfuscation is to confuse a human reader or a programmatic analysis. In measuring the effectiveness
-of a particular obfuscation we are actually attempting to quantify the additional confusion caused by it. This is not an easy task
-as confusion is very subjective to a particular viewer or program.
-
-Previous attempts to do this tend to use program complexity metrics to measure the impact of a particular obfuscation. Many fail to
-actually quantify transformation benefit, preferring instead to give a rough estimation, although recently there have been improvements in
-this area \cite{obfquant}.
-
-Although these metrics can be used during the obfuscating and analysis, they are unlikely to help with evaluation as we are
-not proposing any new transformations. Instead we are comparing the same transformation in an environment with looser rules than usual.
-In this case, complexity metrics will be very similar if not the same and so not helpful to us.
-
-A much more helpful approach will be to discuss freely (and using the metrics) the challenges faced in implementing these obfuscations
-in Python as well as breaking them. This can be compared to other languages and implementations. Finally the comparative performances
-of the obfuscator and analyser will be assessed on some example programs.
 
 \section{Conclusions and Future Work}
 
