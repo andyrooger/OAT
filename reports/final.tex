@@ -3200,7 +3200,33 @@ it.
 \subsection{Reordering Program Statements}
 
 This is the first of the two types of obfuscation that we implemented, aiming to confuse a reader or help to break idioms and hide
-other obfuscations from an analyser. 
+other obfuscations from an analyser. Our implementation can be restrictive, requiring certain conditions to be fulfilled and limiting
+the effectiveness of this type of obfuscation in the real world. These come as a result of a number of decisions, starting with the
+design of our automarker.
+
+The automarker was implemented to traverse the AST marking each node independently from any of its siblings. We can use and extend this implementation
+to perform many of the types of sematic analysis available inside common compilers, but not all. This is in part due to our choice of language, as Python
+will allow us to do many things such as calculating the scope of an identifier statically, but we cannot in the general case decide upon an identifier's
+type or resolve a function call to its definition without running the program.
+
+Using the available marking tools and theory, we concluded that the lists of statements we read or write are restricted to only writing to simple names
+and any functions that are called should only be able to write data that is local to themselves. The potency of our obfuscation then rests on whether
+it is still applicable to the real world.
+
+In our opinion, statement reordering will still be valid in most programs. This is especially true when it is the original author of a program that would
+like to perform obfuscation, in which case they may develop the most sensitive parts of their program specifically to adhere to these rules.
+
+We will not discuss in great detail the effects of reordering on a list of statements as this has been done elsewhere \cite{taxobftrans}. However we will
+explain that the effects are much greater when combined with other types of obfuscation, and used to hide these other transformations or introduced constructs.
+The strength of statement reordering then relies on the difficulty involved in reversing it.
+
+As discussed in the relevant section, a reordering is irreversible in general, however we may estimate a preferential reordering that may in some cases be better
+that the original program. To see the difference between the difficulty in performing obfuscation or deofbuscation in case we will perform a number of tests and
+let the time taken for a transformation represent effort.
+
+\subsubsection{Performance}
+
+
 
 \subsection{Irrelevant Branching}
 
