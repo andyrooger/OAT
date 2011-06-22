@@ -1646,21 +1646,23 @@ Let us think about what happens when we run the following sequence of $n$ statem
 
 $$S_1 \; S_2 \; S_3 \; \ldots \; S_{n-2} \; S_{n-1} \; S_n$$
 
-Beginning at some specified state inside and outside of the program, usually each $S_i$ is executed in turn until we reach $S_n$. There are certain cases where
+Beginning at some specified state inside and outside of the program, each $S_i$ is usually executed in turn until we reach $S_n$. There are certain cases where
 this does not happen, the first being in the event we encounter a flow-breaking statement. These are statements that will jump from the linear flow, for
 example a \texttt{return} statement or any statement that can cause an exception. The other case occurs when a statement does not ever terminate.
 
 For now we will only consider sequences such that for any initial state, the sequence will always terminate, and statements will never be flow-breaking. This also
-means that each of the individual statements must terminate. We prove this by assuming one or more of them do not. As we execute each statement in a linear
-order, and there are no flow breaking statements, we must eventually execute the first of these non-terminating statements, hanging the program indefinitely.
-As the sequence terminates this is a contradiction, meaning that every statement must terminate.
+means that each of the individual statements must terminate.
 
-We consider the following sequence of statements to be of this type.
+We prove this by assuming one or more of them do not terminate. As we execute each statement in a linear
+order, and there are no flow breaking statements, we must eventually execute the first of these non-terminating statements. This would hang
+the program indefinitely. As the sequence does terminate, this is a contradiction, meaning that every statement must terminate.
+
+We consider the following sequence of statements to be of this non-breaking, always terminating type.
 
 $$T_1 \; T_2 \; T_3 \; \ldots \; T_{m-2} \; T_{m-1} \; T_m$$
 
 Again we consider the execution of this sequence, starting with a specified world state and executing each statement in turn. As these statements all terminate,
-and there are no flow-breaking statements, we can see that every single statement is executed in order. During this execution, we will may notice changes to state
+and there are no flow-breaking statements, we can see that every single statement is executed in order. During this execution, we may notice changes to state
 outside of the program, as well as the time between these changes. At the end of the execution we can see the total time of execution and the rest of the program
 will see the internal state left by the executions.
 
@@ -1684,24 +1686,28 @@ will produce exactly the same effect before and after the reordering. We can ens
 a stationary statement that reads everything. We do this without any knowledge of the outer world or of the inner workings of the statement.
 
 Let us now add two empty pseudo-statements $T_{start}$ and $T_{end}$ either side of our current statement sequence. $T_{start}$ is assumed to write to every
-region and $T_{end}$ is assumed to read every region. These statements will not be reordered with the rest, and we can now write our sequence as:
+region and $T_{end}$ is assumed to read every region. These statements will not be reordered with the others, and we can now write our new sequence as:
 
 $$T_{start} \; T_1 \; T_2 \; T_3 \; \ldots \; T_{m-2} \; T_{m-1} \; T_m \; T_{end}$$
 
 The only information that have about these statements tells us which parts of the internal state each $T_i$ reads or writes during its execution. We will
-also assume that we know if a statement reads or writes to the outside world, but do not care which part of this is interacted with. To record this we
+also assume that we know if a statement reads or writes to the outside world, but we do not care which part of the world it is interacting with.
+
+To record these reads and writes, we
 will split the internal state into separate regions, and assume that every write will replace the entire region with what it is writing. If this is not
-the case then we can think of the statement as first reading the region and then using this data to write to its entirety.
+the case then we can think of the statement as first reading the region and then using this data to write to its entirety, overwriting most of the region
+with identical data.
 
 We look at the external state first, noticing that the statements that change it are all those $T_i$s mentioned in \textbf{rule 1}. If any statements
-read from the external state, each of these will need to remain in order relative to the $T_i$s above. We will place a slightly stronger constraint on these
-and instead write:
+read from the external state, each of these will need to remain in order relative to the $T_i$s above. We will actually place a slightly stronger constraint on these
+statements and instead write:
 
 \begin{description}
 \item[Rule 2] \hfill \\
-For any reordering, all $T_i$ that make changes \textit{or read changes} to the world outside of the program must remain in the same order relative to each other.
+For any reordering, all $T_i$ that make changes to \textit{or read changes from} the world outside of the program must remain in the same order
+relative to each other.
 
-Call these statements \textbf{visible} statements.
+Call these \textbf{visible} statements.
 \end{description}
 
 Now we see that as a write to any region rewrites the entire region, our initial state condition can be simply fulfilled. First we will define for some region
@@ -1710,10 +1716,10 @@ we can write:
 
 \begin{description}
 \item[Rule 3] \hfill \\
-Fix $i \ne {start}$ then for any region $r$ read by $T_i$, the providing statement of $r$ to $T_i$ should be the same before and after reordering.
+Fix $i \ne {start}$. Then for any region $r$ read by $T_i$, the providing statement of $r$ to $T_i$ should be the same before and after reordering.
 \end{description}
 
-These 3 rules alone will now give us a valid ordering, ensuring that changes to the outside world will be performed in order and exactly as they were before.
+These 3 rules alone will now yield a valid ordering, ensuring that changes to the outside world will be performed in order and exactly as they were before.
 This will also ensure that the internal state left after the sequence has executed will be the same before and after the reordering. This assumes we are working
 on our $T_i$s including $T_{start}$ and $T_{end}$, so all statements must terminate and cannot be flow-breaking.
 
@@ -1724,47 +1730,47 @@ would have been executed by this point in the original ordering still will have 
 Treating statements that execute slowly as being visible too also solves a problem we would have gained by ignoring execution time earlier. A common
 pattern in software would be to warn user that a slow operation is about to occur, perform the operation, and then possibly let the user know the
 operation is finished. We would usually expect that the user warnings would be visible statements, but they would not rely in any way on the slow
-operation and so would have no reason to stay either side of it. By treating the slow operation as visible, we create this relationship and preserve
+operation and so would have no reason to stay on the correct side of it. By treating the slow operation as visible, we create this relationship and preserve
 the order. This does make sense as a slow operation will usually become very apparent or visible to the user.
 
 The way we will introduce flow-breaking statements is slightly more complicated, though not by much. If we assume that a flow-breaking statement
 \textit{always} breaks the linear flow, we may decide legal orderings for the statements following could be anything. This works for most types of
-breaks, although a \texttt{yield} statement will break flow while allowing execution to resume from the point at which we left. This means if our
+breaks, although a \texttt{yield} statement will break flow when executed, but allowing execution to resume from the point at which we left. This means that if our
 breaking statement is breaking due to a \texttt{yield}, we have to make sure the ordering following this statement is legal as defined earlier.
-For convenience we will treat all breaking statements the same as our \texttt{yield} statement as it is also how we will treat statements for which
-breaking flow is only a possibility.
+For convenience we will treat all breaking statements the same as our \texttt{yield} statement. This decision is sensible to implement as it exactly describes
+how we will treat statements for which breaking flow is only a possibility.
 
-We know how we will treat statements following a flow-breaking statements, now we think about those before. We know we have to make sure visible
-statements before or after the break stay before or after the break. Also we know that program state should be left the same when the program breaks
+We know how we will treat statements following a flow-breaking statement, now we think about those before. It is plain to see that visible
+statements before or after the break should stay before or after the break. Also we know that program state should be left the same when the program breaks
 in whichever legal order we have placed the statements. To achieve this we will use the following final rule:
 
 \begin{description}
 \item[Rule 4] \hfill \\
 Rules 1 to 3 apply only to non-breaking statements. For a sequence containing flow-breaking statements, partition the sequence so that each partition
-contains either a continuous run of non-breaking statements or a single breaking statement. A legal ordering is now some combination of legal orderings
-of each individual partition.
+contains either a continuous run of non-breaking statements or a single breaking statement. A legal ordering is now some combination of the legal orderings
+for individual partitions.
 \end{description}
 
 To illustrate this imagine the following sequence of statements:
 
 $$S_1 \; S_2 \; B_3 \; S_4 \; \ldots \; S_{n-4} \; B_{n-3} \; S_{n-2} \; S_{n-1} \; S_n$$
 
-where $S_i$ and $B_i$ represent non-breaking and breaking statements. These would be partitioned into:
+where $S_i$ and $B_i$ represent non-breaking and breaking statements respectively. These would be partitioned into
 
 $$S_1 \; S_2 \text{ and } B_3 \text{ and } S_4 \; \ldots \; S_{n-4} \text{ and } B_{n-3} \text{ and } S_{n-2} \; S_{n-1} \; S_n$$
 
-Legal orderings will now be
+and legal orderings will be
 
 $$\text{reorder}(S_1 \; S_2) \; B_3 \; \text{reorder}(S_4 \; \ldots \; S_{n-4}) \; B_{n-3} \; \text{reorder}(S_{n-2} \; S_{n-1} \; S_n)$$
 
 We can see that this rule works because the execution of any legal reordering of a partition will result in the same final inner and outer state.
-This happens to be exactly the state required by the following partition. Also we can see visible statements will remain in the same order as
+This happens to be exactly the state required by the succeeding partition. Also we can see, visible statements will remain in the same order as
 partitions are not moved relative to each other.
 
-While we have shown that these rules produce correct orderings for any statement list, with respect to the definition of correct we gave earlier,
-we will not always produce a complete set of orderings. This is due to a number of small concessions we made during the reasoning process. While
-this is not perfect, it is a reasonable compromise as to gather a complete set of reorderings for any sequence could require very thorough analysis,
-calculating variable values at various points in the program. This is simply not practical for our task so we will settle with our incomplete but
+Whilst we have shown that these rules will produce correct orderings for any statement list, with respect to the definition of correct that we gave earlier,
+we will not always produce a complete set of orderings. This is due to a number of small concessions we have made during the reasoning process. While
+this is not a perfect result, it is a reasonable compromise as to gather a complete set of reorderings for any sequence could require very thorough analysis,
+calculating variable values at various points in the program. This is simply not practical for our task and so we will be content with our incomplete but
 correct set.
 
 \subsection{Marking the AST for Statement Reordering}
