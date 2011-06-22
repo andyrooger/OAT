@@ -437,7 +437,7 @@ Without these the rest of the program would be useless, so this is where our imp
 
 It is easy to assume that reading and writing Python source code are two discrete problems. In fact this is not the case,
 when looking at most possible solutions we shall see that the method or tools used to read the source code are usually deeply
-entwined with each other. This will either be because they are part of the same toolset, or just because they work so closely together;
+entwined with those to write it. This will either be because they are part of the same toolset, or just because they work so closely together;
 any data structures output by one need to be readable by the other. For this reason we shall tackle these problems as one.
 
 There are plenty of free tools that read and write source as part of their tasks. For example PyDev, mentioned in the background section, will
@@ -458,11 +458,11 @@ perform automatic translation on Python source. Unfortunately further reading sh
 the next release. This is not a situation we wish to to deal with and so is not really a viable option.
 
 Fortunately the Python standard library contains a number of modules devoted to its own language. By using these to parse a source file
-we can hold the source as an abstract syntax tree or AST. This will give us the freedom to transform the language as we like and the only code we
-will need to write would be for the AST translations and an AST to source code writer.
+we can hold the source as an abstract syntax tree or AST. This will give us the freedom to transform the language as we see fit and the only code we
+will need to write would be to modify this AST and then to write it to source.
 
 There are some flaws to storing the program as an AST, as this structure drops certain information.
-For example the \texttt{elif} statement, meaning the same as an \texttt{else}-\texttt{if} statement in other languages allows many tests without
+For example the \texttt{elif} statement, meaning the same as an \texttt{else}-\texttt{if} statement in other languages, allows many tests without
 additional levels of nesting in source. When this construct is parsed it becomes an \texttt{if} statement within an \texttt{else} statement and
 can create large changes to the expected code and level of nesting. The example below shows the result of translating the code on the left hand
 side to an AST and back, writing the result on the right.
@@ -482,25 +482,25 @@ using Python's \texttt{ast} module and writing our own AST to source writer is t
 being fast to write.
 
 Before we start to design our source writers, we should think about the data structures we will be using to store information. As we don't have
-control of the \texttt{ast} module, we cannot decide what format will be output when parsing a file. In fact, the value we should receive from
+control of the \texttt{ast} module, we cannot decide which format will be output when parsing a file. In fact, the value we should receive from
 a successfully parsed file will be derived from the \texttt{ast.AST} class. More specifically it will be a child of \texttt{ast.mod}, either
 \texttt{ast.Module}, \texttt{ast.Interactive}, \texttt{ast.Expression} or \texttt{ast.Suite} depending on the context in which we are parsing.
 
 It may be tempting to use this format throughout our software, however it does have its drawbacks. We will take a look at the design first to see why.
 
 An object of any class derived from \texttt{ast.AST} represents a node in the AST grammar given in the documentation for the \texttt{ast} module. The
-type of the node is the name of the class it belongs to. Each of these nodes can have a number of attributes or children, these are either of basic
+type of the node is given by the name of the class it belongs to. Each of these nodes can have a number of attributes or children, these are either of basic
 types such as strings and integers or they are single or lists of other \texttt{ast.AST} nodes.
 
 For most types of node the names of these children vary so it is useful to be able to find out their names from the object we are inspecting. For this we
 look at the \texttt{\_fields} attribute, which is a tuple of all fields names. Using this we can look through the whole tree without worrying about the type
 of individual nodes. There is also an \texttt{\_attributes} attribute giving the names of attributes. These are \texttt{lineno} and \texttt{col\_offset} where
-available. We access field or attributes as normal attributes of the class.
+available. We access children or attributes as normal attributes of the class.
 
-This is a nice system and will help with tasks such as exploring or displaying the tree, however it creates problems as it is not stored as a tree of the same
-type. Instead it is stored as a tree of \texttt{ast.AST} nodes, lists, and basic types. Unfortunately this means any tree traversal will have to be designed to
-cope with either having or not having a proper \texttt{ast.AST} node and cannot rely on being able to find or read a \texttt{\_fields} attribute. Additionally we
-cannot add new attributes onto lists, and we see later that we need to do this for any node.
+This is a nice system and will help with tasks such as exploring or displaying the tree, however it creates problems as nodes of the the same tree can be of
+multiple different types, either \texttt{ast.AST} nodes, lists, or basic types. Unfortunately this means any tree traversal will have to be designed to
+cope all of these types rather than just \texttt{ast.AST} nodes and cannot rely on being able to find or read a \texttt{\_fields} attribute. Additionally we
+cannot add new attributes onto lists, and we see during the Marking the AST section that we need to do this for any node.
 
 \subsubsection{Implementing Internal Data Structures}
 
