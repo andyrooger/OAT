@@ -690,35 +690,33 @@ We can see a large difference between the source code returned by the two writer
 
 All of these writers will be held in the \texttt{writer} package.
 
-laboom
-
 \subsection{Interacting with the Software}
 
-The next important part to think about is the how the user will interact with the software. Without some form of front end, the
+The next important problem to think about is the how the user will interact with the software. Without some form of front end, the
 user would need to write their own program each time they want to use our obfuscation code. Let us first discuss the type of
 interaction we, or a user, would will need to have with the software.
 
 \subsubsection{Interaction Method}
 
 Current tools such as pyobfuscate or BitBoost's obfuscator are automated. In pyobfuscate, which is one of the more interactive
-of the tools, user interaction and control is limited to not much more than the choice of file to obfuscate, and indentation style. This means
+of the tools, user interaction and control is limited to not much more than the choice of file to obfuscate and the style of indentation. This means
 that while a user does have a little control over what happens, they really just insert a file and are returned an
 unreadable one.
 
 We want to be able to effectively evaluate what our tool is doing to the source code. For this we need to be able to intimately control
-which parts of the program are affected, and by which obfuscations. This would be unfeasible to attempt with an automatic program,
+which parts of the program are affected, and by which types of obfuscation. This would be unfeasible to attempt with an automatic program,
 even one with tweakable parameters, therefore it is not really an approach we can use.
 
-Knowing we have to be able to direct and control transformations, there are a few different ideas of how. In general, these fit into
-either solutions that involve us interactively looking through the AST and choosing how to transform or analyse certain
-nodes, or those that let us insert tags into the source code that mark structures and techniques for obfuscation.
+Knowing that we have to be able to direct and control transformations, there are a few different ideas of how. In general these fit into
+either two categories. We can interactively look through the AST and choose how to transform or analyse certain nodes. Otherwise we can
+insert tags into the source code that mark structures and techniques for obfuscation.
 
 There are methods already used in other tools that we could employ to tag code. For example the \texttt{doctest} module in the standard
-library uses docstrings (programmatically accessible comment strings) to specify unit tests for the code. Instead of unit tests,
+library uses docstrings, described earlier, to specify unit tests for the code. Instead of unit tests,
 we could place some form of markup into the comments. This would allow us to specify transformations in text form, but we should
 remember to remove the docstrings at the end of the obfuscation.
 
-For example we could try the following format to indicate a function should have all of its statements reordered:
+For example we could try the following format to indicate that the function \texttt{func} should have all of its statements reordered:
 
 \lstinputlisting{../snippets/tag.py.docstring}
 
@@ -726,30 +724,30 @@ Another possibility would be to use empty decorators to mark functions or classe
 transform the code in some way at run time, but could easily do nothing and be picked up as flags for the obfuscator. Using this
 method we would need to specify the decorators elsewhere and could write the above examples as:
 
+\newpage
+
 \lstinputlisting{../snippets/tag.py.decorator}
 
-This would require a separate file, called obfuscate here, that defines the decorators. Also we would need to remember to
-remove these decorators after obfuscation, just like in the docstring example.
+This method would require a separate file, called \texttt{obfuscate} in this example, that defines the decorators. Also we would need to
+remember to remove these decorators after obfuscation just like in the docstring example.
 
 The trouble with these methods is that transformations would be restricted to single nodes that support either docstrings or
-decorators. By placing this constraint on any obfuscations we want to make, we would be rejecting a huge range of options.
+decorators. By placing this constraint on any obfuscations we wish to make, we would be rejecting a huge range of options.
 
-We can also try to create our own system to tag source code or nodes in an AST. If we choose to tag source code, we need
-to either make sure our solution is valid Python syntax and so will translate cleanly into an AST using the \texttt{ast}
-module, or that we can strip any tags out before parsing and still be able to match them up afterwards.
+We can also try to create our own system for tagging source code or nodes in an AST. If we choose to tag source code we will need
+to either make sure our solution contains only valid Python syntax and so will translate cleanly into an AST using the \texttt{ast}
+module, or that we can strip any tags out before parsing and still be able to match them back to the AST afterwards.
 
 It then makes much more sense, if we are tagging code, to tag the AST directly. This way we are free to modify \texttt{CustomAST}
-nodes in whatever way we like. Parsing will still work as normal as we do not have the AST yet, and we can feel safe that our AST
+nodes in whichever way we like. Parsing will still work as normal as we do not have the AST yet, and we can feel safe that our AST
 to source writers will still work as we create them ourselves.
 
-Actually if we were to enable a user to browse and tag an AST, we would already have already created an interactive explorer for
-the tree. It seems unreasonable to expect a user to use software such as this to tag their tree and then have to feed this tagged
-tree into a separate application to perform the obfuscation.
-
-This leads us back to an earlier suggestion of of obfuscating directly from the explorer. This way
-a user can merely browse to a node of interest and tell the software immediately to perform the transformations they want. Any
-parameters needed can be set at this point, and the user will be able to see the effect of their command as soon as they have issued
-it.
+Actually if we were to enable a user to browse and tag an AST, then we would already have already created an interactive explorer for
+the tree. It seems unreasonable to expect a user to use one set of software to tag their tree and then have to feed this tagged
+tree into a separate application to perform the obfuscation. This leads us back to an earlier suggestion of of obfuscating directly
+from the explorer. Choosing this approach allows a user merely to browse to a node of interest and tell the software immediately to perform the
+transformations they want. Any parameters needed can be set at this point, and the user will be able to see the effect of their
+command as soon as they have issued it.
 
 There is also the possibility that some obfuscations may involve multiple nodes or require more complicated parameters. To cope with
 this we can provide the interface, but allow a different method of interaction to be defined for each type of obfuscation.
@@ -759,7 +757,7 @@ explore an AST generated from the program source. For any obfuscation type imple
 of interaction from the AST explorer.
 
 As well as browsing and obfuscating the AST, we also need to be able to generate the AST and convert it back to source code afterwards.
-For this reason we will also need to include some way of parsing and writing the file.
+For this reason we will need to include some way of parsing and writing the file from the interface.
 
 \subsubsection{Designing the User Interface}
 
@@ -769,48 +767,49 @@ interpreters or \texttt{tkinter} \cite{pytkinter} for GUIs.
 
 First, let us look at the \texttt{tkinter} library. This contains the standard Python interface to the Tk GUI toolkit. While being
 a very simple and friendly toolkit to use, there is still a large amount to learn before starting to develop. As the developer is
-not familiar with this library, this would add a moderate delay before beginning development work.
+not familiar with this library, this would add a noticeable delay before beginning development work.
 
 After the initial learning curve however, a GUI may present some significant advances over a command line interface. For a lot of interactive
 tasks the graphical interaction is more intuitive for the user. This would also allow a more natural presentation of information. Data like
 the AST tree structure could be displayed in a widget such as \texttt{Treeview}, designed specifically for this type of data. It is hard to
-understand how a command interface could provide these natural displays.
+imagine how a command interface could provide these natural displays.
 
 Now we can discuss the benefits of using the \texttt{cmd} library. Again the developer is not familiar with this library, but unlike
-\texttt{tkinter}, it is very simple to begin. Even at it's bare minimum functionality, the provided command console offers a help
+\texttt{tkinter}, it is very simple to begin programming with. Even at its bare minimum functionality, the provided command console offers a help
 function and support for auto-completion. All other functionality is easily addable by subclassing and implementing functions at various
-hook points.
+hooks.
 
 It is true that some information will be difficult to display naturally using only text, but our focus is on the obfuscation rather than
 the interface. Time is restricted for this task so as long as this interface provides adequate access to the back end software, speed
-of development is the main factor here.
+of development is our main factor.
 
 For this reason we shall be creating a command interface to our back end. The style of the interface will be designed to imitate a
 Unix style shell, with Unix style commands. This means that the large user base of Unix style operating systems will be already familiar
-and find learning to use this tool much easier than it would be otherwise.
+with similar interfaces and find learning to use this tool much easier than they would otherwise.
 
 We should leave the option of having graphical components open. If we find later in the project that some operations or information would
-be clearer in graphical environment, then we can still write commands to open a GUI for the task. The back end code should be completely
+be clearer in graphical environment, then we can still write commands to produce a GUI window for the specific task. The back end code should be completely
 separate from the interface so it should be easy to replace the command line with a full GUI later if the time is available.
 
-This command line interface will be the point of entry for users who want to obfuscate their code as well as those who want to analyse
+Our command line interface will be the point of entry for users who want to obfuscate their code, as well as for those who want to analyse
 already obfuscated code. For this reason, we shall name it simply 'Obfuscation and Analysis Tool', or OAT. If we do find time later in
-the project to develop a graphical interface, we can now call it 'Graphical Obfuscation and Analysis Tool', or GOAT.
+the project to develop a graphical interface, we can call it 'Graphical Obfuscation and Analysis Tool', or GOAT.
 
 \subsubsection{Implementing the User Interface}
 
-Having decided on the tools to create the interface, as well as its style and tasks it is required to perform, we now need to begin creating it.
+Having decided on the tools to create the interface, as well as its style and the tasks it is required to perform, we now need to begin creating it.
 
 As described briefly above, we will be developing using the \texttt{cmd} library. This will mean our starting point is the \texttt{cmd.Cmd} class.
-This class can be started using the \texttt{cmdloop} method and will proceed to act as like a normal shell with only the command 'help' available.
+The command loop may be begun from this class using the \texttt{cmdloop} method and will proceed to act like a normal shell with only the
+command 'help' available.
 
 Obviously we will want to add other available commands to this, and we can do this by creating a subclass implementing methods called
-\texttt{do\_\{command\}}. These can be documented for the help command by either implementing \texttt{help\_\{command\}}, or providing
-\texttt{do\_\{command\}} with a docstring.
+\texttt{do\_\{command\}}. These can be documented to allow integration with the help command by either implementing \texttt{help\_\{command\}}, or by
+providing \texttt{do\_\{command\}} with a docstring.
 
 There is also a huge item missing from the default \texttt{cmd.Cmd} class. By default any command run will return a value which is passed to a
 hook method called \texttt{postcmd}. If this method returns \texttt{True} then we exit. As the only method defined by default, 'help', does not
-cause the program to exit, the only way to quit is to cause an exception!
+cause the program to exit, the only way to quit the command loop is to cause an exception.
 
 Our first task in writing the interface is then to create \texttt{CommandUI}, a subclass of \texttt{cmd.Cmd} and provide a way to quit the program.
 This is very easy and just involves implementing a \texttt{do\_quit} method that returns \texttt{True} and hence quits the program. For ease we will
@@ -830,14 +829,14 @@ most important methods are listed below.
 
 \begin{description}
 \item[\texttt{\_\_init\_\_(id)}] \hfill \\
-This gives the command a name. It will be used by \texttt{CommandUI} as the name to type when running the command.
+This gives the command a name. It will be used by \texttt{CommandUI} as the name to type to run the command.
 
 As this is a constructor, it also initialises an \texttt{argparse.ArgumentParser} object which is used by subclasses to parse their arguments and
 provide standard help messages. By expecting all commands to use an argument parser of this type, we are attempting to help standardise the user
 experience.
 
 \item[\texttt{do(line)}] \hfill \\
-When a command is run from \texttt{CommandUI} it will, by default try to call \texttt{do\_\{command\}}. We override that functionality to search
+When a command is run from \texttt{CommandUI} it will, by default, try to call \texttt{do\_\{command\}}. We override this functionality to search
 through the list of added commands and run this method instead on the appropriate object.
 
 This method will try to parse the arguments given on the command line. If successful, it will feed the result through to the \texttt{run} method,
@@ -851,18 +850,18 @@ When this function is called, it is passed information that can be used to calcu
 is difficult to use and not very helpful to us. The information we should be returning is also non-intuitive.
 
 To make this easier when programming later we translate this information into three strings; all text typed before the current word, all text after,
-and everything that has been typed of the current word. This is then handed to the \texttt{autocomplete} method from which we
-expect to receive a number of words that the current word could become. This is then translated back into the format needed by \texttt{cmd.Cmd} to
+and everything that has been typed as part of the current word. This is then handed to the \texttt{autocomplete} method from which we
+expect to receive a number of possible words that the current word could become. This is then translated back into the format needed by \texttt{cmd.Cmd} to
 return and complete the loop.
 
 \item[\texttt{help()}] \hfill \\
-As suggested by the name, this method will print a help message from the command. This is generated using the argument parser initialised inside
-the constructor. This will be called by the overridden help method in \texttt{CommandUI}.
+As suggested by the name, this method will print a help message from the command. The message is actually generated using the argument parser
+initialised inside the constructor. This will be called by the overridden help method in \texttt{CommandUI}.
 
 \item[\texttt{status()}] \hfill \\
 Another method we will add to \texttt{CommandUI} is \texttt{do\_status}, allowing us to use the command 'status'. This will be built into the
 class rather than added with \texttt{add\_command} so that it has access to all of the other commands. It may then iterate over each and call
-this status method to display the status of each command in turn. We expect this method to be overridden in an actual \texttt{Command} class.
+this \texttt{status} method to display the status of each command in turn. We expect this method to be overridden in an actual \texttt{Command} class.
 
 \item[\texttt{run(args)}, \texttt{autocomplete(before, arg, after)}] \hfill \\
 These are both designed to be overridden when implementing a concrete command, along with \texttt{status}. \texttt{run} is called to run the
@@ -871,69 +870,67 @@ command as described in \texttt{do}, and \texttt{autocomplete} is called to gene
 
 Now we know how to create and plug in the commands, we can start to create them. The initial commands we will implement are described below:
 
-\paragraph{help}
-
+\begin{description}
+\item[help] \hfill \\
 This will list help for the program as a whole as well as individual commands. It is an essential tool for a user to find their way around a
 command based program such as this one.
 
 Most of this command is implemented by \texttt{cmd.Cmd}, but we have extended the functionality to forward the calls for individual commands
 to the \texttt{Command} objects.
 
-\paragraph{quit}
-
+\item[quit] \hfill \\
 Used to exit the program as described earlier. This can also be achieved by using Ctrl\^{}D.
 
-\paragraph{status}
-
+\item[status] \hfill \\
 Again this has already been described. When run, it will send a request to all added \texttt{Command} objects asking them to print
 their statuses if they have anything useful to contribute. A user can use this command to check the state of certain parts of the
 program.
 
-\paragraph{parse}
-
+\item[parse] \hfill \\
 Actual parsing of Python source files is done using this command, as well as loading and saving of the resulting ASTs. Most of the processing
-is performed inside of the \texttt{ASTStorage} class. This class can be initialised, given a file name, by either parsing the source file, or
-loading a saved version.
+is performed inside of the \texttt{ASTStorage} class. Given a file name, this class can be initialised by either parsing the source file, or
+by loading a saved version.
 
 Parsing is performed by the Python standard library, \texttt{ast}, and then transformed into a \texttt{CustomAST} node as described earlier.
-If we choose to load the AST, the \texttt{pickle} library is used to load the \texttt{CustomAST} node tree directly from the .ast file
+If we choose to load the AST then the \texttt{pickle} library is used to load the \texttt{CustomAST} node tree directly from the .ast file
 corresponding to the Python source file. This is the same library used to save the AST in the first place.
 
 We also record information to identify changes to the tree. When we save or load a file, we record with it a SHA-224 hash of the file. This
 is used to ensure that we are loading the correct tree when we request the file later. As well as this information, we keep a \texttt{modified}
-flag that tells us if the tree structure has been changed, and an \texttt{augmented} flag that lets us know whether any other information has
+flag that tells us if the tree structure has been changed since it was loaded, and an \texttt{augmented} flag that lets us know whether any other information has
 been added to the tree.
 
-\paragraph{explore}
-
+\item[explore] \hfill \\
 This is used to explore an AST generated by the parse command. Whenever there is a parsed tree, this command will point to a specific node within it.
 
 By typing this command with no arguments we can view a description of the node we are looking at, as well as any children it contains. We can move
 our pointer to a child node by using the child's name as an argument, or to the parent node by using the argument '--parent'.
 
-It is also possible to view information such as the node's line number and column in the source by adding the '--attributes' flag.
+It is also possible to view information such as the node's line and column numbers in the source by adding the '--attributes' flag.
 
-\paragraph{format}
+\item[format] \hfill \\
+The integration point for the source writers. This command can print either the whole AST using the flag '--top' or by default the subtree pointed
+to by explore will be printed. The printing style can also be changed, choosing either \texttt{BasicWriter} or \texttt{PrettyWriter} as our method
+of output using the argument '--style \{basic, pretty\}'.
 
-The integration point for the source writers. This command can print either the whole AST using the flag '--top' or the subtree pointed
-to by explore by default. The printing style can also be changed by choosing to use \texttt{BasicWriter} or \texttt{PrettyWriter} with
-the argument '--style \{basic, pretty\}'.
-
-If the user chooses, output from this command may be written to disk using the flag, '--write FILE'.
+If the user chooses, output from this command may be written to disk using the flag '--write FILE'.
+\end{description}
 
 Other commands will be added to this list as we develop the functionality to make them necessary, and all of the commands implemented
 should employ auto-completion wherever possible. This helps to guide the user and speeds up the use of OAT.
 
 Now we can look at an example session, to see how the user will interact with the tool:
 
-\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true]{../snippets/commandsession.log}
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true]{../snippets/commandsession.log.1}
+\pagebreak
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true,firstnumber=last]{../snippets/commandsession.log.2}
 
 At this point we have created an interface, and we are able to parse, store, inspect and write Python source
 files. It is time to begin designing the code that OAT will use to obfuscate these programs.
 
 \section{Developing Obfuscating Transformations}
 
-As mentioned in the background research there are 3 main types of obfuscation; layout obfuscation, data
+As mentioned in the background research there are 3 main types of obfuscation: layout obfuscation, data
 obfuscation and control-flow obfuscation. Of these we will focus on one, control-flow, although we shall
 first digress to describe the layout obfuscation that we inadvertently perform.
 
@@ -952,32 +949,32 @@ help a human reader to follow the program but do not affect the manner in which 
 these are obvious and designed for this purpose such as meaningful variable identifiers and program comments.
 
 There are also more subtle features to the program source code. Whitespace is very helpful in many programming
-languages, this is especially true in Python as indentation is the method of identifying blocks of code, rather than
-the familiar '\texttt{\{}' and '\texttt{\}}' or '\texttt{begin}' and '\texttt{end}' that we often see in other
+languages. This is especially true in Python as indentation is the method of identifying blocks of code, rather than
+the familiar `\texttt{\{}' and `\texttt{\}}' or `\texttt{begin}' and `\texttt{end}' that we often see in other
 languages. 
 
 We do not just use whitespace to illustrate a program's nesting structure. This can be used for breaking long lines
-into shorter readable ones, or for separating blocks of statements that perform separate tasks. For example, a block
+into shorter readable ones, or for separating blocks of statements that perform different tasks. For example, a block
 of \texttt{import} statements in a source file will usually be followed by one of more blank lines to separate them
 from the rest of the code.
 
 While it is not strictly a layout issue, we can also see that the order a programmer writes code in is also important
 to the human understanding of the program. There are often many different ways the software could have been written.
-A machine would be indifferent to this, but one ordering may be much more intuitive that another. This will be discussed
+A machine would be indifferent to this, but to a human one ordering may be much more intuitive than another. This will be discussed
 in more detail when we come to reorder program statements.
 
 Our contact with these matters begins when we parse a source file. By doing this we do not generate a representation of
-the source code. Instead we create a representation of the program structure where the only information transferred to the
-new representation is that which is necessary to run the program.
+the source code. Instead we create a representation of the program structure containing only the parts of the source code
+necessary to run the program.
 
 This means most importantly that we will lose comments. Immediately we have destroyed one of the most helpful tools
 for understanding a complicated program. Of course, any comments contained in a docstring will still exist as these
 affect the running of the program, however we will lose a great deal of information in spite of this.
 
 All layout and whitespace will also be lost\footnote{Actually we retain column and line numbers for many nodes. We could
-use these to recreate much of the original formatting, although the result would not be perfect.}, although we will retain the nesting structure and the tokens that the
-whitespace was used to separate. As the results of the whitespace is retained, we can try to guess what combination
-of characters generated our result, but we can never be sure.
+use these to recreate much of the original formatting, although the result would not be perfect.}, although we will retain
+the nesting structure and the tokens that the whitespace was used to create and separate. As the effect of the original
+whitespace is retained, we can try to guess which combination of characters generated our result, but we can never be sure.
 
 So the only pieces of information retained from the source code are docstring comments, identifier names and the actual
 program code, including structures and some meaningful statement order. These will be printed by our writers, along with
@@ -1000,9 +997,9 @@ makes the program harder to understand. We can see from previous examples and di
 can be mitigated by writing the program using \texttt{PrettyWriter}, therefore we also have a partial reverse obfuscator.
 
 If we were to invest our efforts into actively creating a layout obfuscator, we could do much better just by implementing
-a different writer class. For example a simple change would be to suites containing only simple statements all on a single
-line, separating each by a semicolon. Alternatively we could instruct a writer not to write any docstrings, removing more
-commenting, but possibly breaking the program.
+a different writer class. For example a simple change would be to writes suites containing only simple statements all on a single
+line, separating each statement by a semicolon. Alternatively we could instruct a writer not to write any docstrings, removing more
+developer comments, but possibly breaking the program.
 
 This discussion will now be left as a possible extension of the software, and we can concentrate on our main goal;
 control-flow obfuscation.
