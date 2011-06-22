@@ -1,27 +1,34 @@
-andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py
-Welcome to this little obfuscation tool.
-If you're confused, type help!
+andyrooger@DellBoy:~/git/ugproject/src$ ./quickstart.py 
+Welcome to OAT - Obfuscation and Analysis Tool!
+If you are confused, type help.
 --) help
 
 Documented commands (type help <topic>):
 ========================================
-help  quit  status  parse  explore  format
+help  quit  status  format  parse  explore
 
 
 --) help parse
-usage: parse file
+usage: parse [-l | -s] [file]
 
 Parse a source file to an AST.
 
 positional arguments:
-  file  File to parse.
+  file        File to parse.
 
---) parse
-interactive    quickstart.py  thirdparty     writer
---) parse quickstart.py
+optional arguments:
+  -l, --load  Load the AST from its stored form
+  -s, --save  Save the AST with markings for later
+
+--) parse 
+analysis       goat           quickstart.py  testing        util
+example.py     interactive    test.py        thirdparty     writer
+--) parse example.py
+Loaded AST for file: example.py
 
 --) status
-Parsed tree: <_ast.Module object at 0x1bdab90> : quickstart.py
+Parsed tree: example.py
+Tree hash: 1b47ec50853b9623e39bd60fd91263fb9a6235af4328efe54950f20b
 Viewing node: Module
 
 --) explore
@@ -37,36 +44,21 @@ Looking at: Block of statements
 Looking at: Block of statements
 
 Fields:
-  0 - Expr (line 7, col -1)
-  1 - ImportFrom (line 9, col 0)
-  2 - FunctionDef (line 11, col 0)
-  3 - If (line 19, col 0)
+  0 - Expr (line 4 column -1)
+  1 - Import (line 6 column 0)
+  2 - ImportFrom (line 7 column 0)
+  3 - Import (line 8 column 0)
+  4 - Assign (line 10 column 0)
+  5 - FunctionDef (line 12 column 0)
+  6 - ClassDef (line 16 column 0)
+  7 - ClassDef (line 18 column 0)
 
---) explore 3
-Looking at: If (line 19, col 0)
-
---) explore
-Looking at: If (line 19, col 0)
-
-Fields:
-  test - Compare (line 19, col 3)
-  body - Block of statements
-  orelse - Block of statements
-
---) explore -a
-Looking at: If (line 19, col 0)
-
-Attributes:
-  lineno - 19
-  col_offset - 0
-
-Fields:
-  test - Compare (line 19, col 3)
-  body - Block of statements
-  orelse - Block of statements
+--) explore 5
+Looking at: FunctionDef (line 12 column 0)
 
 --) format -f
-if __name__ == '__main__':
-    go()
+def func(a, b, c = 1, d = [], *e, f = 6, g = ' ', **h):
+    print((a + 'hello'))
+    pass
 
 --) quit

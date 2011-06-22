@@ -4,7 +4,7 @@
 \usepackage[utf8x]{inputenc}
 \usepackage[breaklinks=true,unicode=true,pdfborder={0 0 0},colorlinks=false]{hyperref}
 \usepackage{listings}
-\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format}}
+\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format,visualise,reorder,mark}}
 \lstset{language=Python, numbers=left, showstringspaces=false, frame=single}
 \usepackage{pst-gantt}
 \setlength{\parindent}{0pt}
@@ -917,7 +917,7 @@ should employ auto-completion wherever possible. This helps to guide the user an
 
 Now we can look at an example session, to see how the user will interact with the tool:
 
-\lstinputlisting[language=obftool,basicstyle=\small]{../snippets/commandsession.log}
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true]{../snippets/commandsession.log}
 
 At this point we have created an interface, and we are able to parse, store, inspect and write Python source
 files. It is time to begin designing the code that OAT will use to obfuscate these programs.
