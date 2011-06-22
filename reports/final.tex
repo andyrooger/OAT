@@ -116,7 +116,7 @@ and current tools.
 
 \subsection{Python}
 
-As we have discussed in the introduction, the project aims to implement known obfuscation techniques on Python source.
+As we have described in the introduction, the project aims to implement known obfuscation techniques specifically on Python source code.
 The language is used widely, from the popular web framework Django \cite{django} through many applications
 from Google \cite{pygoogle} and even embedded as a scripting language for extensions in programs like GNU
 Image Manipulation Program (GIMP) \cite{gimp}. Due to its wide and varied use, it is of increased importance
@@ -134,10 +134,11 @@ There are a number of ways Python developers currently try to hide or protect th
 of success and security.
 
 One method is to use a Python tool called Freeze. This tool will simply take given source code and compile
-it to bytecode. This will be combined with necessary parts of the runtime to allow a program to run
+it to bytecode. A Unix executable will then be created containing the necessary parts of the Python runtime as
+well as the bytecode to allow a program to run
 on systems without Python installed. As it says in the README \cite{freezereadme} this provides little if any
 protection as Python's standard library comes with a disassembler ready to view the bytecode. There are also
-tools such as AntiFreeze \cite{pirates} to help analyse the code, as well as a program called
+tools such as AntiFreeze \cite{pirates} to help analyse the code, and a program called
 decompyle \cite{decompyle} that will actually try to generate the original source for older bytecode ($\le$version
 2.3). There is a similar tool to Freeze, called py2exe \cite{py2exe}, that will create a Windows executable but
 this too suffers from the same problems.
@@ -147,18 +148,18 @@ used, also fails to thwart reverse-engineering attempts. In fact there is anothe
 with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail \cite{dis}
 of the default Python implementation, CPython. Relying on this to distribute code would glue any
 user to a specific implementation of Python and possibly even to a specific version. This would remove the portability
-expected from a Python program and contradict the condition that solutions must be portable, specified earlier.
+expected from a Python program and contradict our own condition that solutions must be portable, specified earlier.
 
 A more secure solution for protecting Python code, and one that works for many people, is to remove the most
 sensitive parts and replace them with C extensions to the Python program. This way the code becomes machine
-code, it can use the wealth of obfuscation tools for C and being compiled machine code makes it much
+code; it can use the wealth of obfuscation tools for C and being compiled machine code makes it much
 harder to reverse engineer. Again though, this is based on CPython's ability to include C modules, restricting a
 user to a particular runtime as well as a particular machine architecture (that the modules are compiled for).
 
 A portable way to protect the code would be to obfuscate it, performing source to source translations that can
 confuse a reader or program analyser. This is not and will never be a perfect solution, because all attempts
 to avoid reverse engineering will be overcome eventually. The difference between one method of protection and
-another is the time and effort taken to break it and how much the result is worth to the attacker. There are already
+another is the time and effort taken to break each and how much the result is worth to the attacker. There are already
 programs for obfuscating Python code, though the selection is limited. These will be discussed later.
 
 \subsubsection{Ethics of Obfuscating}
@@ -168,9 +169,9 @@ Specifically for Python, the language is based on a philosophy of clear and read
 enforces this by the design of the grammar. Obviously, obfuscation is an attempt to take this away.
 
 This hits out against certain expectations a user may have about a Python program. A key benefit of having your
-software handed to you in source form is that you always know what it's doing. Deliberately obscuring the
+software handed to you in source form is that you always know what it is doing. Deliberately obscuring the
 function of software, but in a format that is almost always open for inspection, removes trust. The vendor or developer is
-denying the user trust by not allowing them to use the software as they wish, but more importantly the user's
+denying the user their trust by not allowing them to use the software as they wish, but more importantly the user's
 trust in the software can be lost.
 
 If the software is hiding what it is doing this could be for a legitimate reason, such as hiding novel ideas
@@ -180,19 +181,19 @@ writers to avoid detection by anti-virus software \cite{dycodeobf}. In fact, it 
 all obfuscated code should be treated as if it were malware \cite{noobf}, assuming software is guilty until
 proven otherwise.
 
-My view and the view we will take for the remainder of the paper is that these issues create more reason for
+Our view and the view we will take for the remainder of the paper is that these issues create more reason for
 building a tool such as this. By allowing issues such as those described above to block research into a subject
-we are making ourselves much more vulnerable to those who would abuse the technology. Those who may abuse any
-product of this project will be free to do so, as will those who would use the tools and information legitimately.
+we are making ourselves much more vulnerable to those who would abuse the technology. Therefore those who choose to abuse any
+product of this project will be free to do so, just as will those who would use the tools and information legitimately.
 
-It is important to note that although my conclusion on this subject would be the same were I based outside of
+It is important to note that although our conclusion on this subject would be the same were we based outside of
 the UK, the legal implications stemming from it may not be. For example in German law, clause 202(c) \cite{202c}
 could make it illegal to write or distribute this software if it could be used for
 certain forms of cybercrime. As discussed above, it probably could, and would have implications for anyone distributing
 or using the information presented here.
 
-In the UK have a similar law in the Computer Misuse Act section 3A \cite{compmisuse}. This laws says that a person is guilty of an offence
-if they supply a tool intended for or likely to be used in a criminal manner. The law carries a fine or a maximum 12 month
+In the UK we have a similar law in the Computer Misuse Act section 3A \cite{compmisuse}. This laws says that a person is guilty of an offence
+if they supply a software tool intended for or likely to be used in a criminal manner. The breaking of this law carries a fine or a maximum 12 month
 prison sentence, but we believe it unlikely that any software we create will be used for criminal purposes. There are
 much better methods to hide malware from an unsuspecting user.
 
