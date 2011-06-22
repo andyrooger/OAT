@@ -1269,11 +1269,11 @@ The constructor takes a large number of arguments, but nevertheless is fairly si
 
 \texttt{res\_order} defines the resolution order we will use. Rather than ordering all four of \textbf{mark}, \textbf{user}, \textbf{calc} and
 \textbf{default}, we cleverly notice that \textbf{default} will always return to us a value for the markings. This means that any resolution methods
-occurring after \textbf{default} will never be used and can be forgotten. We also decide to make sure that \textbf{default} is always implicitly in
-our list, allowing our recursive marking method to always return a value. Thus we order only \textbf{mark}, \textbf{user} and \textbf{calc},
+occurring after \textbf{default} will never be used and can be forgotten. We decide to make sure that \textbf{default} is always implicitly the last method
+in our list, allowing our recursive marking method to always return a value. Thus we order only \textbf{mark}, \textbf{user} and \textbf{calc},
 represented by a list of strings.
 
-We also take the parameter \texttt{mark}, indicating what to do when have calculated a set of markings for a node. Any markings should be gathered using
+We also take the parameter \texttt{mark}, indicating what to do once we have calculated a set of markings for a node. Any markings should be gathered using
 the \texttt{resolve\_marks} method rather than reading from the node, so we do not necessarily need to write the markings once they are calculated. By
 setting this parameter to \texttt{False}, we can calculate markings without affecting the tree in any way.
 
@@ -1282,7 +1282,7 @@ cannot be included in the class as \texttt{AutoMarker} is designed to be interfa
 the calling code.
 
 Finally \texttt{defaults} is a dictionary mapping marking types to functions that generate default values. We cannot simply provide the default values,
-as they may be mutable. This would mean that if node's markings are ever changed after being given this default, all other markings with these default
+as they may be mutable. This would mean that if a node's markings are ever changed after being given this default value, all other markings with these default
 markings would be changed too.
 
 \item[\texttt{resolve\_marks(node, needed)}] \hfill \\
@@ -1291,22 +1291,23 @@ indicating all of the types of marking we wish to resolve. The returned value is
 needed types.
 
 The internal workings of this method are simple. First we create an empty dictionary of markings. For each resolution method in our specified resolution
-order, we look at all the types of markings we already have and remove them from \texttt{needed}. Now we ask the current resolution method for all the
-markings in the \texttt{needed} set that it can give us, add these to our marking dictionary and repeat.
+order, we first ask for all the needed marking types. Once these have been calculated we can remove all of the types that have been generated from \texttt{needed}
+and move onto the next method.
 
-Once we have been through the resolution list, recall we implicitly finish with \textbf{default} so now remaining needed markings are filled by defaults.
-To finish we call the user review function and if marking was turned on in the constructor, we will write the calculated markings to the node. We can now
-return our results.
+Once we have completed the resolution list, recall we implicitly finish with \textbf{default} so now remaining needed markings are filled by defaults.
+To finalise the marks, we call the user review function and if marking was turned on in the constructor, we will write the calculated markings to the
+node. We can now return our results.
 
 \item[\texttt{\_base\_marks(needed)}] \hfill \\
 This should return the set of markings that we would use to mark an empty program. These should be able to be used as an identity element for
 \texttt{\_combine\_marks}, meaning that their combination should not affect the original markings. Obviously only those marks whose types are in
-\texttt{needed} will be returned, we will assume this is true for all functions taking this parameter.
+\texttt{needed} will be returned, we will assume this is true for all functions taking \texttt{needed} as a parameter.
 
 \item[\texttt{\_combine\_marks(marks, addition, needed)}] \hfill \\
 Often we will have to combine the markings from many nodes into a single set of markings. This method assumes we have already combined a number of nodes
 which result in the markings represented by \texttt{marks}. Now we expect that the next node to be interpreted or executed would generate the markings
-in \texttt{addition} when executed by itself. This method will combine both of these sets of markings and return the result.
+in \texttt{addition} when executed by itself. This method will combine both of these sets of markings and return the result representing the execution of all
+of our marked nodes.
 
 \item[\texttt{default\_marks(node, needed)}] \hfill \\
 This implements the \textbf{default} resolution method. It will call the default methods we gave in the constructor to generate a dictionary containing
@@ -1315,13 +1316,13 @@ markings for all \texttt{needed} types.
 \item[\texttt{get\_marks(node, needed)}] \hfill \\
 This is a very simple function, implementing the \textbf{mark} resolution method. All we do is retrieve the \texttt{needed} types of markings from the
 given \texttt{node} if they exist and return a dictionary containing them. This method is not required to return a marking for every \texttt{needed}
-marking type, just like \texttt{calculate\_marks} below.
+marking type, just as \texttt{calculate\_marks} below is not.
 
 \item[\texttt{calculate\_marks(node, needed)}] \hfill \\
 Here we implement the resolution method, \texttt{calc}. This is an indirectly recursive method but is guaranteed to terminate so long as the node
 given contains no reference cycles. This should be true as the node should represent a tree.
 
-We can quickly show this property as \texttt{calculate\_marks} calls itself through \texttt{resolve\_marks}, but only on child nodes. Therefore we have
+We can quickly show this property as \texttt{calculate\_marks} recurses through \texttt{resolve\_marks}, but is only called on child nodes. Therefore we have
 a base case where our node has no children and so \texttt{calculate\_mark} must terminate. As the AST does not loop and it must be of finite size,
 eventually at some level of recursion we will reach a terminal node, whichever path we take down the tree. Working back up the call tree we can see
 that any call to \texttt{calculate\_marks} must terminate.
@@ -1332,34 +1333,34 @@ There are multiple phases of design for this function which we can now describe.
 \subsubsection{Implementing Marking Calculation - First Attempt}
 
 We already know the structure we expect from our mark calculation. The process starts by calling \texttt{calculate\_marks}, and this function will
-need to try and produce markings for each type in \texttt{needed}. To do this we expect to use the markings from various children, depending on the
+need to try and produce markings for each type in \texttt{needed}. We expect to use the markings from various children, depending on the
 type of node we are looking at, to work out the markings for the whole node.
 
-As our method of marking differs based on the type of node, it makes sense to think back to where we have used this pattern previously. We will begin
+As our method of marking differs based on the type of node, it makes sense to recall our previous encounter with this pattern. We will begin
 implementing this function in the style we used to produce our \texttt{SourceWriter} and derived classes. Therefore \texttt{calculate\_marks} becomes
-a dispatcher function, passing any work onto a method named \texttt{\_marks\_\{node type\}}.
+a dispatcher function, passing any work to a method named \texttt{\_marks\_\{node type\}}.
 
-One of these methods is implemented for every type in our AST. If we have forgotten or decided not to implement one of these then rather than raising
-and exception as we would in \texttt{SourceWriter}, we just return no markings. This allows us to just ignore node types we are unsure of and allow
+One of these methods is implemented for every type in our AST. If we have forgotten to or decided not to implement one of these methods, then rather than raising
+an exception as we would in \texttt{SourceWriter} we merely return no markings. This allows us to safely ignore node types we are unsure of and allow
 the other methods in the resolution list to fill the gap.
 
-While this design works correctly, and is flexible enough to allow almost any processing we would like to do, we soon notice flaws for the developer.
+While this design works correctly, and is flexible enough to allow almost any processing we would like to perform, we soon notice flaws for the developer.
 Flexibility is a useful attribute to have, but it is wasted once we notice that most of these nodes are processed in very similar manners, only using
 different child names.
 
-We also have the problem that having this many tiny functions creates a very messy code base. Most of these may be written in one or two lines, and those
+We also have the problem that maintaining this many tiny functions creates a very messy code base. Most of these may be written in one or two lines, and those
 that take more can usually have their contents outlined into a common function. These problems give rise to our second design.
 
 \subsubsection{Implementing Marking Calculations - Second Attempt}
 
-This time we will try to keep hold of the good parts of the last design, correctness and flexibility, but fix the problems of code size and functionality
+This time we will try to keep hold of the good parts of the last design which were correctness and flexibility, but fix the problems of code size and functionality
 duplication. We would like to be able to fit much more code into a single screen without it looking untidy. By doing this, a developer would find it much
 easier to read through the program and immediately see how the algorithm will behave for each node type.
 
-To deal with code duplication we will try to categorise all of the different tasks our first version performed. These are:
+To deal with code duplication we will try to categorise all of the different tasks performed in the functions of our first attempt. These are:
 
 \begin{itemize}
-\item Using identical markings to a child node. This happens when processing nodes like \texttt{ast.Expr} where its single child defines it exactly.
+\item Using identical markings to a child node. This happens when processing nodes like \texttt{ast.Expr} for which a single child defines the parent exactly.
 \item Combining markings from child nodes. We perform this on nodes such as lists containing statements.
 \item As above but adding or removing flow-breaking exceptions. For instance when processing an \texttt{ast.For} node whose body contains a \texttt{break}
       statement. This is flow breaking inside the loop but will not be outside.
@@ -1367,16 +1368,16 @@ To deal with code duplication we will try to categorise all of the different tas
       or classes with decorators.
 \item Some combination of the above, but ignoring certain types of marking that we cannot calculate. This will help when we start to deal with more complicated
       types of marking.
-\item Take a set of markings from children as above, but process them to assume that it is only a possibility that the children would have been executed. We 
+\item Take a set of markings from a node's children as above, but process them to assume that it is only a possibility that the children would have been executed. We 
       see this type of processing for \texttt{if} or \texttt{for} statements whose body may never be run.
 \end{itemize}
 
 None of these tasks are related to visibility markings. This is because we cannot tell if a node is visible just from its type or content. We rely on the
-other resolution methods to mark child nodes as visible, and parent nodes tend to inherit this marking from them.
+other resolution methods to mark child nodes as visible, and parent nodes tend to inherit this marking from those children.
 
 Now we can think about how to pull all of our small disjoint functions together from the previous design and merge their functionality to create a clear and
 concise process for each node type. Our idea is to create a single function that can perform any of these tasks. Rather than putting work into individual
-functions we build a data structure to describe the work we wish to do, and call this a task description. These can then be interpreted and executed by
+functions, we build a data structure to describe the work we wish to do, and call this a task description. These task descriptions can then be interpreted and executed by
 our single function.
 
 Let us first define the task description, and then we can describe the implementation of the interpreter. We will have a different task description for each
@@ -1384,7 +1385,7 @@ type of node, these are held in a dictionary and looked up when needed by our in
 
 \begin{description}
 \item[Dictionary] \hfill \\
-This will describe the main part of any calculations. It maps a number of tasks onto the parameters they require. To interpret this we will
+This will describe the majority of the work in any calculations. It maps a number of tasks onto the parameters they require. To interpret this we will
 start with a set of marks generated by \texttt{\_base\_marks} and perform all individual tasks in turn on these markings. The available tasks are:
 
 \begin{description}
@@ -1398,8 +1399,8 @@ Add each of the given break types to the set of possible breaks.
 Remove each of the given break types from the set of possible breaks if possible.
 \item[``transform'' : function] \hfill \\
 If this exists, it will always be performed first. The current node will be passed to the given function and our next action depends on the returned value. On a
-\texttt{None} return value we will continue as normal. Otherwise we will assume the value is a new node and we treat the markings generated for this node as our
-\textit{entire} set of markings. In this case we do not execute any of the other tasks here.
+\texttt{None} return value we will continue as normal. Otherwise we will assume that the value is a new node and we will treat the markings generated for this node as our
+\textit{entire} set of markings. In this case we do not execute any of the other tasks listed.
 \item[``unknown'' : set of marking types] \hfill \\
 We assume that we do not know the given set of marking types, so they are not returned.
 \item[``known'' : set of marking types] \hfill \\
@@ -1422,20 +1423,20 @@ would be easy to remember.
 
 From this definition of a task description, we can easily see how the interpreter would be implemented. Now both implementation of the general tasks, and
 the definition of specific task descriptions become much simpler. We can even read through the task descriptions and understand quickly what is happening
-as required. For example the following is the task description for a return node.
+as we desired. For example the following is the task description for a \texttt{return} node:
 
 \lstinputlisting{../snippets/task.py.return}
 
-We quickly read from this that in order to generate markings for a return node, we use the markings from the child ``value'', and add a ``return'' break type.
+We quickly read from this that in order to generate markings for a \texttt{return} node, we use the markings from the child ``value'', and add a ``return'' break type.
 
 Again we should be critical of this design. The objectives here were to design a flexible system with a small code base, and these have been achieved.
-However we also wanted to retain correctness and flexibility, of which we have lost flexibility. We also notice that although we have simplified the
-original design for a user reading the code, the understanding needed to write a task description is not small. So now we try again.
+However we also wanted to retain correctness and flexibility, of which we have lost flexibility. Notice that although we have simplified the
+original design for a user reading the code, the understanding needed to write a task description is much larger than that needed to read one. So now we try again.
 
 \subsubsection{Implementing Marking Calculations - Third Attempt}
 
-We would like to simplify the design of task description further, as there are non-obvious components in the previous design. In addition we will
-need to provide extra functionality to process the more complicated tasks required the read/write markings we will introduce later.
+We would like to simplify the design of our task description further, as there are non-obvious components in the previous design. In addition we will
+need to provide extra functionality to process the more complicated tasks required the read/write markings that we will introduce later.
 
 The previous two designs were built to work only with the two types of marking we have already. These are really fairly simple and so details such
 as the order of evaluation of nodes does not matter. Once we begin to deal with reading or writing to identifiers this is something that will become
@@ -1447,22 +1448,22 @@ The task description may be one of 5 types:
 
 \begin{description}
 \item[Dictionary] \hfill \\
-Again this maps action names to the parameters they require. During execution, this will start with markings from \texttt{\_base\_marks} and
+Again this maps action names to the parameters they require. During execution, we will start with markings from \texttt{\_base\_marks} and
 execute each of these actions on them in turn. Actions may be one of
 
 \begin{description}
   \item[``combine'': list of child names] \hfill \\
-  Like ``local'' before this will combine all markings from children as if they has been executed in the given sequence. Rather than having a
-  separate list to combine lists, we allow the writer of the task descriptions decide to combine all children in order. This means lists may
-  be placed in here just like any other child type.
+  Like ``local'' before, this will combine all markings from children as if they has been executed in the given sequence. Rather than having a
+  separate action to combine lists we expect the writer of the task descriptions to decide to combine all children of a list in order. This means \texttt{list}-type
+  children may be combined here just like any other child type.
   \item[``marks''/``nomarks'': set of marking types] \hfill \\
-  Again as ``known''/``unknown'' before this allows us to either restrict or reject markings we can mark. We can combine this with a set type task
-  description to calculate different marks using different tasks.
+  Again as ``known''/``unknown'' before this allows us to either restrict or reject certain types of markings. We can combine this with a \texttt{set}-type task
+  description to calculate different marks using different task descriptions.
   \item[``add\_breaks''/``rem\_breaks'': set of break types] \hfill \\
-  Allows us to add or remove a type of break from the markings. The set can contain any of the break types we will discuss in the Reordering
+  Allows us to add or remove a type of break from the markings. The set can contain any of the break types that we will define in the Reordering
   Program Statements section.
   \item[``transform'': callable] \hfill \\
-  Executed first if it exists, this is used to transform the node into another to ease the markings of nodes such as decorated functions or
+  Executed first if it exists, this is used to transform the node into another to ease the marking of nodes such as decorated functions or
   classes. The callable is given our current node and returns either \texttt{None} to indicate no transformation should take place, or a
   node whose generated markings should be used as the \textit{entire} set of markings.
   \item[``add\_reads''/``add\_writes'': set of children containing names to add] \hfill \\
@@ -1471,10 +1472,10 @@ execute each of these actions on them in turn. Actions may be one of
 \end{description}
 
 \item[Tuple] \hfill \\
-This will contain a number of task descriptions and each will be treated as if exactly \textit{one} of the generated sets of markings will be correct
-for any particular execution of the node. If there are less than two task descriptions given, the markings from \texttt{\_base\_marks} will be added.
-By doing this we can represent empty markings by \texttt{()} and the possibility of either executing or not executing the node whose markings are
-given by a task description as \texttt{(task\_desc,)}.
+This will contain a number of task descriptions and these will be treated as if exactly \textit{one} of the generated sets of markings will be correct
+for any particular execution of the node. If there are less than two task descriptions given, the markings from \texttt{\_base\_marks} will be added as a choice.
+By doing this we can represent empty markings by \texttt{()} and the possibility of either executing or not executing a node marked by a certain task description
+as \texttt{(task\_desc,)}.
 
 \item[List] \hfill \\
 Lists should contain a number of other task descriptions. Each will generate their own set of markings and they will be combined assuming the nodes
@@ -1482,11 +1483,11 @@ that generated them are executed sequentially.
 
 \item[Set] \hfill \\
 The final type of combining task description, again containing a number of other task descriptions. This time we require the task descriptions to
-generate a disjoint set of markings as they will be combined as different pieces of the same set of markings. We can use the ``marks'' and ``nomarks''
+generate disjoint sets of marking types as they will be combined as different pieces of the same set of markings. We can use the ``marks'' and ``nomarks''
 actions to ensure this.
 
 \item[Callable] \hfill \\
-Again as before this will be given a node and return a new task description, allowing dynamic creation of the task description depending on
+Again similar to earlier, this will be given a node and will return a new task description. This allows dynamic creation of the task description depending on
 specific characteristics of the node.
 
 \end{description}
@@ -1501,7 +1502,7 @@ and out of the program during its execution. In the future it may be possible to
 OAT, to allow a user to account for slightly different semantics of different runtimes without editing our program code.
 
 We can now create a command for OAT to extend this functionality to the user. This will mean that a user can experiment and alter markings
-with or without prior programmatic analysis.
+with or without prior programmatic analysis and automatic marking.
 
 \subsection{Extending Marking Functionality to the User}
 
