@@ -354,8 +354,8 @@ These are the type of transformations we will attempt to implement first, due to
 
 \subsection{Existing Tools}
 
-We have previously seen that there are tools to do similar obfuscation in Python already. We will now discuss some
-examples of these, as well as other tools to try to reverse the transformations.
+We have previously seen that there are tools available to perform similar obfuscation in Python already. We will now discuss some
+examples of these, as well as other tools that can try to reverse any transformations they may perform.
 
 \subsubsection{Python Obfuscation}
 
@@ -376,22 +376,22 @@ a similar situation and so it is unlikely these will be able to cope with recent
 
 For analysis of Python code there are more tools available.
 
-Firstly to reverse the very basic syntax transformations there are a great number of Python pretty printers such as
+Firstly to reverse basic syntax transformations there are a great number of Python pretty printers such as
 pygments \cite{pygments} or PythonTidy \cite{pythontidy}. This should never be a particularly difficult task as Python is
 designed with readability in mind and enforces clear formatting in its syntax.
 
 Pylint \cite{pylint}, PyChecker \cite{pychecker} and PyFlakes \cite{pyflakes} are all tools designed to help look for possible
-bugs in Python code and so may have some use in checking validity of obfuscated source files. They also look for bad design and so
+bugs in Python code and so may have some use in checking the validity of obfuscated source files. They also look for bad design and so
 could help to determine how difficult a program is to understand for a human reader.
 
 PyDev \cite{pydev} is a plugin for the Eclipse IDE for developing in Python. It performs some useful code analysis on projects to detect
-possible bugs and allow easy refactoring of code. While it is implemented in Java as well as Jython (an alternate Python runtime)
+possible bugs and allow easy refactoring of code. While it is implemented in a conjunction of Java and Jython (an alternate Python runtime)
 it should be possible to reuse the ideas if needed. Tools for refactoring are easily available as PyDev uses Bicycle Repair
 Man \cite{bikerepair}, a Python library designed specifically for this task. PyDev also definitely supports Python 3.x as opposed to the
 other tools in which this is unclear.
 
 To attempt decompilation of the Python bytecode if necessary, there is a tool called decompyle \cite{decompyle} that has already been
-mentioned. This should not be necessary though as we have already discussed reasons not to use bytecode during the project.
+mentioned. This, however, should not be required as we have already discussed reasons not to use bytecode during the project.
 
 Some of the greatest  tools for analysis come from Python itself. Programs are often run from an interactive Python interpreter, and this
 can be used for easy dissection. Python's standard library comes with modules for parsing, assembling and disassembling source code.
