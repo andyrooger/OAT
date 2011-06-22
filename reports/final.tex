@@ -1010,52 +1010,53 @@ As we have discussed already, there are a number of types of control-flow obfusc
 remember now that we are not solely looking to obfuscate source code, but also to deobfuscate it ourselves as part of
 our evaluation.
 
-If we look through the previous list of example control-flow obfuscations, we can see there are a mix between those
+If we look through the earlier list of example control-flow obfuscations, we can see that there are a mix between those
 obfuscations that are easy to perform but involve serious work to remove, those that perform complicated work to perform
 but can be removed simply, and those that involve similar work in either direction.
 
-If we look at any transformations relying on opaque predicates, we see that these tend to be simple to perform, but the
-reversal requires careful analysis to locate and identify opaque predicates. Obviously the difficulty of reversal depends
-on the quality of the predicate, so the main difficulty in the forward step will be to construct these well. These types
+For transformations relying on opaque predicates we tend to see a simplicity in the obfuscation, but
+reversal requires careful analysis to locate and evaluate these opaque predicates. Obviously the difficulty of reversal depends
+on the quality of the predicate, so the main difficulty in the obfuscation step will be to construct these well. These types
 of obfuscations include adding dead code, extending loop conditions, or adding redundant operations to expressions.
 
 Pattern recognition within the code will be one technique we will rely on for some obfuscations. This will apply both for
-outlining and removing or replacing idioms. Of course if a pattern is broken, such as when removing idioms, the result can
-be further obfuscated, hugely complicating the task of recognising the original pattern.
+outlining and removing or replacing idioms. Of course if a common pattern is broken, such as when removing idioms, the result can
+be further obfuscated by other transformations and this will hugely complicate the task of recognising the original pattern.
 
 We could extend the notion of removing idioms and deconstruct many useful constructs such as list comprehensions or generators.
 The semantics of such are well documented \cite{genexpr}, so we should find it easy to create an equivalent program without
-these constructs. Again we are already removing some constructs such as \texttt{elif} during parsing as we described earlier.
+these constructs. Again we find that we are already removing some such constructs during parsing, for example the \texttt{elif}
+construct that we described earlier.
 
 Table translation would be simple to implement in CPython as the standard library actually includes a module called \texttt{dis}
-to interpret (and compile programs to bytecode). Unfortunately as \texttt{dis} is so tied into CPython, it is not available in
-other runtimes such as Jython, therefore if we use this method, we will need to invent our own virtual machine language and
+to interpret (and compile programs to bytecode). Unfortunately as \texttt{dis} is so heavily entwined with CPython, it is not available in
+other runtimes such as Jython and so if we use this method we will need to invent our own virtual machine language and
 produce bytecode and an interpreter for it. We will not be using this method. 
 
-If we were to parallelise our code, this could be done using the \texttt{multiprocessing} standard library. This makes it
+If we were to parallelise our code then we would be likely to use the \texttt{multiprocessing} standard library. This makes it
 very simple to spawn a new process using \texttt{Process} and exchange objects with \texttt{Queue} or \texttt{Array}. By
-performing redundant operations on these objects in both processes, we make the analysis required to re-merge the processes
+performing redundant operations on these objects from both processes, we make the analysis required to re-merge the processes
 very difficult.
 
-Finally, one ability required explicitly for many types of control-flow obfuscation, as well as implicitly for many of those
+Finally one ability required explicitly for many types of control-flow obfuscation, as well as implicitly for many of those
 described above is the ability to resolve variable values. This is needed for tasks such as removing or replacing library calls
 as an imported standard library could be assigned to any variable at all, or standard library names could be used to hold other
-data. This means we need to resolve any identifiers to discover whether a call is actually directed to a library or not.
+data. This means that we need to resolve any identifiers to discover whether a call is actually directed to a library or not.
 
-A subset of this ability is also needed when moving and rearranging parts of the program. We do not need to know which value a
-particular identifier refers to, but we do need to know which identifiers are used in which parts of a program and which
+A subset of this ability is also needed when moving or rearranging parts of the program. We do not need to know which value a
+particular identifier refers to, but we do need to know which identifiers are used in which areas of the program and which
 identifiers refer to the same data.
 
-The same set of tools are necessary both when obfuscating and deobfuscating a program by rearranging its components. Knowing
+The same set of tools are necessary both when obfuscating and deobfuscating a program by rearrangement of its components. Knowing
 this, we can implement the transformation in one direction and already have the tools to be able to implement the reverse.
 This is why we will implement program reordering as our first obfuscation, specifically reordering statements rather than
-files, as our parser currently only handles a single file at a time.
+files as our parser can currently only handle a single file at a time.
 
 Before we skip straight to implementing the transformations, we must make sure that we can perform the necessary analysis. As
-most information we calculate will be useful to many different forms of obfuscation, we should make sure it is only calculated
-once and can be stored and recalled whenever needed.
+most information we calculate will be useful to many different forms of obfuscation that will be performing, we should make sure
+that it is only calculated once and can be stored and recalled whenever needed.
 
-This can be done by 'marking' the AST with our calculated results.
+This can be done by `marking' the AST with our calculated results.
 
 \section{Marking the Abstract Syntax Tree}
 
