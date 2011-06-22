@@ -410,7 +410,7 @@ however Python provides more than enough in its standard library.
 
 The end product of this project is intended to be a usable source to source Python obfuscator as well as an analytic tool
 to assess its effectiveness. If we are to make sure the transformations we make to programs are really correct, we should
-know the ins and outs of the language well. This way we can easily pick up on language features that may contradict our
+know the language intimately. This way we can easily pick up on language features that may contradict our
 expectations about the behaviour of the code. For example it's easy to naively assume that a simple assignment to an object
 variable would be free of side effects. This is not the case, depending on the actual code an assignment can run absolutely
 anything \cite{pyprop} and doesn't even have to assign the given value to a variable.
@@ -423,15 +423,15 @@ Having chosen the language and version we will use to develop in, we need to des
 blocks. Specifically the following:
 
 \begin{itemize}
-\item A Python parser/lexer to read and make sense of Python source files.
+\item A Python lexer and parser to read and make sense of Python source files.
 \item Implementations of a number of obfuscating transformations.
 \item Implementations of a number of analytic techniques.
 \item A Python writer to take our abstract representation of the source code and output a file.
 \item A user interface.
 \end{itemize}
 
-The most fundamental parts here in the workflow are the parser/lexer and the writers for the source files.
-Without these the other parts are useless, so this is where the implementation will begin.
+The most fundamental components in this workflow are the parser and lexer and the writers for the source files.
+Without these the rest of the program would be useless, so this is where our implementation will begin.
 
 \subsection{Reading and Writing Python Source Code}
 
