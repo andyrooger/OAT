@@ -3367,6 +3367,27 @@ for real situation.
 
 \subsection{Future Work}
 
+There are many possible avenues for extending this work. One of the more pressing issues is to finish the metamorphosis between OAT and GOAT, creating an entire
+graphical interface. By doing this we would greatly ease the job of the user, allowing them to simultaneously edit and browse the AST while seeing the changes
+made in the source code. The graphical user interface would also be helped by some level of automation, allowing a user to make one or two clicks and have the
+entire source file obfuscated by performing different transformations until some level of complexity or time is reached. Once this is done it would be viable
+for a user to work with this tool productively.
+
+More technical goals include building a greater number of obfuscating transformations. The architecture or the software allows these to be easily
+added to the program so long as they can be implemented at all. Two good candidates for implementation are removal or library calls and idioms and
+parallelising code as described the the control-flow obfuscation background section. Removal of library calls would help as a barrier to human reverse
+engineering and parallelisation will help greatly against both a machine \textit{and} a human. It would also be helpful to perform some layout obfuscation
+by creating a new source writer.
+
+For the ability to implement these new transformations we would also need to perform some more in depth analysis. This would involve developing the ability
+to create a control flow graph as well as the ability to transform it back into an AST. Analysis could then be performed on the CFG, allowing us hopefully
+to resolve function calls or to use constant propagation to break weak opaque predicates. We could use this ability to extend and automate our reordering
+operation, removing the user's need to guide the analysis and marking process.
+
+Another useful feature would be to enable the user to work on mutliple files at once. This would be much simpler in a graphical interface and would allow
+inter-module obfuscation. In allowing this we would enable functions and variables to be split between multiple files, making the job of deobfuscation much
+harder.
+
 \bibliographystyle{plain}
 \bibliography{final}
 
