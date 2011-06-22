@@ -42,7 +42,7 @@ Andy Gurden
 \begin{minipage}{0.4\textwidth}
 \begin{flushright} \large
 \emph{Supervisor:} \\
-Herbert Wikliky
+Herbert Wiklicky
 \end{flushright}
 \end{minipage}
 
@@ -60,7 +60,7 @@ Herbert Wikliky
 
 \section*{Acknowledgements}
 
-TODO - write acknowledements - Hayley Hannam, Herbert Wikliky, Chris Hankin, Alex Lamaison
+TODO - write acknowledgements - Hayley Hannam, Herbert Wiklicky, Chris Hankin, Alex Lamaison
 
 \tableofcontents
 
@@ -272,10 +272,10 @@ This time we can look to Collberg 1997 \cite{taxobftrans} for examples of contro
 of an opaque predicate, a variable whose value is known by the obfuscator but hard for a deobfuscator to calculate.
 
 By depending on the value of an opaque predicate, a transformation can be made more resilient against a deobfuscator. As the
-deobfuscator finds it difficult to calculate the value of this predicate, it cannot reduce the tranformation or possibly
+deobfuscator finds it difficult to calculate the value of this predicate, it cannot reduce the transformation or possibly
 remove it.
 
-We will see this used in the following types of control-flow obfuscaton:
+We will see this used in the following types of control-flow obfuscation:
 
 \begin{description}
 \item[Inserting Dead Code] \hfill \\
@@ -304,7 +304,7 @@ The benefit of doing this is obvious. These are both common parts of program sou
 to gain their bearing. Common idioms will indicate the intention of a section of code much more strongly than other arbitrary
 code.
 
-Likewise library calls, especially in Python, are usually very well documented. This documentation gives the reverse enginner
+Likewise library calls, especially in Python, are usually very well documented. This documentation gives the reverse engineer
 a great deal of information relating to the values of variables around the call. The danger of these library calls can be
 mitigated somewhat by obfuscating the names of imported libraries, but it still may be better to replace them with calls
 to undocumented custom libraries.
@@ -376,7 +376,7 @@ Firstly to reverse the very basic syntax transformations there are a great numbe
 pygments \cite{pygments} or PythonTidy \cite{pythontidy}. This should never be a particularly difficult task as Python is
 designed with readability in mind and enforces clear formatting in its syntax.
 
-PyLint \cite{pylint}, PyChecker \cite{pychecker} and PyFlakes \cite{pyflakes} are all tools designed to help look for possible
+Pylint \cite{pylint}, PyChecker \cite{pychecker} and PyFlakes \cite{pyflakes} are all tools designed to help look for possible
 bugs in Python code and so may have some use in checking validity of obfuscated source files. They also look for bad design and so
 could help to determine how difficult a program is to understand for a human reader.
 
@@ -478,7 +478,7 @@ using Python's \texttt{ast} module and writing our own AST to source writer is t
 being fast to write.
 
 Before we start to design our source writers, we should think about the data structures we will be using to store information. As we don't have
-control of the \texttt{ast} module, we cannot decide what format will be output when parsing a file. In fact, the value we should receieve from
+control of the \texttt{ast} module, we cannot decide what format will be output when parsing a file. In fact, the value we should receive from
 a successfully parsed file will be derived from the \texttt{ast.AST} class. More specifically it will be a child of \texttt{ast.mod}, either
 \texttt{ast.Module}, \texttt{ast.Interactive}, \texttt{ast.Expression} or \texttt{ast.Suite} depending on the context in which we are parsing.
 
@@ -516,7 +516,7 @@ Otherwise the node is a basic type and has no children, or the node is a list an
 easily map these names to the children they refer to, and place the \texttt{CustomAST} versions of them into the dictionary.
 
 We can also give a hybrid node to this constructor. This would be either a list containing normal nodes and \texttt{CustomAST} nodes, or an
-\texttt{ast.AST} node with some \texttt{CustomAST} nodes as children. Children that are already \texttt{CustomAST} nodes will not be rewraped
+\texttt{ast.AST} node with some \texttt{CustomAST} nodes as children. Children that are already \texttt{CustomAST} nodes will not be re-wrapped
 and the given node will be altered to contain only normal nodes. This allows us to easily transform or create new nodes from \texttt{CustomAST}
 nodes without dissecting them first.
 
@@ -536,7 +536,7 @@ Checks whether this node actually represents the lack of a node. If a parent nod
 not exist, the child will be set to \texttt{None}. This will then become an empty node. Likewise, if a parent has a field that can hold multiple children, an
 empty list would represent that none exist and so this is also an empty node.
 
-\item[\texttt{temp\_list(*vargs)}] \hfill \\
+\item[\texttt{temp\_list(*varargs)}] \hfill \\
 When translating or transforming nodes, it is often useful to concatenate lists to each other. New lists of single \texttt{CustomAST} nodes can easily be
 created using hybrid nodes as so: \texttt{CustomAST([node1, node2, ...])}.
 
@@ -639,11 +639,11 @@ The specific extensions we will include in \texttt{PrettyWriter} alter the outpu
 \begin{description}
 \item[\texttt{Expr} and \texttt{Str}] \hfill \\
 An \texttt{Expr} node is a type of Python statement, this means it stands on its own line. If the \texttt{Expr} node contains only a \texttt{Str} node
-(representing a string), it is known as a docstring. These are used for programatically accessible documentation and are usually represented
+(representing a string), it is known as a docstring. These are used for programmatically accessible documentation and are usually represented
 differently to normal strings.
 
 By making the distinction between a string and a docstring we can ensure we recreate this difference in the written code. As the docstring conventions 
-\cite{docstr} recommend, we use triple quotes and so multiline strings can actually be written on multiple lines. We also change some of the strings to
+\cite{docstr} recommend, we use triple quotes and so multi-line strings can actually be written on multiple lines. We also change some of the strings to
 cope with differing indentation.
 
 \item[\texttt{FunctionDef}] \hfill \\
@@ -697,7 +697,7 @@ that while a user does have a little control over what happens, they really just
 unreadable one.
 
 We want to be able to effectively evaluate what our tool is doing to the source code. For this we need to be able to intimately control
-which parts of the program are affected, and by which obfuscations. This would be unfeasable to attempt with an automatic program,
+which parts of the program are affected, and by which obfuscations. This would be unfeasible to attempt with an automatic program,
 even one with tweakable parameters, therefore it is not really an approach we can use.
 
 Knowing we have to be able to direct and control transformations, there are a few different ideas of how. In general, these fit into
@@ -769,7 +769,7 @@ understand how a command interface could provide these natural displays.
 
 Now we can discuss the benefits of using the \texttt{cmd} library. Again the developer is not familiar with this library, but unlike
 \texttt{tkinter}, it is very simple to begin. Even at it's bare minimum functionality, the provided command console offers a help
-function and support for autocompletion. All other functionality is easily addable by subclassing and implementing functions at various
+function and support for auto-completion. All other functionality is easily addable by subclassing and implementing functions at various
 hook points.
 
 It is true that some information will be difficult to display naturally using only text, but our focus is on the obfuscation rather than
@@ -835,7 +835,7 @@ This method will try to parse the arguments given on the command line. If succes
 otherwise it will print the help message and return.
 
 \item[\texttt{complete(text, line, begidx, endidx)}] \hfill \\
-If the user presses the tab key while typing, the \texttt{cmd.Cmd} will try to autocomplete the command by calling a specific set of functions. We
+If the user presses the tab key while typing, the \texttt{cmd.Cmd} will try to auto-complete the command by calling a specific set of functions. We
 override this behaviour in \texttt{CommandUI} to outsource the work to a specific \texttt{Command} object, calling the \texttt{complete} method.
 
 When this function is called, it is passed information that can be used to calculate possible completions of the line. At this point this information
@@ -857,7 +857,7 @@ this status method to display the status of each command in turn. We expect this
 
 \item[\texttt{run(args)}, \texttt{autocomplete(before, arg, after)}] \hfill \\
 These are both designed to be overridden when implementing a concrete command, along with \texttt{status}. \texttt{run} is called to run the
-command as described in \texttt{do}, and \texttt{autocomplete} is called to generate autocompletions as described in \texttt{complete}.
+command as described in \texttt{do}, and \texttt{autocomplete} is called to generate auto-completions as described in \texttt{complete}.
 \end{description}
 
 Now we know how to create and plug in the commands, we can start to create them. The initial commands we will implement are described below:
@@ -913,7 +913,7 @@ the argument '--style \{basic, pretty\}'.
 If the user chooses, output from this command may be written to disk using the flag, '--write FILE'.
 
 Other commands will be added to this list as we develop the functionality to make them necessary, and all of the commands implemented
-should employ autocompletion wherever possible. This helps to guide the user and speeds up the use of OAT.
+should employ auto-completion wherever possible. This helps to guide the user and speeds up the use of OAT.
 
 Now we can look at an example session, to see how the user will interact with the tool:
 
@@ -942,7 +942,7 @@ When writing a program there are many things a developer will include, often wit
 help a human reader to follow the program but do not affect the manner in which the code is run. Some of
 these are obvious and designed for this purpose such as meaningful variable identifiers and program comments.
 
-There are also more subtle features to the program source code. Whitespace is very helpful in many progamming
+There are also more subtle features to the program source code. Whitespace is very helpful in many programming
 languages, this is especially true in Python as indentation is the method of identifying blocks of code, rather than
 the familiar '\texttt{\{}' and '\texttt{\}}' or '\texttt{begin}' and '\texttt{end}' that we often see in other
 languages. 
@@ -1107,7 +1107,7 @@ markings, then we we can first add this attribute and then return it.
 These are designed to be called from derived classes. The first two will try to find the name of this particular type of marking inside
 the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if this was successful, and \texttt{get\_mark} will return either the
 corresponding value, or a safe default on failure. \texttt{set\_mark(val)} will try instead to set the value and return a boolean value
-indicating if it was successfull
+indicating if it was successful.
 
 Only \texttt{is\_marked} is designed to be public. \texttt{get\_mark} should be used for convenience in subclasses that will provide
 customised interfaces to help interpret the particular type of marking.
@@ -1157,7 +1157,7 @@ depending only on the type of marking. Also simple would be asking a user to dec
 making the decision.
 
 Of course if the node could possibly have already been marked, we can just take these current markings. The final option we will think about is
-that we could calculate the values based on those of any child nodes. Any of these four options may be combined into a hybrid automarker, and actually
+that we could calculate the values based on those of any child nodes. Any of these four options may be combined into a hybrid auto-marker, and actually
 this is what we will do.
 
 The idea is that to calculate the value for marks on a single node, we should first order the discussed methods of choice into a mark resolution
@@ -1195,7 +1195,7 @@ are the assignment and the \texttt{if}-\texttt{else} statement, so we must perfo
       marked as non-visible and non-breaking.
 
       \item[\texttt{ast.Store}] \hfill \\
-      The user has no idea what this node is so passes. Now our knowledgeable automarker knows that this type of node is used to represent the context
+      The user has no idea what this node is so passes. Now our knowledgeable auto-marker knows that this type of node is used to represent the context
       a name is used in. This particular node is describing a name being used to store data and so could cause an exception if the name is not writable.
       
       Now we can mark this node as non-visible but possibly breaking with an exception.
@@ -1206,7 +1206,7 @@ are the assignment and the \texttt{if}-\texttt{else} statement, so we must perfo
     of causing an exception.
 
     \item[\texttt{ast.Call}: \texttt{get\_wound()}] \hfill \\
-    Now our user does not know about the \texttt{get\_wound} function so passes the marking to our automarker. Our automarker knows it does not have
+    Now our user does not know about the \texttt{get\_wound} function so passes the marking to our auto-marker. Our auto-marker knows it does not have
     the ability to resolve the name being called and so also passes.
 
     This means we will mark this node with safe default values which are set in the corresponding marker classes. Hence our node will be marked
@@ -1235,7 +1235,7 @@ problem for humans, as a programmer tends to program in a way that avoids implic
 and explicitly raise exceptions are easy to spot. Humans will also tend to ignore system exceptions when programming, such as those raised when we run
 out of memory as these indicate that something is actually broken and tend to stop the program immediately.
 
-Unfortunately our automarker does not benefit from this human intuition. The last thing we wish to do is to break a program by assuming something that
+Unfortunately our auto-marker does not benefit from this human intuition. The last thing we wish to do is to break a program by assuming something that
 could happen does not. This means that if a node could break flow or produce visible output we must mark them as so, even if it would be unlikely to ever
 happen. Of course if we can somehow prove that an exception will not be caused, such as by showing that a name is assigned to before it is read from,
 then we can mark the node as such.
@@ -1246,14 +1246,14 @@ after markings are generated for a node, but before they are written to it. This
 they feel them to be incorrect.
 
 As well as the user review step, we will also allow the user to edit markings completely manually. This gives us the benefit of both the expert
-knowledge and speed of the automarker, but also of the intuition of the user. As the automarker improves, reliance on the user will diminish, allowing
+knowledge and speed of the auto-marker, but also of the intuition of the user. As the auto-marker improves, reliance on the user will diminish, allowing
 gradual evolution of the tool.
 
 Now we must implement our algorithm, clarifying our ideas in the software.
 
-\subsection{Implementing the Automarker}
+\subsection{Implementing the Auto-marker}
 
-The main class to be implemented is the \texttt{AutoMarker} class, this implements all of the functionality needed to create a hybrid automarker.
+The main class to be implemented is the \texttt{AutoMarker} class, this implements all of the functionality needed to create a hybrid auto-marker.
 We define the class as so:
 
 \begin{description}
@@ -1262,7 +1262,7 @@ The constructor takes a large number of arguments, but nevertheless is fairly si
 
 \texttt{res\_order} defines the resolution order we will use. Rather than ordering all four of \textbf{mark}, \textbf{user}, \textbf{calc} and
 \textbf{default}, we cleverly notice that \textbf{default} will always return to us a value for the markings. This means that any resolution methods
-occuring after \textbf{default} will never be used and can be forgotten. We also decide to make sure that \textbf{default} is always implicitly in
+occurring after \textbf{default} will never be used and can be forgotten. We also decide to make sure that \textbf{default} is always implicitly in
 our list, allowing our recursive marking method to always return a value. Thus we order only \textbf{mark}, \textbf{user} and \textbf{calc},
 represented by a list of strings.
 
@@ -1302,7 +1302,7 @@ which result in the markings represented by \texttt{marks}. Now we expect that t
 in \texttt{addition} when executed by itself. This method will combine both of these sets of markings and return the result.
 
 \item[\texttt{default\_marks(node, needed)}] \hfill \\
-This implements the \textbf{default} resolution method. It will call the default methods we gave in the contructor to generate a dictionary containing
+This implements the \textbf{default} resolution method. It will call the default methods we gave in the constructor to generate a dictionary containing
 markings for all \texttt{needed} types.
 
 \item[\texttt{get\_marks(node, needed)}] \hfill \\
@@ -1340,7 +1340,7 @@ While this design works correctly, and is flexible enough to allow almost any pr
 Flexibility is a useful attribute to have, but it is wasted once we notice that most of these nodes are processed in very similar manners, only using
 different child names.
 
-We also have the problem that having this many tiny functions creates a very messy codebase. Most of these may be written in one or two lines, and those
+We also have the problem that having this many tiny functions creates a very messy code base. Most of these may be written in one or two lines, and those
 that take more can usually have their contents outlined into a common function. These problems give rise to our second design.
 
 \subsubsection{Implementing Marking Calculations - Second Attempt}
@@ -1421,7 +1421,7 @@ as required. For example the following is the task description for a return node
 
 We quickly read from this that in order to generate markings for a return node, we use the markings from the child "value", and add a "return" break type.
 
-Again we should be critical of this design. The objectives here were to design a flexible system with a small codebase, and these have been achieved.
+Again we should be critical of this design. The objectives here were to design a flexible system with a small code base, and these have been achieved.
 However we also wanted to retain correctness and flexibility, of which we have lost flexibility. We also notice that although we have simplified the
 original design for a user reading the code, the understanding needed to write a task description is not small. So now we try again.
 
@@ -1491,14 +1491,14 @@ help greatly for marking reads and writes from a node.
 
 This design will suit us for now, it allows simple definition of marking behaviour as well as allowing a user or developer to swap behaviour in
 and out of the program during its execution. In the future it may be possible to add an interface to create and edit these task descriptions from
-OAT, to allow a user to account for slightly different sematics of different runtimes without editing our program code.
+OAT, to allow a user to account for slightly different semantics of different runtimes without editing our program code.
 
 We can now create a command for OAT to extend this functionality to the user. This will mean that a user can experiment and alter markings
 with or without prior programmatic analysis.
 
 \subsection{Extending Marking Functionality to the User}
 
-All we need to create to provide marking and automarking functionality through our \textbf{mark} command is a single \texttt{Command}
+All we need to create to provide marking and auto-marking functionality through our \textbf{mark} command is a single \texttt{Command}
 class called \texttt{MarkCommand}. This is not tied in any way to specific marking types, instead we employ the custom made
 \texttt{util.pluginfinder} package to search through the \texttt{markers} package for marking plugins. This allows us to add a new
 marking type to the interface just by dropping a file into the \texttt{markers} directory.
@@ -1525,7 +1525,7 @@ by the \textbf{explore} command. Otherwise by default these marks are are applie
 markings.
 
 We also provide an '--auto' option that takes the resolution order for an automatic marking. If this is specified then we use each of the
-marking options to provide default markings for each node. As the automarker requires user interaction to be implemented by the interface
+marking options to provide default markings for each node. As the auto-marker requires user interaction to be implemented by the interface
 we will implement a number of functions here that ask the user about the current state of markings and possible actions.
 
 \section{Reordering Program Statements}
@@ -1572,7 +1572,7 @@ are mostly mystifying a human, we should also see benefits of our obfuscation ag
 Notice that there is no single correct order to write a program in. As long as the ordering produces the correct results, it is valid. One may argue that
 some orderings are better than others, for instance one ordering may be easier to understand or read, or may run faster than another, but there is not
 a single correct answer. This means that a deobfuscator cannot find a single correct ordering, and even if it looks for the best, this may not result in
-the program we started with. We can then say that this type of obfuscation is irreversible in general, a very nice propery for any obfuscation. 
+the program we started with. We can then say that this type of obfuscation is irreversible in general, a very nice property for any obfuscation. 
 
 Now being irreversible is very good, but actually we would not care if it did not also bring some benefit in terms of obfuscating the code. Actually
 reordering statements comes in very handy when combined with other types of obfuscation. We will illustrate this with an example, from the background
@@ -1594,9 +1594,9 @@ abstract grammar \cite{pyagrammar} we can see these are:
 
 \begin{description}
 \item[\texttt{ast.FunctionDef}] \hfill \\
-Definition of a function. Possibly multiline: \texttt{def f(params): pass}
+Definition of a function. Possibly multi-line: \texttt{def f(params): pass}
 \item[\texttt{ast.ClassDef}] \hfill \\
-Definition of a class. Possibly multiline: \texttt{class C(bases): pass}
+Definition of a class. Possibly multi-line: \texttt{class C(bases): pass}
 \item[\texttt{ast.Return}] \hfill \\
 Simple return statement: \texttt{return x}
 \item[\texttt{ast.Delete}] \hfill \\
@@ -1604,15 +1604,15 @@ Removal of a name binding: \texttt{del x}
 \item[\texttt{ast.Assign} and \texttt{ast.AugAssign}] \hfill \\
 Normal or augmented assignment: \texttt{x = 1} or \texttt{x += 1}
 \item[\texttt{ast.For} and \texttt{ast.While}] \hfill \\
-For or while loop. Possibly multiline: \texttt{for x in range(y): pass} or \texttt{while x: pass}
+For or while loop. Possibly multi-line: \texttt{for x in range(y): pass} or \texttt{while x: pass}
 \item[\texttt{ast.If}] \hfill \\
-If statement. Possibly multiline: \texttt{if x: pass}
+If statement. Possibly multi-line: \texttt{if x: pass}
 \item[\texttt{ast.With}] \hfill \\
-With statement, used for convent set up/tear down such as when opening files. Possibly multiline: \texttt{with open(x) as file: pass}
+With statement, used for convent set up/tear down such as when opening files. Possibly multi-line: \texttt{with open(x) as file: pass}
 \item[\texttt{ast.Raise}] \hfill \\
 Raise statement, raises exception: \texttt{raise x}
 \item[\texttt{ast.TryExcept} and \texttt{ast.TryFinally}] \hfill \\
-Exception catching. Possibly multiline: \\
+Exception catching. Possibly multi-line: \\
 \texttt{try: pass} \\
 \texttt{except: pass} \\
 \texttt{finally: pass}
@@ -1765,8 +1765,8 @@ We have now decided on the rules for reordering our statements. To implement the
 the statements we will be ordering. Specifically we need to know about visible statements, flow-breaking statements and regions of the program
 state that are read or written to by each node.
 
-The calculation and storage of this information will be performed by the automarker described above. Our task here is then to discuss and instruct
-the automarker on how to act when calculating these properties for statements from deeper nodes in the AST.
+The calculation and storage of this information will be performed by the auto-marker described above. Our task here is then to discuss and instruct
+the auto-marker on how to act when calculating these properties for statements from deeper nodes in the AST.
 
 \subsubsection{Visible Statements}
 
@@ -1776,11 +1776,11 @@ outside of the program. Of course we can also allow the extended definition and 
 are also visible nodes.
 
 Now there are no nodes in Python's abstract grammar that would, by themselves, be visible. These types of nodes would tend to be either created as the
-result of a direct or indirect system through a function call, or as a specific combination of nodes that may reveal itself to be visble through analysis.
+result of a direct or indirect system through a function call, or as a specific combination of nodes that may reveal itself to be visible through analysis.
 A never ending \texttt{while} loop would fit the second category.
 
 We have no way to resolve a function call, and we do not perform a thorough analysis on the program code, so we really cannot calculate that a node is
-visible from automation alone. We rely either on a user to specifically mark a node visible as a result of some empirical evidence, or on the automarker
+visible from automation alone. We rely either on a user to specifically mark a node visible as a result of some empirical evidence, or on the auto-marker
 to fall back to using default values. This happens as the safest option when choosing whether a node is visible is to assume that it is. It is better to
 introduce too many constraints on the reordering and generate a smaller search space than it is to take away constraints and generate incorrect orderings.
 
@@ -1867,8 +1867,8 @@ If we do not know whether or not an break occurs, we prefer to leave the choice 
 
 \subsection{Theory for Read and Write Regions of Statements}
 
-The previous two types of markings were very briefly described during the creation of the automarker, and even used for the design of the first two attempts.
-Marking read and write regions for a node is much more complex and made the final design for the automarker necessary.
+The previous two types of markings were very briefly described during the creation of the auto-marker, and even used for the design of the first two attempts.
+Marking read and write regions for a node is much more complex and made the final design for the auto-marker necessary.
 
 \subsubsection{Domain and Representation}
 
@@ -2016,7 +2016,7 @@ during our node's execution are exactly those that will have changed and be read
 
 \subsubsection{Calculation of Simple Node Markings}
 
-We will assume that a node is executed by executing a subset of its child nodes in a definite order. For example a list usually represesents
+We will assume that a node is executed by executing a subset of its child nodes in a definite order. For example a list usually represents
 sequentially executed statements, or a function definition will evaluate all of its default arguments and then assign to the function name.
 
 To form our markings we will start with a very simple situation where we mark a node $N$ whose execution involves the sequential execution of two nodes,
@@ -2219,7 +2219,7 @@ If $n(s) = n(y)$ then we know by definition of $q$ and $z$ that also $n(q) = n(y
 $\mathcal{U}(y) \le \mathcal{U}(z)$ by \eqref{fixys}. From here, using the first part of \eqref{uqz} we see that either $\mathcal{U}(q) \le \mathcal{U}(y) \le \mathcal{U}(z)$, or
 $\mathcal{U}(y) \le \mathcal{U}(q) < \mathcal{U}(z)$.
 
-$y \in W^\prime$ so is not $z$ and as $y$ is a write operation and $q$ is a read these cannot be equal either. Therefore \eqref{uqz} explicity disallows
+$y \in W^\prime$ so is not $z$ and as $y$ is a write operation and $q$ is a read these cannot be equal either. Therefore \eqref{uqz} explicitly disallows
 the first of these options, meaning that $\mathcal{U}(y) < \mathcal{U}(q) < \mathcal{U}(z)$. Feeding this into \eqref{fixyq}, we get
 $\mathcal{U}(p_s) \ge \mathcal{U}(y)$, proving \eqref{conds} and showing our marking was correct.
 
@@ -2393,8 +2393,8 @@ These will be executed in the order
 \item possible \texttt{orelse}
 \end{enumerate}
 
-Using the task descriptions defined in the automarker section, as well as the reasoning above, it should be simple to add read and write markings to
-our automarker for the \texttt{for} loop as well as most other nodes.
+Using the task descriptions defined in the auto-marker section, as well as the reasoning above, it should be simple to add read and write markings to
+our auto-marker for the \texttt{for} loop as well as most other nodes.
 
 \subsection{Implementing a Simple Reorderer}
 
@@ -2448,7 +2448,7 @@ returning a tuple containing the index and names that read or written from the n
 
 \item[\texttt{\_statement\_dependence(t, before, after)}] \hfill \\
 This function will is used to calculate the providing statements for \texttt{t}. Provided with our statement, \texttt{t}, and a list of statements
-occuring \texttt{before} and \texttt{after} our statement, all in the form given by \texttt{\_statement\_tuple}, we will calculate a new representation
+occurring \texttt{before} and \texttt{after} our statement, all in the form given by \texttt{\_statement\_tuple}, we will calculate a new representation
 for \texttt{t}.
 
 This will be a tuple, beginning with the index of \texttt{t}. The next item is a dictionary mapping read names to statement indices of their providing
@@ -2459,7 +2459,7 @@ is a providing statement for the name in our final pseudo-statement.
 
 Having designed the basic structure of our reorderer we would like to begin implementing the actual permutations. As is often the case, we will need to
 ensure certain preconditions of the algorithm are true. Rather than inserting this functionality with the logic of the permutations, we will create
-another class, \texttt{ReorderChecker}. Any subclass of \texttt{BasicReorderer} that also inheritd from this class will ensure that the provided node
+another class, \texttt{ReorderChecker}. Any subclass of \texttt{BasicReorderer} that also inherited from this class will ensure that the provided node
 is confirmed as a list of statements. It will also provide a function to check that all necessary markings are provided on each statement.
 
 At this point we can begin to implement transformations that follow our rules. As our fourth rule allows us to generate permutations by splitting the
@@ -2693,8 +2693,8 @@ of these is to use lazy evaluation. This may have a very minor impact on executi
 we gain a huge speed boost when generating only a subset of these.
 
 Lazy evaluation using generator functions also allows us to yield each permutation as we calculate it, which would allow us to parallelise the execution of valuer
-function if we noticed they were too costly. We discussed earlier the design of a simple dynamic alorithm when permuting that allows us to preserve our lazy
-evalutation.
+function if we noticed they were too costly. We discussed earlier the design of a simple dynamic algorithm when permuting that allows us to preserve our lazy
+evaluation.
 
 We may try looking towards the algorithms we use to calculate our permutations. There may well be room to optimise these with some clever insights into
 the theory being used. In fact we have already done this to some extent, using the informed algorithms in \texttt{SingleReorderer} rather than the naive
@@ -2800,7 +2800,7 @@ us to insert complicated or confusing code into paths that we know will never be
 path will not ever be followed, it cannot safely remove our dead code. We also aim to confuse a human reader with the extra source code this will leave.
 
 It is possible to use this type of obfuscation in conjunction with the statement reordering in the previous section. For example when branching on
-an unknown predicate we may want to disguise the fact that both branches will perform the same task. To do this we can repreatedly use a combination
+an unknown predicate we may want to disguise the fact that both branches will perform the same task. To do this we can repeatedly use a combination
 of statement reordering and irrelevant code insertion until the branches are unrecognisable.
 
 \subsection{Creating Opaque Predicates}
@@ -3025,7 +3025,7 @@ mentioned in the earlier discussion, a GUI would provide a more natural interfac
 
 As we have progressed through the development of OAT there are many places we have seen that could have been greatly improved by this graphical interaction.
 For instance the traversal of our AST, currently performed by our \textbf{explore} command is cumbersome and can be confusing in the command line interface. A
-much better representation would be to display all of the nodes in a form of heirarchical display commonly seen in file managers.
+much better representation would be to display all of the nodes in a form of hierarchical display commonly seen in file managers.
 
 This immediate access to all nodes in the AST would also help us with other tasks. While marking the AST we currently expect a user to manually mark any function
 calls as we cannot resolve which function they correspond to. Rather than leaving the marking entirely up to a user, it seems reasonable to allow the user to
@@ -3037,12 +3037,12 @@ command to print the source code. In a GUI application it would not be difficult
 highlighting our node's source code so that the user can view it in context. This pane would be available throughout the entire program's operation.
 
 Thankfully we do not need to reimplement any of our basic functionality to provide this graphical interface. We have followed good design principles and so have
-endevoured to keep our implementation as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
+endeavoured to keep our implementation as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
 Graphical OAT, component by component. Each component may be added and tested as commands in our current interface, OAT.
 
 \subsection{Developing a Hierarchical Display for our AST}
 
-This is the first component we will develop for GOAT. Our intentions for the design are to create a reuseable component that can be used whenever some part of
+This is the first component we will develop for GOAT. Our intentions for the design are to create a reusable component that can be used whenever some part of
 part of the interface requires a user to browse and select nodes. We should be able to set up a node browser just by passing a root node to the
 constructor of the component.
 
@@ -3068,7 +3068,7 @@ information from each to display in the details column.
 \end{description}
 
 As the tree may be larger than the available screen space, we will create a \texttt{ScrolledASTTreeview} that contains \texttt{ASTTreeview}. This allows a
-large widget to scroll by adding scrollbars aroundthe outside.
+large widget to scroll by adding scrollbars around the outside.
 
 \subsection{Developing a Graphical Display for Node Markings}
 
@@ -3129,13 +3129,13 @@ Python obfuscator, and to detail and discuss the limitations imposed by the flex
 Whilst the first of these aims has been achieved there is still much room for improvement. We will now discuss the reasons for this and address the second
 of our aims.
 
-\subsection{Software Useability}
+\subsection{Software Usability}
 
-This was not a primary objective, however it needs to be discussed as useability should be an important consideration for any software project. Our system
+This was not a primary objective, however it needs to be discussed as usability should be an important consideration for any software project. Our system
 was developed with ease of testing and evaluation in mind rather than user friendliness and so can be difficult for a user to use productively.
 
 If we compare our system with other tools to do similar jobs such as pyobfuscate \cite{pyobf} for Python or Kava \cite{taxobftrans} for Java, the main
-difference we see is the level of automation. Rather than our approach, involving the user explicity orchestrating the transformation of their target
+difference we see is the level of automation. Rather than our approach, involving the user explicitly orchestrating the transformation of their target
 source code, simply providing the obfuscator with this target source code is sufficient. The tool will then analyse the code without outside help
 and perform different obfuscating transformations until some complexity or time quota is met.
 
@@ -3178,7 +3178,7 @@ Java or C. What we see is that these obfuscators will usually have a much wider 
 obfuscating transformations, combining data or layout obfuscation as well. These obfuscators tend to
 work in an automatic fashion of object or bytecode rather than source code.
 
-While the extra scope of these tools is likely indicitive of the extra developer manpower and time
+While the extra scope of these tools is likely indicative of the extra developer manpower and time
 available to them, it also appears due to the difference in the languages. While the Python language
 employs rules that allow much flexibility, Java or C is much more restrictive.
 
@@ -3209,10 +3209,10 @@ it.
 This is the first of the two types of obfuscation that we implemented, aiming to confuse a reader or help to break idioms and hide
 other obfuscations from an analyser. Our implementation can be restrictive, requiring certain conditions to be fulfilled and limiting
 the effectiveness of this type of obfuscation in the real world. These come as a result of a number of decisions, starting with the
-design of our automarker.
+design of our auto-marker.
 
-The automarker was implemented to traverse the AST marking each node independently from any of its siblings. We can use and extend this implementation
-to perform many of the types of sematic analysis available inside common compilers, but not all. This is in part due to our choice of language, as Python
+The auto-marker was implemented to traverse the AST marking each node independently from any of its siblings. We can use and extend this implementation
+to perform many of the types of semantic analysis available inside common compilers, but not all. This is in part due to our choice of language, as Python
 will allow us to do many things such as calculating the scope of an identifier statically, but we cannot in the general case decide upon an identifier's
 type or resolve a function call to its definition without running the program.
 
@@ -3228,7 +3228,7 @@ explain that the effects are much greater when combined with other types of obfu
 The strength of statement reordering then relies on the difficulty involved in reversing it.
 
 As discussed in the relevant section, a reordering is irreversible in general, however we may estimate a preferential reordering that may in some cases be better
-that the original program. To see the difference between the difficulty in performing obfuscation or deofbuscation in case we will perform a number of tests and
+that the original program. To see the difference between the difficulty in performing obfuscation or deobfuscation in case we will perform a number of tests and
 let the time taken for a transformation represent effort.
 
 \subsubsection{Performance}
@@ -3250,9 +3250,9 @@ We allowed three different names to be read and written to. For every combinatio
 permutations and the time taken to find the best permutation (according to \texttt{WriteUseValuer}), using \texttt{Reorderer} and \texttt{RandomReorderer}.
 Each individual test was performed five times and the resulting time was averaged.
 
-In comparing the difference between using the valuer and not, we see that the difference is usually negligable. This difference averaged at around a $23000\%$
+In comparing the difference between using the valuer and not, we see that the difference is usually negligible. This difference averaged at around a $23000\%$
 increase for the cost of running a valuer, but as $40\%$ of the tests were actually faster when using the valuer and the range of increases was between
-$-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually negligable and that random factors from other variables contributed much more to
+$-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually negligible and that random factors from other variables contributed much more to
 the overall difference. For the rest of our analysis we will look only at the unvalued results to avoid interference.
 
 Now we compare \texttt{RandomReorderer} to \texttt{Reorderer}. We expect that \texttt{RandomReorderer} will be slower because it adds extra storage and random
@@ -3300,8 +3300,8 @@ difference that changes in visibility, breaking, read, or write probabilities ma
 
 As we can see, more that a minimal amount of either breaking statements or visible statements severely limits the number of legal permutations we may
 generate from a sequence. Of the two types of statements, those that break flow are slightly more effective. This effect means that code with more
-visible or breaking statements will much faster to reorder and have less flexibility on the legal orders available. Similary the next two graphs show
-effect that differences in the number of reading and writing statments make.
+visible or breaking statements will much faster to reorder and have less flexibility on the legal orders available. Similarly the next two graphs show
+effect that differences in the number of reading and writing statements make.
 
 \begin{figure}[h]
 \centering
@@ -3330,7 +3330,7 @@ Our aim in inserting new branches into the target source code was to complicate 
 also confuse an analyser depending on the code inserted.
 
 Other discussions on performing these types of transformations \cite{taxobftrans} tell us that the that the strength and resilience of the obfuscation relies
-on the strength of the chosen opaque predicate. As we have not implemented any reverse transformation we cannot quantify the relilience of any particular
+on the strength of the chosen opaque predicate. As we have not implemented any reverse transformation we cannot quantify the resilience of any particular
 predicates. However we can assume that the same problems that Python's flexibility has caused during other parts of our implementation will help to thwart
 any reversal efforts.
 
@@ -3363,10 +3363,10 @@ read and write variables or create visible output. Other problems were solved by
 could be reached. This approach was used to restrict the sequences of statements that our transformation could be applied to.
 
 Many of the problems we faced eventually had to be solved by relying on the user's input. One such problem was our inability to resolve function calls to a
-particular function definition. This may be possible to implement for very simple cases and useable during obfuscation, but we could use the inability to
+particular function definition. This may be possible to implement for very simple cases and usable during obfuscation, but we could use the inability to
 resolve complex function calls to create another form of obfuscation.
 
-The heavy reliance on user input will be a hinderance for using this tool in practice, but there is potential to automate the process and introduce other
+The heavy reliance on user input will be a hindrance for using this tool in practice, but there is potential to automate the process and introduce other
 tools to help with analysis. If this happens and other forms of obfuscating transformation are implemented then this software could be used successfully
 for real situation.
 
@@ -3389,7 +3389,7 @@ to create a control flow graph as well as the ability to transform it back into 
 to resolve function calls or to use constant propagation to break weak opaque predicates. We could use this ability to extend and automate our reordering
 operation, removing the user's need to guide the analysis and marking process.
 
-Another useful feature would be to enable the user to work on mutliple files at once. This would be much simpler in a graphical interface and would allow
+Another useful feature would be to enable the user to work on multiple files at once. This would be much simpler in a graphical interface and would allow
 inter-module obfuscation. In allowing this we would enable functions and variables to be split between multiple files, making the job of deobfuscation much
 harder.
 
