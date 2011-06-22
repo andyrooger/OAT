@@ -1539,7 +1539,7 @@ we also implement a number of functions here that ask the user about the current
 \section{Reordering Program Statements}
 
 We are now able to think about implementing our first type of obfuscation; reordering program statements. This will involve two steps,
-firstly we need to decide on a definition for a legal reordering and be able to generate these. Following this we can decide on how to
+firstly we need to decide on a definition for a legal reordering and be able to generate these ordering. Following this we can decide on how to
 choose the `best' order to either obfuscate of deobfuscate the program.
 
 \subsection{Why Reorder Statements?}
@@ -1549,13 +1549,13 @@ at the time. This is not a problem, in fact it helps other developers to follow 
 
 Unfortunately, when the software is distributed in source form, this will help a reverse engineer to do the very same thing. As we do not want
 this to happen, we will try to remove as many of these clues as possible. We shall start by looking at the organisation of the program source.
-This falls broadly into two categories; the layout of of the source code in each file, and the location and order of its components. 
+This falls broadly into two categories; the layout of of the source code text, and the location and order of its components. 
 
 We have already seen that most of the layout is destroyed during parsing, any whitespace will only be recoverable as an estimate of the original.
-Therefore we may focus on how to change the order and location of program components, restricted by the design of our tool to performing these
-changes within a single source file.
+Therefore we may focus on how to change the order and location of program components. This effort will be restricted by the design of our tool to performing any
+changes within a single source file only.
 
-The reason we are reordering statements becomes apparent when we start to think about what each program component is. We may first think about
+The reason we will choose to reorder program statements becomes apparent when we start to think about what each program component is. We may first think about
 program source at module level, the top level of a source file. This will usually contain a combination of \texttt{import} statements from
 other files, class definitions, function definitions, and normal program code.
 
@@ -1567,29 +1567,29 @@ Now we can reorder a program at module level just by reordering individual state
 ourselves, but we can do much better. Each statement can be classified as a simple statement such as an assignment or \texttt{import} statement,
 which are of no further use to us, or as a compound statement.
 
-Compound statements on the other hand are very useful to us. These include \texttt{if} or \texttt{while} statements and each includes a suite, or
+Compound statements are very useful to us. These include \texttt{if} or \texttt{while} statements and each includes a suite, or
 a list of statements, exactly as the module did. Now using the tools we will implement to reorder the module level of a program, we can also reorder
 the body of any compound statement. This will allow us to rearrange most of the program by thinking only of a much simpler case.
 
-Up until this point we have been thinking about reordering statements as a way to take information away from a reverse engineer. The idea was that
+Up until this point we have been thinking about reordering statements as a method by which we can take information away from a reverse engineer. The idea was that
 the original source code would be organised in a logical order, and that related components of the program would likely be close together, in an intuitive
-order for a human. By reordering the program we are destroying that information, and also making it difficult to recreate the original source structure. For
-example it would be difficult to separate logical sections of code with whitespace when each section is interleaved with the others. While it is true that we
+order for a human to read. By reordering the program we are destroying that information, and also making it difficult to recreate the original source structure. For
+example it would be difficult to separate logical sections of code with whitespace when each section is interleaved with others. While it is true that we
 are mostly mystifying a human, we should also see benefits of our obfuscation against a deobfuscator.
 
-Notice that there is no single correct order to write a program in. As long as the ordering produces the correct results, it is valid. One may argue that
+Notice that there is no single correct order to write a program in. As long as the ordering produces correct results, it is valid. One may argue that
 some orderings are better than others, for instance one ordering may be easier to understand or read, or may run faster than another, but there is not
 a single correct answer. This means that a deobfuscator cannot find a single correct ordering, and even if it looks for the best, this may not result in
 the program we started with. We can then say that this type of obfuscation is irreversible in general, a very nice property for any obfuscation. 
 
-Now being irreversible is very good, but actually we would not care if it did not also bring some benefit in terms of obfuscating the code. Actually
+Now being irreversible is very good, but we would not care if it did not also bring some benefit in terms of code obfuscation. Actually
 reordering statements comes in very handy when combined with other types of obfuscation. We will illustrate this with an example, from the background
-research, of an obfuscation technique involving replacing common convenient constructs with more complex representations of themselves.
+research, of an obfuscation technique involving replacing common and convenient constructs with more complex and basic representations of themselves.
 
-If this obfuscation was performed by itself, an analyser should find it very easy to recognise the common pattern of the deconstructions of each of these
-constructs. This gives the obfuscation by itself a very low resilience, as there is little effort invested in removing it. Instead may we choose to replace
+If this obfuscation was performed in isolation, an analyser should find it very easy to recognise the common pattern of the deconstructions of each of these
+constructs. This gives the solo obfuscation a very low resilience, as there is little effort invested in removing it. Instead may we choose to replace
 these constructs and then reorder all of the statements in that block. Suddenly it is much more difficult to recognise the common pattern, and as we cannot
-accurately reverse the reordering, it is difficult to reverse the steps to find the original program.
+accurately reverse the reordering, it is difficult to reverse the steps to retrieve the original program.
 
 \subsection{Specifying the Problem}
 
