@@ -1,12 +1,12 @@
 """
 I am an example file!
 
-And this is also a multiline docstring.
+And this is also a multi-line docstring.
 
 """
 
 try:
-    from wikipedia import myreport
+    from space import aliens
 except ImportError as e:
     pass #print(e)
 
@@ -16,10 +16,6 @@ def a_function(arg1, arg2=None):
 
     print("I don't really do anything")
     return arg1
-
-@a_function
-class a_class:
-    pass
 
 class other_class(a_class):
     """I'm empty too"""

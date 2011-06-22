@@ -1,14 +1,11 @@
-'\nI am an example file!\n\nAnd this is also a multiline docstring.\n\n'
+'\nI am an example file!\n\nAnd this is also a multi-line docstring.\n\n'
 try:
-    from wikipedia import myreport
+    from space import aliens
 except ImportError as e:
     pass
 def a_function(arg1, arg2 = None):
     'I am a function.'
     print("I don't really do anything")
     return arg1
-@a_function
-class a_class:
-    pass
 class other_class(a_class):
     "I'm empty too"
