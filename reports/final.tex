@@ -567,7 +567,7 @@ descriptive manner.
 
 \item[\texttt{\_\_getitem\_\_(item)}, \texttt{\_\_iter\_\_()}, \texttt{\_\_contains(item)\_\_} and \texttt{\_\_len\_\_()}] \hfill \\
 These functions all work towards a more natural interaction with node objects. We can access children using a dictionary-style lookup
-using \texttt{node["field"]}, or iterate using \texttt{for field in node}.
+such as \texttt{node["field"]}, or iterate using \texttt{for field in node}.
 
 We also have a membership test using \texttt{field in item} and number of children using \texttt{len(node)}. These can be used together by Python to provide
 a lot of other useful functionality.
@@ -579,9 +579,9 @@ step is to provide a writer for our structure to enable us to write it back to s
 
 \subsubsection{Implementing an AST to Source Code Writer}
 
-We shall now describe a solid design and extendable implementation for this. The design is fairly simple.
+We shall now describe a solid design and extendable implementation for the translation from \texttt{CustomAST} to source code. The design is fairly simple.
 
-We begin with an abstract class called \texttt{SourceWriter}. Any code wishing to write an AST to source code can expect to be given a writer
+We begin with an abstract class called \texttt{SourceWriter}. Any part of the program wishing to write an AST to source code can expect to be given a writer
 class that looks similar to this, and any writer classes should be derived from this base. \texttt{SourceWriter} will define a number of functions
 to be used by its derived writer classes. Among the more important are:
 
@@ -593,35 +593,35 @@ The constructor. This takes the top node of an AST tree to translate to source a
 Translates and writes the whole of our given AST into our output file.
 
 \item[\texttt{\_write(node)}] \hfill \\
-Writes out the given node (and any necessary children). This actually checks the type of the node and dispatches the work to the appropriate function.
-If an appropriate function is not found then this function will raise an exception as in means we either have an invalid node or an invalid writer class.
-The writing of any node should be done through here rather than the method for a specific node type.
+Writes out the given node (and any necessary children). This actually uses the type of \texttt{node} to dispatch the work to an appropriate auxiliary function.
+If an appropriate function is not found then this function will raise an exception, as it means that we have been given an invalid node or writer class.
+The writing for any particular node should be performed via this function rather than directly accessing the auxiliary function.
 
 \item[\texttt{\_ground\_write(s)}] \hfill \\
 Writes the given string, \texttt{s}, to our file. Any function that wishes to write to file should be doing it through this function.
 This allows added functionality such as being able to monitor the position in the file we are currently writing to.
 
-\item[\texttt{\_inc\_indent(by)} and \texttt{\_dec\_indent()}]
-These increase the indentation level by adding the specified string to the current whitespace, or decrease it by removing the most recent addition.
-By giving a string rather than an indentation level we can choose between tabs or a certain number of spaces. We can even indent by strings such
-as \texttt{">>>"} to indicate an interactive session.
+\item[\texttt{\_inc\_indent(by)} and \texttt{\_dec\_indent()}] \hfill \\
+These increase the indentation level by adding the specified string to the whitespace currently written at the beginning of each line, or decrease
+it by removing the most recent addition. By giving a string rather than an indentation level we can choose between tabs or a certain number of spaces.
+We can even indent by strings such as \texttt{">>>"} to indicate an interactive session.
 
-\item[\texttt{\_write\_block(statements, indent)}]
-Writes an entire block, consisting of the given statements. \texttt{indent} is a boolean value, so we can have a uniform method to choose how to
-indent the block inside the function. This can be overridden by derived classes.
+\item[\texttt{\_write\_block(statements, indent)}] \hfill \\
+Writes an entire block consisting of the given statements. \texttt{indent} is a boolean value rather than a string, so we can produce a uniform method
+that chooses how to indent the block. This can be overridden by derived classes.
 
-\item[\texttt{\_write\_\{classname\}(node)}]
-These are all abstract methods that write specific node types for \texttt{\_write}. \texttt{classname} can be either the name of a basic type we
+\item[\texttt{\_write\_\{classname\}(node)}] \hfill \\
+These are all abstract methods that write specific node types for \texttt{\_write}. \texttt{classname} can be either the name of a basic type that we
 may want to write, or the name of an AST node class.
 
 \end{description}
 
 This design allows any node to be written recursively using the \texttt{\_write} method. When called, it will dispatch the work to an appropriate method who
-in turn will either dispatch each of its components back to \texttt{\_write} or, for leaf nodes or small details, write itself using
+in turn will either dispatch each of its children back to \texttt{\_write} or, for leaf nodes or small details, write itself using
 \texttt{\_ground\_write}.
 
 By using uniform functions for writing structures such as blocks, we allow a derived class to alter behaviour easily from
-a single point. The benefit of doing so is that we make the source writer easily extendable to create pretty printers,
+a single access point. The benefit of doing so is that we make the source writer easily extendable, allowing us to create pretty printers,
 minifiers\footnote{Minification of a program involves shrinking its file size by removing as many unnecessary characters as possible. It is
 often used for interpreted languages such as JavaScript that need to be lightweight for transmission.} or even, at a later date if we choose
 to extend our implementation, a basic layout obfuscator.
@@ -635,15 +635,15 @@ and there is no exciting processing that takes place. The only item of interest 
 there is a small group of nodes that represent context rather than content, such as whether a name is being loaded or assigned to. As these should
 never be written, they instead raise a \texttt{NotImplementedError}.
 
-As we will see shortly, the \texttt{BasicWriter} does not produce very palatable code. Therefore it is in our and our users interests to
+As we will see shortly, the \texttt{BasicWriter} does not produce very palatable code. Therefore it is in our own and our users' interests to
 create a writer with a greater focus on readability. This writer will be named \texttt{PrettyWriter} and can be used to ease the inspection of
-translated code. As suggested previously it will be derived from \texttt{BasicWriter}, avoiding most of the work of creating a new writer.
+translated code. As suggested previously, it will be derived from \texttt{BasicWriter}, avoiding most of the work necessary in creating a new writer.
 
-The specific extensions we will include in \texttt{PrettyWriter} alter the output for only a handful of nodes:
+The specific extensions we will include in \texttt{PrettyWriter} will alter the output for only a handful of nodes:
 
 \begin{description}
 \item[\texttt{Expr} and \texttt{Str}] \hfill \\
-An \texttt{Expr} node is a type of Python statement, this means it stands on its own line. If the \texttt{Expr} node contains only a \texttt{Str} node
+An \texttt{Expr} node is a type of Python statement, this means that it stands on its own line. If the \texttt{Expr} node contains only a \texttt{Str} node
 (representing a string), it is known as a docstring. These are used for programmatically accessible documentation and are usually represented
 differently to normal strings.
 
@@ -653,11 +653,11 @@ cope with differing indentation.
 
 \item[\texttt{FunctionDef}] \hfill \\
 Often in a function definition we need to specify large number of parameters. Each of these parameters can all be given default values, and Python 3.x
-even gives us function annotations so we can add a comment after the name and default value of each parameter. \texttt{BasicWriter} will write all
-of this on one line, which very quickly becomes unreadable.
+even gives us function annotations so that we may also add a comment to each parameter. \texttt{BasicWriter} will write all of this information on a single
+line, which very quickly becomes unreadable.
 
-We aim to fix this by guessing when the argument list will be long, and if so, writing each of the arguments on a separate line. The way we actually look
-for long argument lists is by checking each of the arguments for annotations. If any exist, we assume it to be a long list.
+We aim to fix this by guessing when the argument list will be long, and if so, each of the arguments will be written on a separate line. The way we will
+actually look for long argument lists is by checking each of the arguments for annotations. If any exist we assume the list to be long.
 
 \item[\texttt{list}] \hfill \\
 Lists usually represent a suite or a list of statements. If this is the case, \texttt{BasicWriter} will write the statements one after another, each on a
@@ -668,11 +668,10 @@ new line. This can be hard to read and is very different from a human reader who
 \end{description}
 
 Using this this class as our writer in future should allow us to concentrate on the effects of specific obfuscations later. It will avoid clouding the evaluation
-of the success of a technique with the minor obfuscations introduced by \texttt{BasicWriter}.
+of a technique's success with the minor obfuscations introduced by \texttt{BasicWriter}.
 
-To illustrate the differences between the two solid implementations of \texttt{SourceWriter}, following is a sample program passed through our implementation of
-\texttt{BasicWriter} and \texttt{PrettyWriter}. We can see a large difference between the source code returned by the two writers, it is obvious that
-\texttt{PrettyWriter} produces cleaner and more readable code.
+To illustrate the differences between the two solid implementations of \texttt{SourceWriter}, we present the following sample program passed
+through both \texttt{BasicWriter} and \texttt{PrettyWriter}.
 
 Sample Program
 
@@ -686,7 +685,12 @@ Output from \texttt{PrettyWriter}
 
 \lstinputlisting[basicstyle=\small]{../snippets/writer.py.prettyformat}
 
+We can see a large difference between the source code returned by the two writers, it is obvious that
+\texttt{PrettyWriter} produces cleaner and more readable code.
+
 All of these writers will be held in the \texttt{writer} package.
+
+laboom
 
 \subsection{Interacting with the Software}
 
