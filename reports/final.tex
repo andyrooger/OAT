@@ -1596,8 +1596,8 @@ accurately reverse the reordering, it is difficult to reverse the steps to retri
 So far we have been rather vague about the task we wish to perform. If we are to implement tools for reordering program statements we must now
 define exactly what we mean to do.
 
-During the previous section we discussed the meaning of a program statement, this can be anything from an assignment to a function definition.
-In terms of our AST we can say that any node derived from the \texttt{ast.stmt} class is one which represents some form of statement. From Python's
+During the previous section we have discussed the meaning of a program statement, this can be anything from an assignment to a function definition.
+In terms of our AST we can say that any node that is derived from the \texttt{ast.stmt} class must represent some form of statement. From Python's
 abstract grammar \cite{pyagrammar} we can see these are:
 
 \begin{description}
@@ -1612,30 +1612,30 @@ Removal of a name binding: \texttt{del x}
 \item[\texttt{ast.Assign} and \texttt{ast.AugAssign}] \hfill \\
 Normal or augmented assignment: \texttt{x = 1} or \texttt{x += 1}
 \item[\texttt{ast.For} and \texttt{ast.While}] \hfill \\
-For or while loop. Possibly multi-line: \texttt{for x in range(y): pass} or \texttt{while x: pass}
+\texttt{For} or \texttt{while} loop. Possibly multi-line: \texttt{for x in range(y): pass} or \texttt{while x: pass}
 \item[\texttt{ast.If}] \hfill \\
 If statement. Possibly multi-line: \texttt{if x: pass}
 \item[\texttt{ast.With}] \hfill \\
-With statement, used for convent set up/tear down such as when opening files. Possibly multi-line: \texttt{with open(x) as file: pass}
+\texttt{With} statement, used for convenient set up and tear down such as when opening files. Possibly multi-line: \texttt{with open(x) as file: pass}
 \item[\texttt{ast.Raise}] \hfill \\
-Raise statement, raises exception: \texttt{raise x}
+\texttt{Raise} statement used to raise an exception: \texttt{raise x}
 \item[\texttt{ast.TryExcept} and \texttt{ast.TryFinally}] \hfill \\
 Exception catching. Possibly multi-line: \\
 \texttt{try: pass} \\
 \texttt{except: pass} \\
 \texttt{finally: pass}
 \item[\texttt{ast.Import} and \texttt{ast.ImportFrom}] \hfill \\
-Import other files: \texttt{import tkinter} or \texttt{from tkinter import ttk}
+\texttt{Import} other files: \texttt{import tkinter} or \texttt{from tkinter import ttk}
 \item[\texttt{ast.Global} and \texttt{ast.NonLocal}] \hfill \\
 Assign a specific scope to an identifier: \texttt{global x} or \texttt{nonlocal x}
 \item[\texttt{ast.Expr}] \hfill \\
-Simple expression: \texttt{x}
+Simple or complex expression: \texttt{x} or \texttt{(a+b)/c}
 \item[\texttt{ast.Pass}] \hfill \\
 Do nothing: \texttt{pass}
 \end{description}
 
 Now we will define our reordering operation to be on any list of these statements, so long as the list represents the serial execution of each in turn.
-Such lists are found representing suites in any compound statement, or the body of a module for instance.
+Such lists are found representing suites in any compound statement, or as the body of a module for instance.
 
 \subsection{Defining Legal Orderings}
 
