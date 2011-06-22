@@ -3344,9 +3344,28 @@ As such as simple code snippet evades the efforts of dead code analysis from the
 simple opaque predicate will stand up to today's Python deobfuscators. Thus a user of our tool must only provide predicates sufficient to outwit a human
 analysis.
 
-\section{Conclusions and Future Work}
+\section{Conclusions}
 
-TODO - this section, aaah
+We have developed software that allows a user to parse, transform and print any Python 3.x program. From our internal representation we can perform a static
+semantic analysis on the program and manually edit or store our findings for future use. Following analysis, our internal representation may be transformed
+by either reordering a subset of its statements or by extracting sections of the code into unnecessary and confusing user-defined branches. The transformed
+source code may then be written back to file as an obfuscated but still correct version of the original source code.
+
+Our implemented transformations are limited in scope and number. Initially, implementing a reordering operation was intended to be a simple introduction
+to the parsing and analysis of Python source code. Instead this seemingly simple problem blossomed into a myriad of separate problems, requiring separate
+solutions to implement. Some of these problems were solved by implementing an automatic AST marker for analysis, we use this for calculating which AST nodes
+read and write variables or create visible output. Other problems were solved by careful reasoning and restriction of the problem until a 'correct' solution
+could be reached. This approach was used to restrict the sequences of statements that our transformation could be applied to.
+
+Many of the problems we faced eventually had to be solved by relying on the user's input. One such problem was our inability to resolve function calls to a
+particular function definition. This may be possible to implement for very simple cases and useable during obfuscation, but we could use the inability to
+resolve complex function calls to create another form of obfuscation.
+
+The heavy reliance on user input will be a hinderance for using this tool in practice, but there is potential to automate the process and introduce other
+tools to help with analysis. If this happens and other forms of obfuscating transformation are implemented then this software could be used successfully
+for real situation.
+
+\subsection{Future Work}
 
 \bibliographystyle{plain}
 \bibliography{final}
