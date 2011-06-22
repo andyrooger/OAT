@@ -3263,7 +3263,7 @@ as the length of the statement list increases. Note that this figure is zoomed i
 \begin{figure}[h]
 \centering
 \scalebox{0.75}
-{\includegraphics{../randomreorderperf.eps}}
+{\includegraphics{../images/randomreorderperf.eps}}
 \end{figure}
 
 While we can attribute the extra time taken in randomising output to the increasing work undertaken, the sudden increase starting at nine
@@ -3276,7 +3276,7 @@ This is shown in the following graph
 \begin{figure}[h]
 \centering
 \scalebox{0.75}
-{\includegraphics{../lengthperf.eps}}
+{\includegraphics{../images/lengthperf.eps}}
 \end{figure}
 
 An unexpected result however is the total number of permutations available on average for each sequence size. If there were no data dependencies, visible statements
@@ -3286,7 +3286,7 @@ calculable from our generated statement lists are not even close to this limit.
 \begin{figure}[h]
 \centering
 \scalebox{0.75}
-{\includegraphics{../maxperms.eps}}
+{\includegraphics{../images/maxperms.eps}}
 \end{figure}
 
 This is likely due to the choice of each of the variables used to generate the statement list. From the following graphs we can see the large
@@ -3294,8 +3294,8 @@ difference that changes in visibility, breaking, read, or write probabilities ma
 
 \begin{figure}[h]
 \centering
-\subfloat{\scalebox{0.55}{\includegraphics{../visprob.eps}}}
-\subfloat{\scalebox{0.55}{\includegraphics{../breakprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../images/visprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../images/breakprob.eps}}}
 \end{figure}
 
 As we can see, more that a minimal amount of either breaking statements or visible statements severely limits the number of legal permutations we may
@@ -3305,8 +3305,8 @@ effect that differences in the number of reading and writing statments make.
 
 \begin{figure}[h]
 \centering
-\subfloat{\scalebox{0.55}{\includegraphics{../readprob.eps}}}
-\subfloat{\scalebox{0.55}{\includegraphics{../writeprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../images/readprob.eps}}}
+\subfloat{\scalebox{0.55}{\includegraphics{../images/writeprob.eps}}}
 \end{figure}
 
 We see a similar result here to the previous two graphs. The only real difference being that not having many writes inside a sequence of statements
