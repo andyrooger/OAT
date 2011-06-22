@@ -200,58 +200,59 @@ much better methods to hide malware from an unsuspecting user.
 \subsection{Types of Obfuscation}
 
 Having decided to obfuscate the code from source to source, it is worth taking a look at the types of
-obfuscation already used, how they are useful and which we will pursue. We will classify them into 3 categories
-suggested by \cite[p10]{desevobf}.
+obfuscation already used, how they are useful and which we will pursue. We will classify these types into 3 categories
+as suggested by \cite[p10]{desevobf}.
 
 \subsubsection{Layout Obfuscation}
 
-These will apply transformations to the source language or possibly bytecode that do not affect the running of the
+These will apply transformations to the source source or possibly bytecode that do not affect the running of the
 program. This is a very common form of obfuscation \cite[p10]{desevobf}, and involves transformations such as removing comments,
 scrambling identifiers, or removing as much whitespace as possible to make the code unreadable.
 
 Comments and identifiers often hold a lot of semantic information as they are designed to do.
-Removal of this information by deletion or renaming is quite effective and almost always irreversible. Other transformations involving syntax
+Removal of this information by deletion or renaming is quite effective and almost always irreversible. Other transformations involving
+structure and whitespace
 can be easily removed by a source formatter and so will only be effective against an impatient human.
 
 While some of these transformations may be easy to perform in traditional languages, there are places in which
-Python's constructs can cause problems. Fortunately these kinds of transformations are already covered in existing
+Python's design can cause problems. Fortunately these kinds of transformations are already available using existing
 tools, although these are not necessarily compatible with Python 3. For these reasons, we will be focusing on other forms of
 obfuscation which have received less attention.
 
 \subsubsection{Data Obfuscation}
 
 This type of obfuscation transforms data layout and can help to obfuscate the structure of the program. It can be
-particularly helpful in Python as the language makes it very easy to inspect programs as they run, dissecting data
-structures and learning about how the program works.
+particularly helpful in Python as the language makes it very easy to inspect programs as they run, enabling dissection of internal data
+structures to learn about how the program works.
 
 We can look towards Collberg 1998 \cite{dataobf} to see some different types of data obfuscation. These are summarised here:
 
 \begin{description}
 \item[Classes] \hfill \\
 Classes are a great tool for data abstraction and can often tell us a large amount about the organisation of a program. This is
-especially important in an object-oriented language such as Java, but is also true for Python.
+especially important in an object-oriented language such as Java, but also true for Python, which provides all of the common elements of
+an object-oriented language.
 
-To break this information we have a number of options, often used together. The Chidamber metric says a class becomes more complex,
-the further it resides down the inheritance tree. This means we can complicate the program by increasing this depth, either by adding
-false classes along the tree, or by splitting classes into two or more that inherit from each other.
+To remove or hide this information we have a number of options, often used together. The Chidamber metric says a class becomes more complex
+the further it resides down the inheritance tree. This means that we can complicate the program by increasing this depth, either by adding
+false classes along the tree, or by splitting classes into two or more separate classes that inherit from each other.
 
-We could also complicate the structure by using 'false refactoring', which involves merging unrelated classes to form a new parent
-class.
+We could also complicate the structure by using 'false refactoring', which involves merging elements of unrelated classes to form a new common parent.
 
 \item[Arrays] \hfill \\
-Often program code will iterate over an array. There are a number of ways we can alter the structure of the arrays to complicate
-this.
+Often program code will iterate over an array. There are four simple ways we can alter the structure of an arrays to complicate
+this procedure.
 
-A single array can be folded or flattened, this increases or decreases its dimensions. We can also split one array into multiple
+For a single array we can use folding or flattening, this increases or decreases its dimensions. We can also split one array into multiple
 arrays, or merge multiple arrays into a single one.
 
 \item[Functions] \hfill \\
-These can be obfuscated by applying similar techniques as for classes. Methods can be combined by inlining, or split by outlining.
+These can be obfuscated by applying similar techniques to the ones we use for classes. Methods can be combined by inlining, or split by outlining.
 We can also clone methods, duplicating the original function so to make it hard for a reverse engineer to see that the same
 functionality is being used in different places.
 
 We could also use table interpretation, converting the contents of the function into a virtual machine code and using an internal
-interpreter to run it when the function is called.
+interpreter for execution when the function is called.
 
 \item[Basic Types] \hfill \\
 We can replace basic types such as strings with methods that produce them. As with most other structures we have looked at, we can
@@ -275,23 +276,23 @@ This time we can look to Collberg 1997 \cite{taxobftrans} for examples of contro
 of an opaque predicate, a variable whose value is known by the obfuscator but hard for a deobfuscator to calculate.
 
 By depending on the value of an opaque predicate, a transformation can be made more resilient against a deobfuscator. As the
-deobfuscator finds it difficult to calculate the value of this predicate, it cannot reduce the transformation or possibly
-remove it.
+deobfuscator finds it difficult to calculate the value of this predicate, it cannot reduce or remove any of the transformations relying
+on it.
 
-We will see this used in the following types of control-flow obfuscation:
+We will see opaque predicates used in many of the following types of control-flow obfuscation:
 
 \begin{description}
 \item[Inserting Dead Code] \hfill \\
 Here we branch the code at some point during a sequence of statements based on some opaque predicate. The branch will either
 direct the program flow to the rest of the statements, or to some other code of our choosing.
 
-If we know the value of the opaque predicate we can make sure that the program still follows the same flow, otherwise we
-ensure both branches contain the same code or at least code that performs the same action.
+If we know the value of the opaque predicate we can make sure that the program still follows the execution path it used to, otherwise we
+must ensure both branches contain the same code, or at the very least, code that performs the same action.
 
-We can disguise this branch by making sure any dead code we insert is similar to but possibly a broken version of our real code.
+We can disguise this branch by making sure that any dead code we insert is similar to (but possibly a broken version of) our real code.
 
 \item[Modifying Loop Conditions] \hfill \\
-This is suggested in Collberg in reference to the Java programming language. The idea is to extend the loop condition using a
+This is suggested by Collberg in reference to the Java programming language. The idea is to extend the loop condition using a
 complex opaque predicate that will not affect the truth value of the condition.
 
 This will translate to a \texttt{while} loop in Python, however it will not work inside a \texttt{for} loop. This is due to
@@ -299,17 +300,17 @@ Python \texttt{for} loops iterating over some iterable data type, rather than th
 through indices until a condition turns false.
 
 We could try to apply a similar transformation to Python \texttt{for} loops by inserting or appending one or more special values
-into our iterable object. Inside the loop we would need to make sure any of these special values are ignored, but use further
+into our iterable object. Inside the loop we would need to make sure any of these special values are ignored, and use further
 obfuscation to ensure the modification is well-hidden.
 
 \item[Removing Idioms and Library Calls] \hfill \\
-The benefit of doing this is obvious. These are both common parts of program source code that a reverse-engineer can look at
+The benefit of doing this is obvious. These are both common parts of program source code that a reverse-engineer can identify
 to gain their bearing. Common idioms will indicate the intention of a section of code much more strongly than other arbitrary
 code.
 
 Likewise library calls, especially in Python, are usually very well documented. This documentation gives the reverse engineer
 a great deal of information relating to the values of variables around the call. The danger of these library calls can be
-mitigated somewhat by obfuscating the names of imported libraries, but it still may be better to replace them with calls
+somewhat mitigated by obfuscating the names of imported libraries, but it still may be better to replace them with calls
 to undocumented custom libraries.
 
 \item[Table Translation and Inlining or Outlining Functions] \hfill \\
@@ -317,28 +318,28 @@ These methods have already been described in the data obfuscation section. While
 they also obfuscate the control flow inside of it so we will include them here too.
 
 \item[Adding Redundant Operations] \hfill \\
-This applies to any expressions where we may add an operation that does nothing. For instance, any integer expression may
+This applies for any expressions to which we may add an operation that does nothing. For instance, any integer expression may
 be multiplied by $1$ or added to $0$, and any boolean expression may be replaced by its conjunction with \texttt{True}.
 
 Of course rather than using simple integers or boolean values, we can complicate the expressions by using opaque predicates
 that we know evaluate to these values.
 
 \item[Parallelising Code] \hfill \\
-If we can be sure we won't create any of the issues faced by concurrent programmers, we can take two independent parts of
+If we can be sure that we will not introduce any concurrency-dependent bugs, we can take two independent parts of
 the code and parallelise them. Alternatively we could introduce an entirely new process to run along side our current code.
 
-When they run concurrently, it is difficult for an analyser to split these again. This could be made even more complicated
-by introducing one or more shared variables whose value we do not care about between the processes.
+When parts of a program run concurrently, it is difficult for an analyser to split them apart. This process could be made even more complicated
+by introducing one or more shared variables between the processes whose values we do not care about.
 
 \item[Program Locality] \hfill \\
 A programmer will usually write code in which logically related parts of the program are situated close together. This information
 can be used by a reverse-engineer, so our task it to try and randomise the location of each component of the program.
 
-Collberg makes a distinction here between the level of a program we are looking at. The reason being that, in Java, moving components of
-a program is very different depending on whether you are moving classes between files, methods inside classes, or statements around
+Collberg makes a distinction here between the level of a program we are looking at. The reason being that, in Java, the rearrangement of components
+inside a program is very different depending on whether you are moving classes between files, methods inside classes, or statements around
 inside a method.
 
-As we are working in Python we still will need to make a distinction if we want to move components between different files. Other
+As we are working in Python we will still need to make a distinction if we want to move components between different files. Other
 than this, most levels of the program act very similarly. At module level, class level or function level you can run code, define
 classes or functions, or import other modules. The only difference is how that level interacts with the levels below it.
 
