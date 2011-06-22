@@ -54,6 +54,8 @@ Herbert Wiklicky
 \end{center}
 \end{titlepage}
 
+\cleardoublepage
+
 \begin{abstract}
 \#TODO write abstract!
 \end{abstract}
@@ -3010,14 +3012,6 @@ In reality we will not be able to choose any one method for deobfuscation of the
 code, but these will rely on other forms of analysis, possibly theorem proving algorithms or similar to crack the opaque predicates. For this reason we will not
 be implementing any deobfuscation in this section.
 
-\section{Relocate or Implement me - TODO}
-
-Both of the described transformations and their analysis will require careful testing. So far,
-this has been done using Python's doc test library to write unit tests inside the docstrings
-in each piece of code. It is likely a higher level approach will be more suitable later in
-the project, testing a program's validity before and after obfuscations as well as the validity
-of the analysis.
-
 \section{Introducing GOAT}
 
 At the beginning of this project the choice was made to implement our primary interface on the command line, the focus being on speed of development. As
@@ -3391,7 +3385,11 @@ operation, removing the user's need to guide the analysis and marking process.
 
 Another useful feature would be to enable the user to work on multiple files at once. This would be much simpler in a graphical interface and would allow
 inter-module obfuscation. In allowing this we would enable functions and variables to be split between multiple files, making the job of deobfuscation much
-harder.
+harder. 
+
+Finally it would be helpful to allow the user to automatically test their program following our transformations. This can be used to reassure them that we
+have not broken their code. If the user has provided thorough \texttt{doctest}s for their software then these can be automatically performed following any
+transformation.
 
 \bibliographystyle{plain}
 \bibliography{final}
