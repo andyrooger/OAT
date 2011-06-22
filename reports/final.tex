@@ -1506,20 +1506,20 @@ with or without prior programmatic analysis and automatic marking.
 
 \subsection{Extending Marking Functionality to the User}
 
-All we need to create to provide marking and auto-marking functionality through our \textbf{mark} command is a single \texttt{Command}
+All we need to create in order to provide marking and auto-marking functionality through our \textbf{mark} command is a single \texttt{Command}
 class called \texttt{MarkCommand}. This is not tied in any way to specific marking types, instead we employ the custom made
 \texttt{util.pluginfinder} package to search through the \texttt{markers} package for marking plugins. This allows us to add a new
 marking type to the interface just by dropping a file into the \texttt{markers} directory.
 
-Each marker plugin extends the abstract class \texttt{AbstractMarker}, and implements four functions.
+Each marker plugin extends an abstract class called \texttt{AbstractMarker} and implements four functions.
 
 \begin{description}
 \item[\texttt{parameters()}] \hfill \\
 This will return a dictionary describing the options used to mark this particular type of marking. It will allow the \texttt{MarkCommand}
-class to provide individual options to the user for each marking type.
+class to provide individual command line options to the user for each marking type.
 \item[\texttt{translate(node, arg)}] \hfill \\
-Applies the given options given in \texttt{arg} to the markings in \texttt{node} without changing \texttt{node}'s own markings. This allows
-our main interface to be completely independent of how to use specific marking type options.
+Applies the options given in \texttt{arg} to the markings in \texttt{node} without changing \texttt{node}'s own markings. This allows
+our main interface to be completely independent of specific marking type options.
 \item[\texttt{update(node, trans)}] \hfill \\
 Applies the markings in \texttt{trans} to our node. Again this allows our interface to be free of the specifics of each marking type.
 \item[\texttt{show(node, title)}] \hfill \\
@@ -1527,14 +1527,14 @@ Used to display information on this type of marking for \texttt{node}, beginning
 type in turn to display markings.
 \end{description}
 
-From the users perspective they are now allowed to specify marking types for any marker in the correct directory, using the specific command
-line options given by the plugin. If none of these options are provided we merely print out current marking information for the node pointed to
+From the users perspective they are now allowed to specify marks for any type that has a marking class in the correct directory, using the specific command
+line options given by the plugin. If none of these options are provided then we merely print out current marking information for the node pointed to
 by the \textbf{explore} command. Otherwise by default these marks are are applied to our node, allowing the user to manually update the AST
 markings.
 
-We also provide an `--auto' option that takes the resolution order for an automatic marking. If this is specified then we use each of the
-marking options to provide default markings for each node. As the auto-marker requires user interaction to be implemented by the interface
-we will implement a number of functions here that ask the user about the current state of markings and possible actions.
+We also provide an `--auto' option that takes the resolution order for an automatic marking. If this is specified then we can use each of the
+marking options to provide default markings for our nodes. As the auto-marker requires user interaction to be implemented by the interface
+we also implement a number of functions here that ask the user about the current state of markings and possible actions.
 
 \section{Reordering Program Statements}
 
