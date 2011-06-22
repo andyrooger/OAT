@@ -81,7 +81,7 @@ is a difficult process and there are methods to make this harder \cite{disres}.
 
 The difference for interpreted languages is that much more of the original code is kept in the
 distributed format. Java code, for example, is usually distributed as bytecode for the Java Virtual
-Machine (JVM). This still holds information about high level constructs such as class and method names for example \cite{classinfo},
+Machine (JVM). This still holds information about high level constructs such as class and method names \cite{classinfo},
 making it much easier to decompile a Java class.
 
 In a language like Python it is usually raw source code that is distributed, therefore a
@@ -97,14 +97,14 @@ original program in some way so that it is more confusing to a reader or more di
 
 More specifically, during this project we shall implement a basic functioning, but extensible, obfuscator
 that can modify the control flow of a program with the aim of diverting a human reader from its actual
-function. This will act upon Python source code and should help to address the issue described above.
+function. This will act upon Python source code and should help to address the issues described when distributing source code.
 In the interest of evaluation, we will also create a sister program that will try to reverse the modifications performed by the
 obfuscator with the aim of recovering the original source code. 
 We shall aim to create these tools by taking a subset of obfuscation techniques used on other languages (e.g.
 loop flattening or instruction reordering \cite{taxobftrans}) and looking at how well these will transfer to such a dynamic language as Python.
 
 On the surface this may appear rather simple, however as Python is such a highly dynamic language it can be very difficult to analyse
-\cite[p13]{staticanal} as thoroughly as a more traditional compiled language such as Java. In such languages, it is much easier to perform a static
+\cite[p13]{staticanal} as thoroughly as a more traditional compiled language such as Java. In such traditional languages, it is much easier to perform a static
 analysis of the code. This is simply not feasible for many applications in Python, yet many program transformations will require this type of
 thorough analysis. Issues in this area may appear or they may not, depending on the techniques we decide to implement, and it will be a part of
 this project to notice and evaluate these issues.
