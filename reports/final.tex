@@ -1065,36 +1065,37 @@ the results. By attaching data straight onto individual nodes in the AST, or `ma
 relevant information as we process that particular node.
 
 It is worth noting at this point that the design of the marker code was created before the \texttt{CustomAST} class was. This
-means that we are working on ASTs where nodes may be either \texttt{ast.AST} nodes, lists or basic types such as strings or
+means that we are working on ASTs whose nodes may be either \texttt{ast.AST} nodes, lists or basic types such as strings or
 integers.
 
 \subsection{Implementing Marking}
 
-When thinking of how to attach the data to these nodes, we cannot alter the underlying class or type as these are generated directly
+When thinking of how to attach the data to these nodes, we cannot alter the underlying class or type as they are generated directly
 from the \texttt{ast} module's \texttt{parse} method. Instead we expect to add new attributes to individual objects that we can read
 and write to.
 
-The difficulty in this assumption is that not all nodes support adding these. In fact only the \texttt{ast.AST} nodes will allow this
-addition and while they do make up the majority of most ASTs, this will cause difficulty for many algorithms trying to process the
+The difficulty in this assumption is that not all nodes support the addition of these attributes. In fact, only the \texttt{ast.AST} nodes will allow this
+addition and while they do make up the majority of most ASTs, the non-uniformity will cause difficulty for many algorithms trying to process the
 nodes in a standard way.
 
 To deal with these differences and with all of the work involved in deciding if a node has been marked and by which type of markings,
-we will create a new class; \texttt{BasicMarker}. To clarify, a type of marking is defined by the information it stores, for example
-we will create a `reads' marking that contains a set of identifiers a node reads.
+we will create a new class called \texttt{BasicMarker}. To clarify, we specify that a type of marking is defined by the information it stores, for example
+we will create a `reads' marking that contains a set of identifiers that a node reads.
 
 
-\texttt{BasicMarker} is designed as disposable class through which a specific node can be temporarily viewed. It is designed as a base
+\texttt{BasicMarker} is designed as disposable class through which a specific node can be temporarily viewed. It is a base
 class with functions common to any type of marking, allowing other classes to inherit the functionality and add methods specific to a
 type of marking. While subclasses for each type of marking will be separate, multiple types of marking should be able to coexist on the
 same node. \texttt{BasicMarker} exposes the following functionality:
 
 \begin{description}
 \item[\texttt{\_\_init\_\_(mark, node)}] \hfill \\
-This constructor is designed for a subclass to call, supplying the name of their specific type of marking and a node to view. The only
+This constructor is designed to be called only by subclasses, supplying the name of their specific type of marking as well as a node to view. The only
 processing done here is to test if the given node is \texttt{None}, and if so to replace it with a \texttt{DummyAST} node.
 
-\texttt{DummyAST} is merely an identical subclass of \texttt{ast.AST}. This allows markings to be created without a node and applied later,
-without causing errors when a node derived from \texttt{ast.AST} is expected.
+\texttt{DummyAST} is merely an identical subclass of \texttt{ast.AST}. This allows markings to be created without a node to mark,
+and enables them to be applied later. If \texttt{DummyAST} were not derived from \texttt{ast.AST} then we would cause type errors and
+be unable to mark the node.
 
 \item[\texttt{supports\_markings()}] \hfill \\
 This checks whether the given node supports markings. As we have seen, this is true if and only if we are looking at an \texttt{ast.AST}
@@ -1108,15 +1109,15 @@ existence of this attribute.
 \item[\texttt{\_get\_markings(create)}] \hfill \\
 This is a private method, designed only for use inside this class. For convenience, this will retrieve the \texttt{\_markings} attribute
 from the node if it exists, otherwise it will return \texttt{None}. If \texttt{create} is set to \texttt{True} and the node supports
-markings, then we we can first add this attribute and then return it.
+markings, then we can first create this attribute and then return it.
 
 \item[\texttt{is\_marked()}, \texttt{get\_mark()} and \texttt{set\_mark(val)}] \hfill \\
 These are designed to be called from derived classes. The first two will try to find the name of this particular type of marking inside
-the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if this was successful, and \texttt{get\_mark} will return either the
+the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if it was successfully located, and \texttt{get\_mark} will return either the
 corresponding value, or a safe default on failure. \texttt{set\_mark(val)} will try instead to set the value and return a boolean value
 indicating if it was successful.
 
-Only \texttt{is\_marked} is designed to be public. \texttt{get\_mark} should be used for convenience in subclasses that will provide
+Only \texttt{is\_marked} is designed to be public, \texttt{get\_mark} should be used for convenience in subclasses. These should then provide
 customised interfaces to help interpret the particular type of marking.
 
 \item[\texttt{detach()}] \hfill \\
@@ -1132,7 +1133,7 @@ subclasses.
 
 \item[\texttt{duplicate()}] \hfill \\
 Another abstract method. When implemented, this should clone the data returned by \texttt{get\_mark} in a way that allows updating the
-data without altering our original node.
+cloned data without altering our original node.
 
 \end{description}
 
