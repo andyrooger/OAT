@@ -2718,23 +2718,23 @@ be hugely optimised compared to other valuers.
 \subsection{Optimisation of Permutation Calculation}
 
 Now that we have created the software to perform reordering operations on our statements lists, testing will reveal that the computation involved is huge
-for any more than the simplest programs. At this point we have made a number of design choices to speed up execution time and lower space costs. The first
+for any more than the simplest of programs. At this point we have made a number of design choices to speed up execution time and lower space costs. The first
 of these is to use lazy evaluation. This may have a very minor impact on execution time or space when generating the entire list of legal permutations, but
 we gain a huge speed boost when generating only a subset of these.
 
 Lazy evaluation using generator functions also allows us to yield each permutation as we calculate it, which would allow us to parallelise the execution of valuer
-function if we noticed they were too costly. We discussed earlier the design of a simple dynamic algorithm when permuting that allows us to preserve our lazy
+function easily if we noticed that they were too costly. We discussed earlier the design of a simple dynamic algorithm when permuting that allows us to preserve our lazy
 evaluation.
 
-We may try looking towards the algorithms we use to calculate our permutations. There may well be room to optimise these with some clever insights into
+We may try looking towards the algorithms that we use to calculate our permutations. There may well be room to optimise these with some clever insights into
 the theory being used. In fact we have already done this to some extent, using the informed algorithms in \texttt{SingleReorderer} rather than the naive
-approach to choosing legal insertions used in \texttt{SafeReorderer}.
+approach to choosing legal insertions taken in \texttt{SafeReorderer}.
 
 Actually the largest problem may be the sheer number of legal orderings for medium or large statement lists. For a program with $n$ statements and no breaks
-we have a maximum of $n!$ permutations. To see the effect this has on our performance we will look at an example program where each of the statements has a
+we have a maximum of $n!$ permutations. To see the effect that this has on our performance we will look at an example program where each of the statements simply
 writes to a separate name, so that none of the statements are dependent on each other.
 
-We start by trying to reorder the first $7$ statements, and the delay is barely noticeable before our program has generated all $5040$ possible permutations.
+We begin by trying to reorder the first $7$ statements, and the delay is barely noticeable before our program has generated all $5040$ possible permutations.
 Moving to $8$ statements we will take around a second to calculate the $40320$ possible permutations. At $9$ statements we take about $12$ seconds to calculate
 all $362,880$ permutations, and rather expectedly $10$ statements takes almost exactly two minutes to calculate all $3,628,800$ permutations. Soon after this
 point the calculation of all permutations starts to become infeasible to a user with a deadline.
@@ -2748,14 +2748,14 @@ will never be calculated in full, avoiding a small amount of work.
 We may notice in some cases that we do not need to generate every permutation avoiding the previous problem entirely. For example when we are using the
 \texttt{FirstValuer} valuer, we need only to limit the number of generated permutations to one, rather than generating every permutation and scoring each.
 
-There is a similar solution that we will implement to speed up execution when generating a random permutation. Rather than generate all permutations and
-choose a random one from the list, we just generate the permutations in a random order and limit the output to a single permutation. We will implement this
+There is a similar solution that we will implement to speed up execution when generating a random permutation. Rather than generating all permutations and
+making a random choice the list, we just generate the permutations in a random order and limit the output to a single permutation. We will implement this
 functionality in the \texttt{RandomReorderer} class that extends \texttt{Reorderer}.
 
 The way we do this is to replace the \texttt{SingleReorderer} that \texttt{Reorderer} would use with a modified version. In the modified version we override
 \texttt{\_insert\_statement} so that instead of yielding the possible insertions from back to front, we calculate all possible locations and then shuffle
-the order in which they will be returned. Note that this will only provide a random permutation for the first output permutation, and following permutations
-will be almost identical to the original. This is all right though as the first is the only permutation we will care about when looking for a random
+the order in which they will be returned. Note that this will only provide a random permutation for the first output result, and following permutations
+will be almost identical to the original. This is acceptable though as the first is the only permutation we will care about when looking for any random
 permutation.
 
 Other types of valuer will be harder to optimise in this manner, although we do have a number of choices. We will not be implementing these, but we will
@@ -2765,8 +2765,8 @@ A simple solution, if we could generate permutations in a random sequence not so
 this we would simply generate the first $n$ random legal permutations and choose the best scored out of these. As we would usually have a large number of
 `good' permutations rather than a definite `best', a large enough $n$ would give us an encouraging chance of finding a reasonable choice.
 
-Alternatively we have the possibility of using an informed search through the permutation generation algorithm. Using this we identify part-permutations that
-definitely cannot beat our current best, and decide not ever to evaluate the rest of these permutations. If we did not want a complete search we could also
+Alternatively we have the possibility of using an informed search through the permutation generation algorithm. Using this we identify partial permutations that
+definitely cannot beat our current best, and decide not ever to evaluate the full versions of these permutations. If we did not want a complete search we could also
 try a beam search and choose only the best looking few part-permutations to evaluate at each decision point.
 
 These methods would rely on us redefining our valuers to enable evaluation of an incomplete permutation. For now we will leave this task as a future improvement.
