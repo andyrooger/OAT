@@ -2835,8 +2835,8 @@ of statement reordering and irrelevant code insertion until the branches are unr
 
 \subsection{Creating Opaque Predicates}
 
-Obviously the strength of this obfuscation will depend of the strength of our opaque predicates. If we cannot construct an opaque predicate that withstands
-the analysis of a deobfuscator we cannot insert any code that will remain after analysis.
+Obviously the strength of this type of obfuscation will depend of the strength of our opaque predicates. If we cannot construct an opaque predicate that withstands
+the analysis of a deobfuscator then we cannot insert any code that will remain after analysis.
 
 We begin by looking again to \cite{taxobftrans} for our first examples on manufacturing these constructs. Here we see an example of using a well defined
 library call to a \texttt{random} function to construct our predicate. For example we would expect the predicate \texttt{(random(7, 10) < 0)} to always
@@ -2846,7 +2846,7 @@ In the paper, we are assumed to be using the Java programing language and so the
 would be very easy to spot in the language, and the semantics would be well known. In our case an analyser for Python does not have the luxury of being able to
 identify imported system libraries solely by looking at import statements and class names.
 
-We can use this fact to create strong opaque predicates relying on system calls by modifying the imported part of the system library before we come to use it. As
+We can use this fact to create strong opaque predicates relying on library calls by modifying the imported part of the standard library before we come to use it. As
 the imported library will be just another object in our program, we may pass it between functions, rename it or modify it as we wish. As long as we know what has
 happened to our library by the time we come to construct our opaque predicate, we are able to use library functions with only a slim chance that an analyser will
 ever know.
@@ -2861,7 +2861,7 @@ be implementing any parallel code. This is because our current discussions have 
 multiple threads could break our reasoning.
 
 It can be argued that the strength of an opaque predicate is not in its complexity but in its stealth. In \cite{exceptionpred} we have an example of using very
-simple but stealthy predicates to alter control flow. For instance a branch based on the predicate \texttt{x == 0} can be turned into a \texttt{try}-\texttt{except}
+simple but stealthy predicates to alter control flow. For instance a branch based on the simple predicate \texttt{x == 0} can be turned into a \texttt{try}-\texttt{except}
 block beginning with a benign statement containing \texttt{a / x}. If \texttt{x == 0} then an exception will be raised causing control to move to the \texttt{except}
 block. Otherwise control will continue inside the \texttt{try} block.
 
@@ -2872,7 +2872,7 @@ into the code whenever required. Automatic generation behaviour should then be v
 \subsection{Using Opaque Predicates}
 
 We have already stated that the purpose of us using opaque predicates will be to insert new branches into the control flow of our target program. There are a
-few different types of these branches we will implement, all requiring different information from the user about the opaque predicates they provide us with.
+few different types of these branches that we will implement, all requiring different information from the user about the opaque predicates they provide us with.
 
 Three examples in \cite{taxobftrans} are
 
@@ -2916,26 +2916,25 @@ We will implement these operations by creating a \texttt{Brancher} class. This w
 \begin{description}
 \item[\texttt{\_\_init\_\_(name)}] \hfill \\
 The brancher concentrates all operations on the value of a single name, \texttt{name}. By doing this we can be sure whether an obfuscation performed by a
-\texttt{Brancher} object will affect names defined in our program. In the future we should allow this name to be replaced by another when obfuscating, but
-we do not have the time to implement this.
+\texttt{Brancher} object will affect names defined in our program. In future we should allow this name to be replaced by another when obfuscating.
 
 \item[\texttt{predicates}] \hfill \\
-This is an object that contains our stored predicates. Each predicate should be a \texttt{CustomAST} node of type ``Expr'' that corresponds to some value, either
+This is an object that contains our stored predicates. Each predicate should be a \texttt{CustomAST} node of type ``Expr'' that corresponds to some \texttt{value}, either
 \texttt{True} or \texttt{False}. The predicate should be such that \texttt{bool(predicate)} evaluates to \texttt{value} at any point where \texttt{name} has
 been initialised properly with the values given below, and only the predicate value preserving operations have been performed on it.
 
 To add a predicate to the object we define an \texttt{add(pred, val)} method on the object that will add the predicate and return an id to reference it. We
-can use this id to reference the predicate again using \texttt{predicates[id]} which returns a tuple containing the predicate and value, or remove the
+can use this id to reference the predicate again using \texttt{predicates[id]} which returns a tuple containing the predicate and value, or to remove the
 predicate using \texttt{del predicates[id]}.
 
 We also allow iteration over the \texttt{predicates} object and define the necessary methods to allow counting the number of predicates using
 \texttt{len(predicates)}.
 
 \item[\texttt{exceptions}] \hfill \\
-This object works similarly to \texttt{predicates} although it contains expressions that may raise exceptions rather than predicates. The our add method
-will be defined as \texttt{add(expr, raises, exc*)}. This will be given an expression that could raise exceptions, and must be \texttt{CustomAST} node of
-type ``Expr''. \texttt{raises} indicates whether or not the expression will raise for the conditions we will give it, and \texttt{exc} represents one or more
-names of the exception types involved.
+This object works similarly to \texttt{predicates} although it contains expressions that may raise exceptions rather than predicates. Our \texttt{add} method
+will be defined as \texttt{add(expr, raises, exc*)}. This will be given an expression that could raise exceptions, and must be a \texttt{CustomAST} node of
+type ``Expr''. \texttt{raises} indicates whether or not the expression will raise an exception for the conditions we will give it, and \texttt{exc} represents
+one or more names of the exception types involved.
 
 Deletion, access and iteration are all the same as in \texttt{predicates}.
 
@@ -2947,19 +2946,19 @@ Contains operations on \texttt{name} that will preserve the given \texttt{predic
 node whose type derives from \texttt{ast.stmt}; a statement node.
 
 \item[\texttt{destroying}] \hfill \\
-This contains the opposite of statements in \texttt{preserving}. Instead of preserving our predicates this should give them values other to that which we
-expect.
+This contains the opposite of statements in \texttt{preserving}. Instead of preserving our predicates, these statements should ensure that our predicate no longer
+evaluates to the expected value.
 
 \item[\texttt{randomising}] \hfill \\
 Rather than preserving or upsetting our predicates, statements contained in this object should have an unknown effect.
 
 \item[\texttt{if\_branch(statements, start, end)}] \hfill \\
 This is the first of the actual branching methods defined on our brancher, designed to remove a section of the statements in \texttt{statements} and replace
-them with an \texttt{if} statement depending on one of our predicates that runs the missing section of statements. The statements outside of the \texttt{if}
-statement can now be scattered with statements from \texttt{preserving}, starting with one or more statements from \texttt{initial}. Inside the \texttt{if}
+them with an \texttt{if} statement, depending on one of our predicates, that runs the missing section of statements. The statements outside of the \texttt{if}
+statement can now be scattered with items from \texttt{preserving}, starting with one or more statements from \texttt{initial}. The inside of the \texttt{if}
 statement can be scattered with statements from both \texttt{preserving} and \texttt{destroying}.
 
-Initially this method will just check to ensure we have enough of the components to perform this action. If a list of statements is provided it will then
+Initially this method will just check to ensure we have enough of the components to perform this action. If a list of statements is provided, it will then
 proceed with the transformation, otherwise it will return a boolean value indicating whether the transformation can be performed. \texttt{start} and \texttt{end}
 are indices into the statement list that indicate the range of statements to move into the \texttt{if} statement body.
 
@@ -2990,7 +2989,7 @@ if it exists such as listing all predicates and which values they should evaluat
 
 \begin{description}
 \item[--predicate] \hfill \\
-Without any argument this option will provide us with a space to the source code of a predicate for the \texttt{Brancher} named. Any argument given will be
+Without any argument this option will provide us with a space to input the source code of a predicate for the \texttt{Brancher} named. Any argument given will be
 treated as an id and will either cause the predicate with this id to be displayed in detail, or will be deleted by using the `--remove' flag.
 
 \item[--exception] \hfill \\
@@ -3014,8 +3013,8 @@ This action takes no arguments and will try to save the \texttt{Brancher} of the
 If the file exists we can use `--force' to overwrite it.
 
 \item[--load] \hfill \\
-This will load the brancher of the name given from a file saved by `--save'. If the name is already in use in our program session, then `--force'
-can replace it.
+This will load the brancher of the name given from a file saved by `--save'. If the name is already in use inside our program session, then `--force'
+can be used to replace it.
 \end{description}
 
 \subsection{Analysis and Deobfuscation}
@@ -3029,12 +3028,12 @@ need to be. To reverse this transformation we will then be performing something 
 this analysis, of which we will describe only a few.
 
 Unreachable code elimination is described in \cite{codecompact}. This involves computing a control-flow graph for the program and performing a simple depth
-first search and constant propagation to decide on all of the reachable blocks of code. Any that cannot be marked readable must be unreachable and can be removed
-from the program. If our opaque predicates were not strong enough, these block of unreachable code would correspond to any dead branches we insert.
+first search and constant propagation to decide on all of the reachable blocks of code. Any nodes that cannot be marked readable must be unreachable and can
+be removed from the program. If our opaque predicates were not strong enough, these blocks of unreachable code would correspond to any dead branches we insert.
 
 More useful to us would be using constant propagation through the control-flow graph to identify branches that will always be executed. Additionally we could use
-dead code analysis to remove redundant operations; those that are executed but do not contribute to the program. This would reverse the scattering of statements
-that we perform after inserting our branches.
+constant folding to remove redundant operations; those that are executed but do not contribute to the program. This would mitigate the effects of the statement
+scattering that we perform after inserting our branches.
 
 In reality we will not be able to choose any one method for deobfuscation of these branch insertions. We will need some types of analysis for identifying dead
 code, but these will rely on other forms of analysis, possibly theorem proving algorithms or similar to crack the opaque predicates. For this reason we will not
