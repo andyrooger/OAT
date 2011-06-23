@@ -2041,8 +2041,8 @@ We will assume that a node is executed by executing a subset of its child nodes 
 sequentially executed statements, or a function definition will evaluate all of its default arguments and then assign to the function name.
 
 To form our markings we will start with a very simple situation where we mark a node $N$ whose execution involves the sequential execution of two nodes,
-$N_1$ and $N_2$, in the same scope. If either node has empty reads or writes markings we can say it will have no effect on the overall markings so can be ignored,
-leaving us with the markings from the other node as our final markings. Otherwise we can say that
+$N_1$ and $N_2$, in the same scope. If either node has empty reads or writes markings we can say that it will have no effect on the overall markings so can be ignored,
+leaving us with the markings from the other node as our final markings. Otherwise we say that
 
 \begin{equation}\label{ncomp}
 O_N = O_{N_1} \cup O_{N_2}
@@ -2124,7 +2124,7 @@ $$M_W(N) = M_W(N_1) \cup M_W(N_2)$$
 
 Furthermore by using this method to collapse nodes together into one, we can show by induction that for an arbitrary number $c$ of executed children:
 
-$$M_R(N) = \bigcup_i^c (M_R(N_i) \setminus \bigcup_i^{c-1} M_W(N_i))$$
+$$M_R(N) = \bigcup_i^c (M_R(N_i) \setminus \bigcup_j^{c-1} M_W(N_j))$$
 and
 $$M_W(N) = \bigcup_i^c M_W(N_i)$$
 
