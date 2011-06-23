@@ -2359,21 +2359,21 @@ Notice that if all but one $N_i$ have empty markings, then we will generate the 
 \subsection{Application of Read and Write Region Theory}
 
 Our discussion has shown how to calculate read and write markings for nodes whose execution involves executing a number of children in a sequential order inside
-the execution frame. Not all of these children have to be executed, some may only be possibilities.
+the same execution frame. Not all of these children have to be executed, some may only be possibilities.
 
 We will not be marking any reads or writes that work between execution frames, instead relying on a user to deduce these. This means that we will refuse to mark
 any node that can perform reads or writes that are not accessed by name in our current frame. These are nodes such as \texttt{ast.Call}.
 
-Other nodes that execute everything in the same execution frame will usually execute a number of children in some order, possibly
-with repetition. These could also execute something from their own node, but we can think of this case as having a separate child node containing
+Other nodes that execute everything in the same execution frame will usually execute a number of their children in some order, possibly
+with repetition. These could also execute pieces of their own node, but we can think of this case as having a separate child node containing
 the relevant operations.
 
 Now we have all we need to mark simple nodes such as \texttt{ast.Assign}, \texttt{ast.Return} or \texttt{ast.Expr}. Also we see that deletion of a name
-using \texttt{ast.Del} counts, in this situation, as a write. We can also mark more complicated statements such as \texttt{ast.If} by converting
+using \texttt{ast.Del} counts, in this situation, as a write. We can mark more complicated statements such as \texttt{ast.If} by converting
 possible markings to definite ones as above, with special consideration for \texttt{if-else}.
 
-Some nodes such as the loops will be more complicated. Consider the \texttt{while} loop. This has children \texttt{test}, \texttt{body} and \texttt{orelse},
-corresponding to the loop condition, the body run when this is true, and the suite run when the loop terminates normally, without a break statement. When
+Some nodes such as the loops will be more complicated. Consider the \texttt{while} loop. This has the children \texttt{test}, \texttt{body} and \texttt{orelse},
+corresponding to the loop condition, the body run when this condition is true, and the suite run when the loop terminates normally, without a break statement. When
 an \texttt{ast.While} node is executed, the children are run in the following order:
 
 \begin{enumerate}
@@ -2384,7 +2384,8 @@ an \texttt{ast.While} node is executed, the children are run in the following or
 \item possibly orelse
 \end{enumerate}
 
-We start our definite markings for \texttt{test}, $M_R(test)$, $M_W(test)$. Now calculate the markings for running the \texttt{body} then \texttt{test} as
+We begin by defining our definite markings for \texttt{test}, $M_R(test)$, $M_W(test)$. Now we calculate the markings generated for running the \texttt{body},
+then \texttt{test} as
 
 \begin{align*}
 M_R(body : test) &= M_R(body) \cup (M_R(test) \setminus M_W(body)) \\
@@ -2398,7 +2399,7 @@ M_R(test : (body : test)^*) =& M_R(test) \cup M_W(test) \cup M_W(body) \cup M_R(
 M_W(test : (body : test)^*) =& M_W(test) \cup M_W(body)
 \end{align*}
 
-Actually these are the same markings we would get by applying (\texttt{body}, \texttt{test}) only once, which greatly simplifies our computation. Finally we
+Actually these are the same markings we would get by applying possibly (\texttt{body}, \texttt{test}) only once, which greatly simplifies our computation. Finally we
 add possibly \texttt{orelse} to get the final markings
 
 \begin{align*}
@@ -2421,7 +2422,7 @@ These will be executed in the order
 \end{enumerate}
 
 Using the task descriptions defined in the auto-marker section, as well as the reasoning above, it should be simple to add read and write markings to
-our auto-marker for the \texttt{for} loop as well as most other nodes.
+our auto-marker for the \texttt{for} loop as well as for most other nodes.
 
 \subsection{Implementing a Simple Reorderer}
 
