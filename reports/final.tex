@@ -1972,19 +1972,20 @@ Having defined our parameters, we can start to think about how to apply these ma
 
 We will not be marking all of these reads and writes, only the ones that happen directly inside our block. Other reads and writes that happen indirectly as a
 result of a function call or similar will need to be manually marked by the user. This restriction may be lifted at a later date, or we may develop tools to help
-the user perform this marking, but due to time restrictions we will not do this now.
+the user perform this marking, but due to time restrictions we will not implement this now.
 
-When marking our nodes we will focus on only one at a time. Writes will be marked if the name was written and can be read by the execution of a node in the
-future, before any overwriting takes place. Reads will be marked if the name is written to before our node's execution and is read by the node before any
-overwriting. For now we will assume a node either definitely writes or reads, or it definitely does not.
+When marking our nodes we will focus only on a single node at one time. Writes will be marked if the name was written and can be read by the execution of a node in the
+future. Reads will be marked if the name is written to before our node's execution and is read by the node before any
+overwriting inside the node. For now we will assume that a node either definitely writes or reads, or it definitely does not.
 
-To set up the mathematics, we assume no reads or writes are performed simultaneously, then we label each of these operations with an infinite orderable set $T$ to
+To set up the mathematics, we assume that no reads or writes are performed simultaneously, then we label each of these operations with an element from an infinite
+orderable set $T$ to
 indicate a sequence of execution (lowest label is first). Note that this labels the read or write operations rather than what they write to. For any read or
 write operation $x$, we take its label using $\mathcal{T}(x)$, and we take the name it affects with $n(x)$.
 
 Say $R$ is the set of read operations and $W$ is the set of write operations over the entire program, these are disjoint sets. Finally write
-$\mathcal{T}(x) = t^{-}_N \in T$ when $x$ is the first read or write operation in our node, and $t^{+}_N \in T$ when $x$ is the last. We are
-assuming that such operations exists, otherwise we can safely say that all markings for reads and writes will be empty. Now we can write:
+$\mathcal{T}(x) = t^{-}_N \in T$ when $x$ is the first read or write operation in a node, $N$, and $t^{+}_N \in T$ when $x$ is the last. We are
+assuming that such operations exists, otherwise we can safely say that all markings for reads and writes on the node will be empty. Now we can write:
 
 $$O_N = \{x \in R \cup W \mid t^{-}_N \le \mathcal{T}(x) \le t^+_N \}$$
 
