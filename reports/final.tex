@@ -3233,25 +3233,25 @@ other obfuscations from an analyser. Our implementation can be restrictive, requ
 the effectiveness of this type of obfuscation in the real world. These come as a result of a number of decisions, starting with the
 design of our auto-marker.
 
-The auto-marker was implemented to traverse the AST marking each node independently from any of its siblings. We can use and extend this implementation
+The auto-marker was implemented to traverse the AST, marking each node independently from any of its siblings. We can use and extend this implementation
 to perform many of the types of semantic analysis available inside common compilers, but not all. This is in part due to our choice of language, as Python
 will allow us to do many things such as calculating the scope of an identifier statically, but we cannot in the general case decide upon an identifier's
 type or resolve a function call to its definition without running the program.
 
 Using the available marking tools and theory, we concluded that the lists of statements we read or write are restricted to only writing to simple names
-and any functions that are called should only be able to write data that is local to themselves. The potency of our obfuscation then rests on whether
-it is still applicable to the real world.
+and any functions that are called should only be able to write data that is local to their own block. The strength of our obfuscation then rests on whether
+a transformation with such a limited range of use is still applicable to the real world.
 
 In our opinion, statement reordering will still be valid in most programs. This is especially true when it is the original author of a program that would
-like to perform obfuscation, in which case they may develop the most sensitive parts of their program specifically to adhere to these rules.
+like to perform obfuscation, in which case they may develop the most sensitive parts of their program specifically to adhere to our rules.
 
 We will not discuss in great detail the effects of reordering on a list of statements as this has been done elsewhere \cite{taxobftrans}. However we will
 explain that the effects are much greater when combined with other types of obfuscation, and used to hide these other transformations or introduced constructs.
 The strength of statement reordering then relies on the difficulty involved in reversing it.
 
-As discussed in the relevant section, a reordering is irreversible in general, however we may estimate a preferential reordering that may in some cases be better
-that the original program. To see the difference between the difficulty in performing obfuscation or deobfuscation in case we will perform a number of tests and
-let the time taken for a transformation represent effort.
+As discussed in the Reordering Program Statements section, a reordering is irreversible in general, however we may estimate a preferential reordering that may in
+some cases be better that the original program. To see the difference between the difficulty in performing obfuscation or deobfuscation, we will perform
+a number of tests and let the time taken for a transformation represent effort.
 
 \subsubsection{Performance}
 
@@ -3272,15 +3272,16 @@ We allowed three different names to be read and written to. For every combinatio
 permutations and the time taken to find the best permutation (according to \texttt{WriteUseValuer}), using \texttt{Reorderer} and \texttt{RandomReorderer}.
 Each individual test was performed five times and the resulting time was averaged.
 
-In comparing the difference between using the valuer and not, we see that the difference is usually negligible. This difference averaged at around a $23000\%$
+In comparing the difference between using the valuer and not, we see that the difference is usually negligible when compared with other variables. This difference
+averaged at around a $23000\%$
 increase for the cost of running a valuer, but as $40\%$ of the tests were actually faster when using the valuer and the range of increases was between
-$-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually negligible and that random factors from other variables contributed much more to
-the overall difference. For the rest of our analysis we will look only at the unvalued results to avoid interference.
+$-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually not noticeable in amongst random fluctuation from other factors.
+For the rest of our analysis we will look only at the unvalued results to avoid interference.
 
 Now we compare \texttt{RandomReorderer} to \texttt{Reorderer}. We expect that \texttt{RandomReorderer} will be slower because it adds extra storage and random
 shuffling to \texttt{Reorderer}. What we find is that on average \texttt{RandomReorderer} incurs a $7.68\%$ increase during our tests, however this is highly
 dependent on the length of the statement list. The following figure shows the increase of percentage increase of time taken to randomise permutation output
-as the length of the statement list increases. Note that this figure is zoomed in on the area of interest so some points may not be visible.
+as the length of the statement list increases. Note that this figure is zoomed in on the area of interest so that some points may not be visible.
 
 \begin{figure}[h]
 \centering
@@ -3288,8 +3289,8 @@ as the length of the statement list increases. Note that this figure is zoomed i
 {\includegraphics{../images/randomreorderperf.eps}}
 \end{figure}
 
-While we can attribute the extra time taken in randomising output to the increasing work undertaken, the sudden increase starting at nine
-statement length could be attributed to Python's garbage collector starting to clean up the extra memory being used. We will now ignore the
+While we can attribute the extra time taken in randomising output to the increasing work undertaken, the sudden increase once statement length
+reaches nine could be attributed to Python's garbage collector starting to clean up the extra memory being used. We will now ignore the
 \texttt{RandomReorderer} and focus on the effects of a normal reordering using \texttt{Reorderer}.
 
 As we would expect, the average total number of permutations for each sequence length is proportionate to the average time taken to calculate these permutations.
@@ -3322,8 +3323,8 @@ difference that changes in visibility, breaking, read, or write probabilities ma
 
 As we can see, more that a minimal amount of either breaking statements or visible statements severely limits the number of legal permutations we may
 generate from a sequence. Of the two types of statements, those that break flow are slightly more effective. This effect means that code with more
-visible or breaking statements will much faster to reorder and have less flexibility on the legal orders available. Similarly the next two graphs show
-effect that differences in the number of reading and writing statements make.
+visible or breaking statements will be much faster to reorder and have less flexibility in the legal orders available. Similarly the next two graphs show
+the effect that differences in the number of reading and writing statements make.
 
 \begin{figure}[h]
 \centering
@@ -3332,18 +3333,19 @@ effect that differences in the number of reading and writing statements make.
 \end{figure}
 
 We see a similar result here to the previous two graphs. The only real difference being that not having many writes inside a sequence of statements
-has a greater effect that any of the other variables we have inspected, causing many more legal permutations to become available.
+has a greater effect than any of the other variables we have inspected, causing many more legal permutations to become available.
 
 Overall we see that the the maximum number of legal permutations and therefore the maximum expected execution time of a reordering grows exponentially
 with the number of statements in the sequence. We tested up to $10$ statements due to the time that testing any more could take, but we can already see
-that average number of legal permutations does not grow nearly as fast as the maximum. At $10$ statements we see that that execution time maxed at around
+that average number of legal permutations does not grow nearly as fast as it could do. At $10$ statements we see that that execution time maxed at around
 $90$ seconds, but averaged only around $3.5$. In a separate test of $10$ independent statements we found that execution time rested at around $120$ seconds,
 so most reordering take only a fraction of the maximum time to compute.
 
 By applying this knowledge to our discussion of the strength of our reordering obfuscation we can see that the actual strength depends hugely on the
 particular program being obfuscated. If we remember that we can use \texttt{RandomReorderer} and limit its output to the a single permutation we can
 create an obfuscation that will stand up to an analyser and possibly a human almost instantaneously. To choose an ideal ordering with the aim of
-deobfuscation will depend on attributes we talked about above, and the more legal orderings we can allow the harder this deobfuscation will be. Therefore
+deobfuscation will depend on attributes we talked about above, and the more legal orderings that an obfuscator can allow, the harder this deobfuscation
+will be to perform. Therefore
 this obfuscation will be strongest when applied to a program without much visible output or many flow-breaking statements.
 
 \subsection{Irrelevant Branching}
