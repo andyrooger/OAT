@@ -2436,13 +2436,14 @@ which defines the following functions:
 The constructor for \texttt{BasicReorderer} will first store all of its arguments. \texttt{statements} is a list node containing the statements we wish to
 reorder. We will also store the ordered names of children of this node so that we may iterate over them later in order.
 
-During the reordering operations, a permutation will stored as a list of indices into the statement list. If we provide \texttt{rng} then this will be
+During the reordering operations, a permutation will be stored as a list of indices into the statement list. If we provide \texttt{rng} then this will be
 used as the initial permutation of the statements that we wish to rearrange, possibly missing some statements if we wish. Otherwise we will assume
 that we should be reordering all statements starting from the order of the statements within the original list.
 
-We will allow a limit on the number of permutations producible from the original statement list. This was introduced as the number of permutations it
+We will allow a limit on the number of permutations producible from our original statement list. This was introduced because the number of permutations it
 is possible to generate from an $n$ statement list is $n!$. As the possible number of permutations increases so fast, it is not hard to create a program
-that takes a vast amount of time to process completely, and often we will not want to know about all permutations.
+that takes a vast amount of time to process completely. There is no reason to calculate all of the available permutations and waste this time when often
+we will only want to know about a small subset of these permutations.
 
 \item[\texttt{statement\_at(i)}] \hfill \\
 This allows us to quickly and simply look up the statement at an index. It does not directly access the index in the statement list, instead looking up
@@ -2455,32 +2456,33 @@ permuted statements.
 \item[\texttt{\_gen\_limit(gen)}] \hfill \\
 To generate the permutations, we will be using generator functions. These allow us to \texttt{yield} a permutation as soon as it is calculated, pausing
 execution of the yielding function until it is told to continue and find the next one. This form of lazy evaluation allows us to save of huge amount
-of storage and processing, especially if we do not want the entire list of permutations.
+of storage and processing, especially if we do not want view the entire list of permutations.
 
-Rather than clouding the logic of individual functions with functionality that limits their output as specified in the constructor, we enclose any calls
+Rather than clouding the logic of individual functions with functionality that limits their output, we enclose any calls
 inside this function.
 
 \item[\texttt{permutations()}] \hfill \\
-Initially this is a generator function that yields rng as given in the constructor as the only valid permutation. In future it will be overridden by
+Initially this will be a generator function that yields \texttt{rng}, given in the constructor, as the only valid permutation. In future it will be overridden by
 subclasses that allow it to generate every legal permutation of our statements.
 
 \item[\texttt{best\_permutation(valuer)}] \hfill \\
-Even if we can generate all legal permutations, we usually only want to look at one that is the best for the transformation we want. This function
-will generate a permuted node for every permutation we generate using \texttt{permutations}. Each of these is scored by passing it to the given
-\texttt{valuer}, and the highest score is assumed to indicate the best permutation. We return the best permutation, not the best permuted node.
+Even if we can generate all legal permutations, we usually only want to know about at a single one that is the best for the transformation we want. This function
+will generate a permuted statement list for every permutation we generate using \texttt{permutations}. Each of these is scored by passing it to the given
+\texttt{valuer}, and the highest score is assumed to indicate the best permutation. Once calculated, this function will return the best permutation, not
+the best permuted list.
 
 \item[\texttt{\_statement\_tuple(s)}] \hfill \\
-When we come to ensuring rule 3 holds for our orderings, we will need to have some way of calculating the read names and all providing statements
+When we come to ensuring that rule 3 holds for our orderings, we will need to have some way of calculating the read names and all providing statements
 of these names. This function provides an intermediate transformation for \texttt{\_statement\_dependence}, taking a node index \texttt{s} and
 returning a tuple containing the index and names that read or written from the node.
 
 \item[\texttt{\_statement\_dependence(t, before, after)}] \hfill \\
-This function will is used to calculate the providing statements for \texttt{t}. Provided with our statement, \texttt{t}, and a list of statements
-occurring \texttt{before} and \texttt{after} our statement, all in the form given by \texttt{\_statement\_tuple}, we will calculate a new representation
+This function is used to calculate the providing statements for \texttt{t}. Given our statement, \texttt{t}, and a list of statements
+occurring \texttt{before} and \texttt{after} our statement, all in the form given by \texttt{\_statement\_tuple}, we calculate a new representation
 for \texttt{t}.
 
 This will be a tuple, beginning with the index of \texttt{t}. The next item is a dictionary mapping read names to statement indices of their providing
-statements, or \texttt{None} if the name must have been read before our statement list begins. Recall we assumed the existence of a pseudo-statement
+statements, or \texttt{None} if the name must have been written before our statement list begins. Recall we assumed the existence of a pseudo-statement
 following the statement list that reads all values. Our final item of the tuple is a dictionary mapping written names to whether or not this statement
 is a providing statement for the name in our final pseudo-statement.
 \end{description}
@@ -2505,13 +2507,13 @@ a boolean value that allows the developer to speed up execution by avoiding prec
 This overrides the same function in \texttt{BasicReorderer} to yield each valid permutation according to our first three rules. It will do this
 by first converting the permutation \texttt{rng}, given in the constructor into a dependence tuple from \texttt{\_statement\_dependence}.
 
-Now we ensure the first two rules are covered by using \texttt{\_split\_by\_visibility} to take out any visible statements from our permutation.
+Now we ensure that the first two rules are covered by using \texttt{\_split\_by\_visibility} to take out any visible statements from our permutation.
 These will be kept in their original order with respect to each other, ensuring rules one and two by definition. From here we use
-\texttt{\_insert\_statements} to find all of the different ways we can insert the remaining statements into this list, following rule three.
+\texttt{\_insert\_statements} to find all of the different ways we can insert the remaining statements into this list, such that rule three is not broken.
 
 Taking all visible statements out at the beginning of the algorithm increases performance by a great deal. As well as avoiding a check for rule
 one and two every time we insert a new statement, we also have a great many statements less to insert. When yielding each permutation we will
-either yield a permutation of dependence tuples, or convert to a normal permutation depending on \texttt{convtuple}.
+either yield a permutation of dependence tuples, or convert to a normal permutation depending on the value of \texttt{convtuple}.
 
 \item[\texttt{\_split\_by\_visibility(dependencies)}] \hfill \\
 Given a list of dependency tuples from \texttt{\_statement\_dependencies}, this function will create two lists. One will contain the tuples from
@@ -2519,12 +2521,12 @@ visible statements, and the other will contain tuples from non-visible statement
 calculations.
 
 \item[\texttt{\_insert\_statements(stats, current)}] \hfill \\
-Given the current permutation of dependency tuples, \texttt{current}, we will find all the different ways to insert all statements in
+Given the current permutation of dependency tuples, \texttt{current}, we will find all of the different ways that we may insert into this all statements in
 \texttt{stats}. This is a simple recursive function, generating all the possible ways to insert the tail of \texttt{stats} and then using
 \texttt{\_insert\_statement} to find the ways to insert the head statement into each of these.
 
 \item[\texttt{\_insert\_statement(stat, stats)}] \hfill \\
-This is similar to the previous statement but inserts the single statement, \texttt{stat}, into \texttt{stats}, rather than a group of statements.
+This is similar to the previous function but inserts the single statement, \texttt{stat}, into \texttt{stats}, rather than a group of statements.
 
 A naive approach would be to try inserting the statement into every possible position and testing if it follows rule three (as rules one and two are
 already taken care of). We can do much better than this by noticing that there are certain ranges defined by our providing statements, outside of
@@ -2545,15 +2547,15 @@ new statement will not break a link between a read and a providing statement tha
 
 \item[\texttt{\_get\_correct\_state\_range(reads, stats)}] \hfill \\
 As described in the previous function, this will return a tuple of indices that indicate the range in which all relevant names will use the correct
-providing statement. \texttt{reads} is a dictionary from the statement we would insert, that maps each read name to a providing statement. Relevant
-names are then those in \texttt{reads} that have their providing statement in \texttt{stats}.
+providing statement. \texttt{reads} is a dictionary from the statement we are planning to insert, that maps each read name to a providing statement. Relevant
+names as referred to above are then those in \texttt{reads} that have their providing statement in \texttt{stats}.
 
 To evaluate this range, we take our relevant names to be any whose providing statement is in \texttt{stats}, and scan forward through \texttt{stats}
 from the implicit initial pseudo-statement. As we go we will be keeping track of the reads and writes of each statement. Once we have passed the
 providing statements for all relevant names we mark our range beginning. When we reach a statement that writes to a name whose providing statement
 has already been passed we mark our range end.
 
-These start and end indices may not be in the expected order, if they are not then we just have an empty range. Either way we can now return our calculated
+These start and end indices may not be in the expected order, and if they are not then we just have an empty range. Either way we can now return our calculated
 range.
 
 \item[\texttt{\_get\_possible\_insert\_range(stat\_tuple, stats)}] \hfill \\
@@ -2579,7 +2581,7 @@ There is no reason to check all links as we can say that if any links are broken
 calculated and their providing statement must be broken. To see this we must assume the current statement list is correct, so that all statements currently
 inserted have the correct providing statements if these statements are also inserted.
 
-If the broken link is one we just calculated the proof is trivial. Otherwise assume the link between a read $R$ and its providing statement $P$ is broken
+If the broken link is one we have just calculated then the proof is trivial. Otherwise assume the link between a read $R$ and its providing statement $P$ is broken
 by a write at \texttt{pos}. Now the closest read for the same name after \texttt{pos} that has a providing statement is labelled $C$. Its providing
 statement will be at any one of the $L_i$ below.
 
@@ -2595,7 +2597,7 @@ This can be done simply by checking whether the providing statements for these r
 
 This concludes our design for the \texttt{SingleReorderer}. The most important part of this is to see that the three functions
 \texttt{\_get\_correct\_state\_range}, \texttt{\_get\_possible\_insert\_range} and \texttt{\_cuts\_read\_write} work together to ensure that every node that
-we insert will ensure correct providing pairs wherever both nodes are inserted. By the time we have inserted all nodes we are left with a full permutation
+we insert will ensure correct providing pairs whenever a node is inserted. By the time we have inserted all nodes, we are left with a full permutation
 where rule 3 holds for all statements.
 
 To ensure that the operations implemented in \texttt{SingleReorderer} are correct, we will also implement \texttt{SafeReorderer}. This will be implemented
@@ -2611,16 +2613,16 @@ the following methods.
 
 \begin{description}
 \item[\texttt{\_\_init\_\_(statements, rng, precond, safe, limit)}] \hfill \\
-This constructor uses most of its argument to pass through to the constructors of its two parent classes. All we do here is to call these constructors
-and choose a class to use for reordering each partition. If we \texttt{safe} is true then we will choose \texttt{SafeReorderer}, but by default we use
+This constructor uses most of its arguments to pass through to the constructors of its two parent classes. All we do here is to call these constructors
+and choose a class to use for reordering each partition. If \texttt{safe} is set to true then we will choose \texttt{SafeReorderer}, but by default we use
 \texttt{SingleReorderer} for the extra speed.
 
 \item[\texttt{permutations()}] \hfill \\
-We do not perform much work directly in this function. The first step is to partition our statements by the flow-breaking statements using \texttt{partition},
-then we use \texttt{\_permutations} to permute each individual partition, limiting its output with \texttt{\_gen\_limit}.
+We do not perform much work directly in this function. The first step is to partition our statements between each flow-breaking statement using \texttt{partition}.
+Then we use \texttt{\_permutations} to permute each individual partition, limiting its output with \texttt{\_gen\_limit}.
 
 \item[\texttt{\_permutations(partitions)}] \hfill \\
-This is a recursive function acting on \texttt{partitions}, a list of statement lists that may be fed into \texttt{SingleReorderer}. The aim is to find
+This is a recursive function acting on \texttt{partitions}, a list of statement lists so that each item may be fed into \texttt{SingleReorderer}. The aim is to find
 permutations of the head statement list using \texttt{SingleReorderer}, and permutations of the tail using \texttt{\_permutations} and combine these in every
 possible combination.
 
@@ -2634,8 +2636,8 @@ record each head permutation as we need it. Then for following tail permutations
 generate any excess permutations but we also do not need to recompute any either.
 
 \item[\texttt{partition()}] \hfill \\
-We use this to partition a single list of statements into multiple that are split by flow-breaking statements as described in rule 4. The implementation of this
-function is trivial so will not be described.
+We use this to partition a single list of statements into multiple separate lists that are split by flow-breaking statements as described in rule 4. The
+implementation of this function is trivial so will not be described.
 \end{description}
 
 We now have the ability to mark an AST with \texttt{AutoMarker}, and generate all legal permutations of a list of statements using \texttt{Reorderer}. Our task
