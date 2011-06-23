@@ -144,7 +144,7 @@ decompyle \cite{decompyle} that will actually try to generate the original sourc
 this too suffers from the same problems.
 
 From the above paragraph, it is easy to spot that just distributing the Python bytecode, another method occasionally
-used, also fails to thwart reverse-engineering attempts. In fact there is another problem
+used, also fails to thwart reverse engineering attempts. In fact there is another problem
 with these methods and any others that rely on Python bytecode. Bytecode is an implementation detail \cite{dis}
 of the default Python implementation, CPython. Relying on this to distribute code would glue any
 user to a specific implementation of Python and possibly even to a specific version. This would remove the portability
@@ -562,7 +562,7 @@ Instead we use this function to generate a list of fields in the correct order. 
 \item[\texttt{location()}, \texttt{desc()} and \texttt{\_\_str\_\_()}] \hfill \\
 These provide a tuple with line number and column number, a text description of the node and a combination of both respectively.
 
-By providing \texttt{\_\_str\_\_}, we allow conversion from node to string using \texttt{str(node)}. This means we can program in a much more
+By providing the \texttt{\_\_str\_\_} method, we allow conversion from node to string using \texttt{str(node)}. This means we can program in a much more
 descriptive manner.
 
 \item[\texttt{\_\_getitem\_\_(item)}, \texttt{\_\_iter\_\_()}, \texttt{\_\_contains(item)\_\_} and \texttt{\_\_len\_\_()}] \hfill \\
@@ -670,7 +670,7 @@ new line. This can be hard to read and is very different from a human reader who
 Using this this class as our writer in future should allow us to concentrate on the effects of specific obfuscations later. It will avoid clouding the evaluation
 of a technique's success with the minor obfuscations introduced by \texttt{BasicWriter}.
 
-To illustrate the differences between the two solid implementations of \texttt{SourceWriter}, we present the following sample program passed
+We may illustrate the differences between our two solid implementations of the \texttt{SourceWriter} by presenting the following sample program passed
 through both \texttt{BasicWriter} and \texttt{PrettyWriter}.
 
 Sample Program
@@ -1033,7 +1033,7 @@ to interpret (and compile programs to bytecode). Unfortunately as \texttt{dis} i
 other runtimes such as Jython and so if we use this method we will need to invent our own virtual machine language and
 produce bytecode and an interpreter for it. We will not be using this method. 
 
-If we were to parallelise our code then we would be likely to use the \texttt{multiprocessing} standard library. This makes it
+If we were to parallelise our code then we could do this easily by using the \texttt{multiprocessing} standard library. This makes it
 very simple to spawn a new process using \texttt{Process} and exchange objects with \texttt{Queue} or \texttt{Array}. By
 performing redundant operations on these objects from both processes, we make the analysis required to re-merge the processes
 very difficult.
@@ -1113,7 +1113,7 @@ markings, then we can first create this attribute and then return it.
 
 \item[\texttt{is\_marked()}, \texttt{get\_mark()} and \texttt{set\_mark(val)}] \hfill \\
 These are designed to be called from derived classes. The first two will try to find the name of this particular type of marking inside
-the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if it was successfully located, and \texttt{get\_mark} will return either the
+the \texttt{\_markings} dictionary. \texttt{is\_marked} will tell us if the name was successfully located, and \texttt{get\_mark} will return either the
 corresponding value, or a safe default on failure. \texttt{set\_mark(val)} will try instead to set the value and return a boolean value
 indicating if it was successful.
 
@@ -1466,7 +1466,7 @@ execute each of these actions on them in turn. Actions may be one of
   Executed first if it exists, this is used to transform the node into another to ease the marking of nodes such as decorated functions or
   classes. The callable is given our current node and returns either \texttt{None} to indicate no transformation should take place, or a
   node whose generated markings should be used as the \textit{entire} set of markings.
-  \item[``add\_reads''/``add\_writes'': set of children containing names to add] \hfill \\
+  \item[``add\_reads''/``add\_writes'': set of children containing names] \hfill \\
   This allows a node to add names to a set of read or written variables. All children specified in the set should be string type nodes. The process
   will be described in more detail in the Reordering Program Statements section.
 \end{description}
@@ -2500,14 +2500,14 @@ Again we will describe this implementation by the methods our class provides:
 
 \begin{description}
 \item[\texttt{\_\_init\_\_(statements, rng, precond, limit)}] \hfill \\
-The constructor only passes its arguments on to the constructors of \texttt{BasicReorderer} and \texttt{ReorderChecker}. \texttt{precond} is
+The constructor only passes its arguments through to the constructors of \texttt{BasicReorderer} and \texttt{ReorderChecker}. \texttt{precond} is
 a boolean value that allows the developer to speed up execution by avoiding precondition checks.
 
 \item[\texttt{permutations(convtuple)}] \hfill \\
 This overrides the same function in \texttt{BasicReorderer} to yield each valid permutation according to our first three rules. It will do this
 by first converting the permutation \texttt{rng}, given in the constructor into a dependence tuple from \texttt{\_statement\_dependence}.
 
-Now we ensure that the first two rules are covered by using \texttt{\_split\_by\_visibility} to take out any visible statements from our permutation.
+Now we ensure that the first two of our rules are covered by calling \texttt{\_split\_by\_visibility} to take out any visible statements from our permutation.
 These will be kept in their original order with respect to each other, ensuring rules one and two by definition. From here we use
 \texttt{\_insert\_statements} to find all of the different ways we can insert the remaining statements into this list, such that rule three is not broken.
 
@@ -2595,7 +2595,7 @@ This can be done simply by checking whether the providing statements for these r
 
 \end{description}
 
-This concludes our design for the \texttt{SingleReorderer}. The most important part of this is to see that the three functions
+This concludes our design for the \texttt{SingleReorderer}. The most important part of this discussion is to see that the three functions
 \texttt{\_get\_correct\_state\_range}, \texttt{\_get\_possible\_insert\_range} and \texttt{\_cuts\_read\_write} work together to ensure that every node that
 we insert will ensure correct providing pairs whenever a node is inserted. By the time we have inserted all nodes, we are left with a full permutation
 where rule 3 holds for all statements.
@@ -2697,7 +2697,7 @@ Instead of linking \texttt{GOTO} statements to the statements they jump to, we w
 of knots in this case can be summed and negated using a new valuer that we will write, called \texttt{KnotValuer}. This should encourage lists of statements that focus
 on one name at a time. It is possible that smaller clusters of reads and writes may appear inside a more distant pair of reads and writes.
 
-We now have four different valuers to encourage the recovery of a simple or natural program order. These are \texttt{WriteRangeValuer}, \texttt{WriteUseValuer},
+We now have four different valuers to encourage the recovery of a simple or natural program order. These valuers are \texttt{WriteRangeValuer}, \texttt{WriteUseValuer},
 \texttt{WriteUseLogValuer} and \texttt{KnotValuer}. It is perfectly reasonable to allow a user to try each of these and select the best for them, as an individual's
 opinion of the complexity of a program will be much more useful to them than our software's will be. In this case we will just be using our valuers to cut a possibly
 enormous number of possible permutations down to an inspectable size.
@@ -2752,7 +2752,7 @@ There is a similar solution that we will implement to speed up execution when ge
 making a random choice the list, we just generate the permutations in a random order and limit the output to a single permutation. We will implement this
 functionality in the \texttt{RandomReorderer} class that extends \texttt{Reorderer}.
 
-The way we do this is to replace the \texttt{SingleReorderer} that \texttt{Reorderer} would use with a modified version. In the modified version we override
+The way we do this is to replace the \texttt{SingleReorderer} that \texttt{Reorderer} would use with a modified version. In this version we override
 \texttt{\_insert\_statement} so that instead of yielding the possible insertions from back to front, we calculate all possible locations and then shuffle
 the order in which they will be returned. Note that this will only provide a random permutation for the first output result, and following permutations
 will be almost identical to the original. This is acceptable though as the first is the only permutation we will care about when looking for any random
@@ -2920,14 +2920,14 @@ The brancher concentrates all operations on the value of a single name, \texttt{
 
 \item[\texttt{predicates}] \hfill \\
 This is an object that contains our stored predicates. Each predicate should be a \texttt{CustomAST} node of type ``Expr'' that corresponds to some \texttt{value}, either
-\texttt{True} or \texttt{False}. The predicate should be such that \texttt{bool(predicate)} evaluates to \texttt{value} at any point where \texttt{name} has
+\texttt{True} or \texttt{False}. The predicate should be designed so that \texttt{bool(predicate)} evaluates to \texttt{value} at any point where \texttt{name} has
 been initialised properly with the values given below, and only the predicate value preserving operations have been performed on it.
 
 To add a predicate to the object we define an \texttt{add(pred, val)} method on the object that will add the predicate and return an id to reference it. We
 can use this id to reference the predicate again using \texttt{predicates[id]} which returns a tuple containing the predicate and value, or to remove the
 predicate using \texttt{del predicates[id]}.
 
-We also allow iteration over the \texttt{predicates} object and define the necessary methods to allow counting the number of predicates using
+We also allow iteration over the \texttt{predicates} object and define all of the necessary methods to allow counting of the number of predicates using
 \texttt{len(predicates)}.
 
 \item[\texttt{exceptions}] \hfill \\
@@ -3258,6 +3258,8 @@ a number of tests and let the time taken for a transformation represent effort.
 To perform these tests we created a generator that would randomly construct sequences of statements for us. This generator relies on the following
 parameters to create its statements:
 
+\pagebreak
+
 \begin{description}
 \item[Length] of the sequence list. We varied this between one and ten statements long.
 \item[Visibility Probability] is the probability that any given statement will be visible. We chose this to be either $0.1$ or $0.5$.
@@ -3278,10 +3280,12 @@ increase for the cost of running a valuer, but as $40\%$ of the tests were actua
 $-9857.60\%$ and $3219163.88\%$, we can see that the use of a valuer was usually not noticeable in amongst random fluctuation from other factors.
 For the rest of our analysis we will look only at the unvalued results to avoid interference.
 
-Now we compare \texttt{RandomReorderer} to \texttt{Reorderer}. We expect that \texttt{RandomReorderer} will be slower because it adds extra storage and random
+Now we compare \texttt{RandomReorderer} to \texttt{Reorderer}. We can reasonably expect that \texttt{RandomReorderer} will be slower because it adds extra storage and random
 shuffling to \texttt{Reorderer}. What we find is that on average \texttt{RandomReorderer} incurs a $7.68\%$ increase during our tests, however this is highly
 dependent on the length of the statement list. The following figure shows the increase of percentage increase of time taken to randomise permutation output
 as the length of the statement list increases. Note that this figure is zoomed in on the area of interest so that some points may not be visible.
+
+\pagebreak
 
 \begin{figure}[h]
 \centering
@@ -3325,6 +3329,8 @@ As we can see, more that a minimal amount of either breaking statements or visib
 generate from a sequence. Of the two types of statements, those that break flow are slightly more effective. This effect means that code with more
 visible or breaking statements will be much faster to reorder and have less flexibility in the legal orders available. Similarly the next two graphs show
 the effect that differences in the number of reading and writing statements make.
+
+\pagebreak
 
 \begin{figure}[h]
 \centering
