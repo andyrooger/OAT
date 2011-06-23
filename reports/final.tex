@@ -3154,11 +3154,11 @@ of our aims.
 \subsection{Software Usability}
 
 This was not a primary objective, however it needs to be discussed as usability should be an important consideration for any software project. Our system
-was developed with ease of testing and evaluation in mind rather than user friendliness and so can be difficult for a user to use productively.
+was developed with ease of testing and evaluation in mind rather than user friendliness, and so can be difficult for a user to use productively.
 
 If we compare our system with other tools to do similar jobs such as pyobfuscate \cite{pyobf} for Python or Kava \cite{taxobftrans} for Java, the main
-difference we see is the level of automation. Rather than our approach, involving the user explicitly orchestrating the transformation of their target
-source code, simply providing the obfuscator with this target source code is sufficient. The tool will then analyse the code without outside help
+difference we see is the level of automation. Rather than our approach, involving the user explicitly orchestrating the transformation of target
+source code, simply providing the obfuscator with this source code is sufficient. The tool will then analyse the code without outside help
 and perform different obfuscating transformations until some complexity or time quota is met.
 
 In practice this method of interaction is exactly what most users want, allowing quick and easy use without needing to learn about the tool or
@@ -3167,15 +3167,15 @@ It would be possible in future to extend the interface and automate the processi
 and AST marking phase.
 
 Let us accept that non-automatic operation is correct for our task, then the usability of OAT is still not yet ideal. There are many parts of both the
-analysis and obfuscating parts of the program that require user interaction for tasks that could be performed by the software with no loss to flexibility or
+analysis and obfuscating portions of the program that require user interaction for tasks that could be performed by the software with no loss to flexibility or
 power. For example, while we enable the automatic marking of the AST, the user is still required to mark any function calls manually. It is reasonable
-to assume that a user would need to resolve function calls, however the software should allow a simple link to be created between the call and one or more
-possible definitions, so that it may continue the automatic marking.
+to assume that a user would need to have input in resolving function calls, however the software should allow a simple link to be created between the call
+and one or more possible definitions, so that it may continue the automatic marking.
 
 We also have the cumbersome use of the command line interface to think about, guiding the user through a somewhat unnatural interaction process. This will be
 solved by the gradual migration from OAT to GOAT and its graphical interface. The current graphical command \texttt{visualise} already greatly eases the
 exploration of and experimentation with the AST. Eventually we hope that the whole process of obfuscation may be carried out from a graphical interface,
-allowing a more friendly user experience that provides parallel viewing and access to multiple parts of the program.
+allowing a more friendly user experience that provides concurrent viewing and access to multiple parts of the program.
 
 As the tool's production progresses we hope to integrate other analytic tools such as Bicycle Repair Man \cite{bikerepair} with our own tool to
 perform tasks such as resolving method calls. This will allow our software to become much more useful that it is in its current state, where certain
@@ -3183,22 +3183,22 @@ missing functionality dampens the user experience.
 
 We feel that the level of usability of our software is sufficient for its current purpose. The internal code is easily accessible to a programmer so that
 future extensions of the software can provide a better experience for an average user. For the advanced user expected currently we provide customisability
-at the expense of usability although the advent of GOAT can improve both of these.
+at the expense of usability although the advent of GOAT can improve both of these measures.
 
 \subsection{Comparison to Similar Tools}
 
 A comparison of our work with other software is going to be difficult due to the lack of similar tools.
 
 If we look at other Python obfuscators we can relate to two; pyobfuscate \cite{pyobf} and BitBoost's
-``Python obfuscator and code size reducer'' \cite{bitboost}. Of these, only one is accessible to us and
+`Python obfuscator and code size reducer' \cite{bitboost}. Of these, only one is accessible to us and
 neither can cope with Python 3.x source code. Both of these obfuscators focus on layout transformations
 and so would serve better performing complementary transformations rather than competing with our
 control-flow obfuscation software.
 
 Instead we may look to the wider range of control-flow obfuscators available for other languages such as
 Java or C. What we see is that these obfuscators will usually have a much wider range of available
-obfuscating transformations, combining data or layout obfuscation as well. These obfuscators tend to
-work in an automatic fashion of object or bytecode rather than source code.
+obfuscating transformations, combining data or layout obfuscation as well as control-flow. These obfuscators tend to
+work in an automatic fashion and process object code or bytecode rather than source code.
 
 While the extra scope of these tools is likely indicative of the extra developer manpower and time
 available to them, it also appears due to the difference in the languages. While the Python language
@@ -3208,7 +3208,7 @@ One problem that has hindered us frequently is that Python methods and classes a
 This means they can be renamed, redefined, dynamically generated, or passed around the program as parameters.
 Many times in our development work we have had to sacrifice automation or flexibility to avoid resolving function
 calls or classes. This analysis would have been made much easier by being able to point directly to a class or
-function definition in Java.
+function definition as is often the case in a language such as C.
 
 While similar problems exist in C where we can pass around function pointers or in Java where we have to decide which
 type of object a method is being called on, the issue is more prolific in Python. In the average Python program we will
@@ -3221,7 +3221,7 @@ While this restricts the types of obfuscation we can perform, it also increases 
 transformations. Therefore a few simple transformations performed on Python source code can be just as difficult to reverse as
 a large amount of transformations in other languages.
 
-Our opinion is that although we provide only a limited number of available transformations for the code, with a little more work
+Our opinion is that although we provide only a limited number of available transformations to be performed on target source code, with a little more work
 these can start to compete with obfuscators for other languages. As it would be misleading to compare our software with tools for
 other languages or types of obfuscation we will instead compare each type of obfuscation we implement with our own ability to reverse
 it.
