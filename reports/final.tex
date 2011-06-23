@@ -3384,15 +3384,15 @@ Our implemented transformations are limited in scope and number. Initially, impl
 to the parsing and analysis of Python source code. Instead this seemingly simple problem blossomed into a myriad of separate problems, requiring separate
 solutions to implement. Some of these problems were solved by implementing an automatic AST marker for analysis, we use this for calculating which AST nodes
 read and write variables or create visible output. Other problems were solved by careful reasoning and restriction of the problem until a `correct' solution
-could be reached. This approach was used to restrict the sequences of statements that our transformation could be applied to.
+could be reached. This approach was used to restrict the sequences of statements that our reordering transformation could be applied to.
 
 Many of the problems we faced eventually had to be solved by relying on the user's input. One such problem was our inability to resolve function calls to a
-particular function definition. This may be possible to implement for very simple cases and usable during obfuscation, but we could use the inability to
-resolve complex function calls to create another form of obfuscation.
+particular function definition. Automation of this may be possible to implement for very simple cases and usable during obfuscation, but we could use this
+inability to resolve complex function calls to create another form of obfuscation.
 
 The heavy reliance on user input will be a hindrance for using this tool in practice, but there is potential to automate the process and introduce other
 tools to help with analysis. If this happens and other forms of obfuscating transformation are implemented then this software could be used successfully
-for real situation.
+in real situations.
 
 \subsection{Future Work}
 
