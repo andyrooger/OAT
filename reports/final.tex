@@ -2646,7 +2646,7 @@ now is to use these classes to allow us to either obfuscate or deobfuscate our c
 \subsection{Choosing a Permutation}
 
 As stated before we began our implementation, the task of obfuscating or deobfuscating a program by reordering its statements reduces to choosing the `best'
-permutation for what we want to do. Loosely this means that to obfuscate the program we wish to choose an ordering that holds the least information for a
+legal ordering for what we want to do. Loosely this means that to obfuscate the program we wish to choose an ordering that holds the least information for a
 human, and to deobfuscate we want an ordering that either holds the most information or follows the most logical order.
 
 Recall the \texttt{best\_permutation} method defined in \texttt{BasicReorderer}. This allows us to score every legal permutation of statements based on some
@@ -2656,16 +2656,16 @@ such valuer functions that are designed as a result of a brief pragmatic analysi
 \begin{description}
 \item[\texttt{FirstValuer}] \hfill \\
 This gives every permutation a constant score. Due to the implementation of our \texttt{Reorderer} this will result in choosing the first permutation put to
-it, which happens to be the original permutation.
+it, which happens to be the original ordering.
 \item[\texttt{RandomValuer}] \hfill \\
 Like \texttt{FirstValuer}, this does not take the actual permutation into account at all, scoring only by some random number. We use this to decide upon an
-entirely random permutation although we will propose a much better method later.
+entirely random permutation, although we will propose a much better method later.
 \item[\texttt{WriteRangeValuer}] \hfill \\
-\texttt{WriteRangeValuer} will calculate the spread of writes to every name, sum them and return the negative sum. This valuer will favour orderings where
-writes to any particular name are clustered close together.
+\texttt{WriteRangeValuer} will calculate the maximum distance between two writes of every name, sum them, and return the negative sum. This valuer will
+favour orderings where writes to any particular name are clustered close together.
 \item[\texttt{WriteUseValuer}] \hfill \\
 This time we will also consider reads of names. To calculate the score we will sum the distance between every read and its providing statement. The result
-will then be negated, meaning we favour orderings that keep the write of a name close to any reads of the value that was written.
+will then be negated, meaning we favour orderings that keep the writing of a name close to any reads that depend on it.
 \end{description}
 
 To evaluate the fitness of each of these valuers we need to look at the qualities we would expect to find in an unobfuscated program. We have already
@@ -2676,16 +2676,16 @@ that splits a program into basic blocks, so that executing the first statement i
 complexity of the program now increases with the number of inter-block references it contains.
 
 Unfortunately when we reorder our program we first partition it into these basic blocks and only reorder statements within them so that all inter-basic
-block references remain. Actually the previous statement is not strictly true as our partitions still contain plenty of separate blocks such as the body
-of \texttt{if} statements. Even so, we will have marked each statement as if these blocks do not exist, and maintained all references throughout and
-between our partitions. In fact it is for these reasons that many complexity metrics will be unaffected by reordering; we effectively have the same
+block references remain\footnote{Actually this is not strictly true as our partitions still contain plenty of separate blocks such as the bodies
+of any \texttt{if} statements. Even so, we will have marked each statement as if these blocks do not exist, and maintained all references throughout and
+between our partitions.}. In fact it is for these reasons that many complexity metrics will be unaffected by reordering; we effectively have the same
 program as we started with.
 
 We may look towards Wroblewski \cite{localityprob} to see that the probability that one statement will be dependant on another drops quickly as the
 statements become further apart. Our \texttt{WriteUseValuer} works on this premise, trying to cluster dependent statements to reverse an obfuscation.
 
 From Wroblewski we see that the relationship between dependency and locality is not at all linear, so we realise that the difference between a read/write
-pair being very far apart and moderately far apart is not important. \texttt{WriteUseValuer} does not take this into account so instead we will also add
+pair being very far apart and moderately far apart is not important. \texttt{WriteUseValuer} does not take this into account so we will also add
 a \texttt{WriteUseLogValuer} that works like the \texttt{WriteUseValuer} but sums the logarithms of distance between each write and its use to model this
 behaviour.
 
@@ -2694,12 +2694,12 @@ are defined in a sequential program that includes \texttt{GOTO} statements. We j
 time two connections are forced to cross we have a knot.
 
 Instead of linking \texttt{GOTO} statements to the statements they jump to, we will link providing statements to the statements they provide for. The number
-of knots in this case can be summed and negated using a new valuer we will write, \texttt{KnotValuer}. This should encourage lists of statements that focus
+of knots in this case can be summed and negated using a new valuer that we will write, called \texttt{KnotValuer}. This should encourage lists of statements that focus
 on one name at a time. It is possible that smaller clusters of reads and writes may appear inside a more distant pair of reads and writes.
 
 We now have four different valuers to encourage the recovery of a simple or natural program order. These are \texttt{WriteRangeValuer}, \texttt{WriteUseValuer},
 \texttt{WriteUseLogValuer} and \texttt{KnotValuer}. It is perfectly reasonable to allow a user to try each of these and select the best for them, as an individual's
-opinion of the complexity of the program will be much more useful to them than our program's. In this case we will just be using our valuers to cut a possibly
+opinion of the complexity of a program will be much more useful to them than our software's will be. In this case we will just be using our valuers to cut a possibly
 enormous number of possible permutations down to an inspectable size.
 
 So far we have only discussed choosing deobfuscating permutations. To decide upon a permutation that will obfuscate our program, we should be clear about our
