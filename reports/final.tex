@@ -57,7 +57,22 @@ Herbert Wiklicky
 \cleardoublepage
 
 \begin{abstract}
-\#TODO write abstract!
+Not so long ago, a programmer could write their program in a compiled language
+such as C. This would then be compiled to machine code for a given architecture,
+and the program could be handed out to anyone without worrying about whether
+a hacker or reverse-engineer could recover the original source code.
+
+With the increasing popularity of interpreted languages like Java or Python, we
+are starting to see a change in the way that program code is distributed. In these
+interpreted formats, a distributed program is often so close to the original source code that 
+reverse engineering becomes almost effortless and holding onto embedded secrets or avoiding
+piracy can be incredibly difficult.
+
+We propose source code control-flow obfuscation as a solution to this problem in Python and
+explore the creation of tools to perform this obfuscation as well as to reverse it. We will
+see the additional difficulties faced by using such a flexible language and will arrive at
+a basic but functional obfuscator named OAT.
+
 \end{abstract}
 
 \section*{Acknowledgements}
