@@ -3355,7 +3355,7 @@ also confuse an analyser depending on the code inserted.
 
 Other discussions on performing these types of transformations \cite{taxobftrans} tell us that the that the strength and resilience of the obfuscation relies
 on the strength of the chosen opaque predicate. As we have not implemented any reverse transformation we cannot quantify the resilience of any particular
-predicates. However we can assume that the same problems that Python's flexibility has caused during other parts of our implementation will help to thwart
+predicates. However we can assume that the same problems that have been caused by Python's flexibility during other parts of our implementation will help to thwart
 any reversal efforts.
 
 While we do require the user to build up a library of expressions and statements that can be used to insert these irrelevant branches, this allows extra
@@ -3363,7 +3363,7 @@ flexibility. Rather than being limited by what our obfuscator can perform automa
 predicate they like. Although this library may be slow to create initially, once a user has a large base of different examples the process of obfuscating using
 them will become much quicker.
 
-To give a very loose idea of how our irrelevant branches will stand up against analysis, we can create one or more very simple example and allow analysis by
+To give a very loose idea of how our irrelevant branches will stand up against analysis, we can create a very simple example and allow analysis by
 other Python analysers. In fact by testing in all of PyDev \cite{pydev}, pylint \cite{pylint} and PyCharm \cite{pycharm} we see that even the very
 simple case below is not recognised as an unreachable branch.
 
