@@ -2785,7 +2785,7 @@ Next we have options seen earlier including safety checks with \texttt{SafeReord
 \texttt{RandomReorderer} using `--random',  and limiting the number of generated permutations using `--limit'.
 
 The final global option will state whether to actually edit the AST with our reordering or just display it. We set this with `--edit', which is turned
-off by default. If we do write, we will edit the current statement list node rather than replacing it so that we do not break any references within the
+off by default. If we do write our changes, we will edit the current statement list node rather than replacing it so that we do not break any references within the
 program.
 
 Now we allow the user a choice of one of the following options, defaulting to `--best' if none are supplied.
@@ -2793,7 +2793,7 @@ Now we allow the user a choice of one of the following options, defaulting to `-
 \begin{description}
 \item[--current] \hfill \\
 Safety checks will always be carried out to ensure that our node is of the appropriate type and that each of the statements it contains carry sufficient
-markings for the reorderer. If we choose this action then we stop at this point, informing the user whether they can reorder the current node and printing
+markings for the reorderer. If we choose this action then we stop at this point, informing the user whether they can or cannot reorder the current node and printing
 the status of markings for each statement.
 
 \item[--split] \hfill \\
@@ -2801,11 +2801,11 @@ In this case we will only partition the statement list based on the flow-breakin
 depending on which display type they chose.
 
 \item[--number] \hfill \\
-This will generate all the permutations up to any limit set. Rather than doing anything with these it will count the total and display this to the user.
+This will generate all of the permutations up to any limit set. Rather than doing anything with these it will count the total and display this to the user.
 
 \item[--unique] \hfill \\
 Rather than simply counting all yielded permutations, we insert each permutation into a set and display the size of the set. This can be used to calculate
-the unique permutations generated and can be used to identify bugs is the number does not match that from `--number'.
+the unique permutations generated and can be used to identify bugs if the number does not match that from `--number'.
 
 \item[--permutations] \hfill \\
 This will generate each possible permutation and display them to the user using the display method they specified, waiting for confirmation before proceeding
@@ -2816,8 +2816,8 @@ The main reason we have the \textbf{reorder} command and the default action to p
 the best based on the specified valuer function. If `--edit' is set then this action will also write the changes to our AST.
 \end{description}
 
-Most tasks should now be simple to perform, although more complex tasks may need explaining. For instance to find a random permutation quickly and edit the
-AST to reflect this then the options we would need to set would be `--limit 1 --random --edit'. Another example would be to find the best of the first 400
+Most tasks should now be simple to perform, although more complex requirements may need guidance. For instance to find a random permutation quickly and edit the
+AST accordingly then the options we would need to set would be `--limit 1 --random --edit'. Another example would be to find the best of the first 400
 permutations using the \texttt{WriteUseValuer} which is labelled `rwrange' in OAT. For this we use `--limit 400 --valuer rwrange'.
 
 \section{Opaque Predicates and Irrelevant Code Insertion}
