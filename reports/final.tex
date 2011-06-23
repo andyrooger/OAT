@@ -2131,17 +2131,17 @@ $$M_W(N) = \bigcup_i^c M_W(N_i)$$
 \subsubsection{Calculation of Probable Read and Write Markings}
 
 In the previous section we looked at how to mark statements that either definitely do or do not write or read statements. There are cases such as
-\texttt{if} statements in which we may not know which child node will be executed and so do not know if any reads or writes will take place. In this
+\texttt{if} statements in which we may not know which child nodes may be executed and so do not know if any reads or writes will take place. In this
 case we will need to convert the possible read or write into a definite read or write.
 
-First we look at the rules we defined earlier relating to read and write markings. Recall rule 3 states that the providing statement of
+First we look at the rules that we defined earlier relating to read and write markings. Recall rule 3 states that the providing statement of
 any name to any statement must be the same before and after the reordering. Let us take a node $N$ whose execution involves executing a
-child with definite read and write markings, $N_D$ followed by either the execution of a second child $N_P$, or nothing. We want to define
+child $N_D$ with definite read and write markings, followed by either the execution of a second child $N_P$, or nothing. We want to define
 a set of markings on $N$ that will ensure that rule 3 is followed whichever option is taken.
 
-To do this we will not rely on the dependency between statements that is described by providing statements, but we will rely on dependency
-between providing operations which the statements themselves rely on. A providing operation is defined much the same as a providing statement,
-for some $r \in R$, the providing operation of $r$ is $p_r \in W$ such that:
+To do this we will not rely on the dependency between statements that is described by providing statements, but we will rely on the dependency
+between providing operations that the providing statements themselves rely on. A providing operation is defined much the same as a providing statement.
+For some $r \in R$, the providing operation of $r$ is $p_r \in W$ such that:
 
 \begin{equation} \label{provop}
 \mathcal{T}(p_r) < \mathcal{T}(r) \text{ and } \\
@@ -2163,11 +2163,14 @@ break our logic to add a new $r \in R$ and hence a new $p_r$, but it will if we 
 
 Now we think of our markings for $N$. Let us assume for the moment that $O_{N_P}$ contains a single read operation $z$. If we do not take
 the option to run $N_P$ then our markings for $N$ would be $M_R(N_D)$ and $M_W(N_D)$ using the previous section. If we choose to execute $N_P$ then $N$'s
-read markings will be $M_R(N_D) \cup (M_R(N_P) \setminus M_W(N_D))$. This is $M_R(N_D)$ if $N_D$ writes $n(z)$, or the same with $z$ added otherwise.
-$N$'s write markings would be $M_W(N_D)$.
+read markings will be
 
-From this we see that we can quickly mark $N$ as reading $M_W(N_D)$, this was clear from the beginning as $N_P$ does not write anything. Now we need to choose
-how to represent the $M_R(N_D)$ with the possible union of $\{z\}$ to create $N$'s read markings. Whichever representation we choose, we will need to make sure
+$$M_R(N_D) \cup (M_R(N_P) \setminus M_W(N_D))$$
+
+This is $M_R(N_D)$ if $N_D$ writes $n(z)$, or its union with $\{n(z)\}$ otherwise. $N$'s write markings would be $M_W(N_D)$.
+
+From this we see that we can quickly mark $N$ as writing $M_W(N_D)$, this was clear from the beginning as $N_P$ does not write anything. Now we need to choose
+how to represent $M_R(N_D)$ with the possible union of $\{n(z)\}$ to create $N$'s read markings. Whichever representation we choose, we will need to make sure
 that no $p_r$ is changed. If we choose to ignore $z$ and pretend we always choose not to run it then we are ignoring a read statement that occurs when $N_P$ is
 executed and breaking our logic.
 
@@ -2175,16 +2178,18 @@ This means we must assume $N$ contains our read operation always. We check this 
 are not changing any write operations. Due to the definition of $p_r$ this means we cannot change its value. Hence in both paths we can safely say that all
 $p_r$ remain the same write operations.
 
-Now we try the same reasoning where $N_P$ contains a single write operation, we use $z$ again to represent this. In this case, always executing $N_P$ would
+Now we try the same reasoning where $N_P$ contains a single write operation, again using $z$ to represent this write. In this case, always executing $N_P$ would
 make $N$'s marks $M_R(N_D)$ and $M_W(N_D) \cup \{ z \}$. On the other hand, never executing $N_P$ would result in the markings $M_R(N_D)$ and $M_W(N_D)$.
 
 First we try using $M_R(N_D)$ as the read markings for both execution paths, and concentrate on the write markings. If we assume that $N_P$ is never executed
-we see that the conditions in \eqref{provop} are relaxed as we lose a $w \in W$ to test against. This would means that our markings would not necessarily imply
-the correctness of out $r_p$s, so instead we try assuming that $N_P$ is always executed. In this case we are an extra condition for our $p_r$:
+we see that the conditions in \eqref{provop} have been relaxed by doing this as we lose a $w \in W$ to test against. This would mean that our markings would
+not necessarily imply
+the correctness of out $r_p$s, so instead we try assuming that $N_P$ is always executed. In this case we add an extra condition for our $p_r$:
 
 $$(n(r) = n(z) \text{ and } \mathcal{T}(z) < \mathcal{T}(r)) \rightarrow \mathcal{T}(p_r) \ge \mathcal{T}(z)$$
 
-If this becomes false for any current $p_r$ then this $p_r$ becomes $z$, breaking our conditions. For this to happen, we need to find a read of the same name
+If this condition becomes false for any current $p_r$ then that $p_r$ in the new ordering will become $z$, breaking our conditions. For this to happen, we need
+to find a read of the same name
 that occurs after $z$, and whose providing operation occurs before $z$. More simply if our write is placed between a read operation $r$ and its providing operation
 of the same name as $z$, then we imply incorrect $p_r$ for that $r$ when $N_P$ is not executed.
 
@@ -2211,8 +2216,8 @@ and as $q$ and $z$ occur in the same statement, they will not be reordered so
 $$\mathcal{T}(q) < \mathcal{T}(z) \text{ and } \not \exists x \text{ st } \mathcal{T}(q) < \mathcal{T}(x) < \mathcal{T}(z)$$
 
 After the reordering, these are maintained replacing $\mathcal{T}$ with $\mathcal{U}$. We have shown that when we choose the execution path that executes $N_P$,
-the correct $r_p$s will be implied. This is also true if $z$ did not sit between a providing pair. We now assume we never execute $N_P$ and so remove the dummy
-statements $q$ and $z$ from $R$ and $W$, giving us $R^\prime$ and $W^\prime$ and the equations:
+the correct $p_r$s will be implied. This is also true if $z$ did not sit between a providing pair. We now assume that we never execute $N_P$ and so remove the dummy
+operations $q$ and $z$ from $R$ and $W$, giving us $R^\prime$ and $W^\prime$ and the equations:
 
 \begin{align}
 \mathcal{U}(p_s) < \mathcal{U}(q) \text{ and } \mathcal{U}(z) < \mathcal{U}(s) \label{uordering} \\
@@ -2221,7 +2226,7 @@ statements $q$ and $z$ from $R$ and $W$, giving us $R^\prime$ and $W^\prime$ and
 \mathcal{U}(q) < \mathcal{U}(z) \text{ and } \not \exists x \text{ st } \mathcal{U}(q) < \mathcal{U}(x) < \mathcal{U}(z) \label{uqz}
 \end{align}
 
-Any $r_p$ we have not mentioned were not affected, to show that our marking was correct, we must show that:
+Any $p_r$ we have not mentioned were not affected. To show that our marking was correct we must show that:
 
 \begin{equation} \label{conds}
 \mathcal{U}(p_s) < \mathcal{U}(s) \text{ and }
@@ -2266,7 +2271,7 @@ M_R(N) =& M_R(N_D) \cup M_R(N_P) \cup M_W(N_P) \\
 M_W(N) =& M_W(N_D) \cup M_W(N_P)
 \end{align*}
 
-What we are doing here is treating both of the coming left hand examples as the right hand examples
+What we are doing here is treating both of the following code examples on the left as those corresponding to them on the right.
 
 \begin{minipage}[b]{0.4\linewidth}
 \centering
@@ -2289,11 +2294,11 @@ What we are doing here is treating both of the coming left hand examples as the 
 \end{minipage}
 
 Now we consider an $N_P$ containing multiple read an write operations. From this node we construct a new node that just reads each name in $M_R(N_P)$ in turn
-and then writes each $M_W(N_P)$. This new node $N_P^\prime$ will have exactly the same markings as $N_P$ would by itself. Now we split $N_P^\prime$ into 
-multiple $N_r^i$ for reads and $N_w^j$ for the writes with either a single read or write operation in each.
+and then writes each $M_W(N_P)$. This new node, call it $N_P^\prime$, will have exactly the same markings as $N_P$ does. Now we split the execution of
+$N_P^\prime$ into multiple $N_r^i$ for reads and $N_w^j$ for the writes with either a single read or write operation in each child node.
 
-$N$'s markings can now be calculated by repeatedly using the above to merge these possible $N^*_x$'s in order with $N_D$ until we have a single set of markings.
-Eventually we can show that 
+$N$'s markings can now be calculated by repeatedly using the above equations to merge these possible $N^*_x$'s in order following $N_D$ until
+we have a single set of markings. Eventually we can show that 
 
 \begin{align*}
 M_R(N) &= M_R(N_D) \cup \bigcup_i M_R(N_r^i) \cup \bigcup_i M_W(N_r^i) \cup \bigcup_j M_R(N_w^j) \cup \bigcup_j M_W(N_w^j) \\
