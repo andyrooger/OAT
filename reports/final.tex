@@ -3042,15 +3042,16 @@ be implementing any deobfuscation in this section.
 \section{Introducing GOAT}
 
 At the beginning of this project the choice was made to implement our primary interface on the command line, the focus being on speed of development. As
-mentioned in the earlier discussion, a GUI would provide a more natural interface to the user.
+was mentioned in the discussion preceeding this decision, a GUI would provide a more natural interface to the user.
 
 As we have progressed through the development of OAT there are many places we have seen that could have been greatly improved by this graphical interaction.
-For instance the traversal of our AST, currently performed by our \textbf{explore} command is cumbersome and can be confusing in the command line interface. A
-much better representation would be to display all of the nodes in a form of hierarchical display commonly seen in file managers.
+For instance the traversal of our AST, currently performed by the \textbf{explore} command is cumbersome and can be confusing in the command line interface. A
+much better representation would be to display all of the nodes in a form of hierarchical display commonly seen in file managers. This immediate access to all
+nodes in the AST would also help us with other tasks.
 
-This immediate access to all nodes in the AST would also help us with other tasks. While marking the AST we currently expect a user to manually mark any function
+While marking the AST we currently expect a user to manually mark any function
 calls as we cannot resolve which function they correspond to. Rather than leaving the marking entirely up to a user, it seems reasonable to allow the user to
-click on a function definition within the tree and continue our analysis in the function body. There is no natural way to choose this function definition
+click on a function definition within the graphical tree and continue our analysis in the function body. There is no natural way to choose this function definition
 in the current command line tool.
 
 Another helpful function would be to display the program code as we explore it. Currently when looking at a node we have to specifically run the \textbf{format}
@@ -3058,8 +3059,8 @@ command to print the source code. In a GUI application it would not be difficult
 highlighting our node's source code so that the user can view it in context. This pane would be available throughout the entire program's operation.
 
 Thankfully we do not need to reimplement any of our basic functionality to provide this graphical interface. We have followed good design principles and so have
-endeavoured to keep our implementation as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
-Graphical OAT, component by component. Each component may be added and tested as commands in our current interface, OAT.
+endeavoured to keep our main functionality as separate as possible from our interface. This means we can start building our graphical interface, named GOAT or
+Graphical OAT, component by component. Each component may be added and tested as additional commands in our current interface, OAT.
 
 \subsection{Developing a Hierarchical Display for our AST}
 
@@ -3095,12 +3096,12 @@ large widget to scroll by adding scrollbars around the outside.
 
 This is the most basic of the components we will implement, designed solely to display a specific node's markings.
 
-We will implement this in the class \texttt{MarkPane}, whose constructor takes just a node whose markings to display. For each type of marking specified on the
+We will implement this in the class \texttt{MarkPane}, whose constructor takes just a node whose markings we wish to display. For each type of marking specified on the
 node, we create a row labelling the marking type and detailing its contents.
 
 As the widget has no knowledge of the individual mark representation, we do not detail their contents in any way specific to the marking type. Instead we perform
-a simple conversion based on the type of the contents. For instance a boolean value is converted to ``Yes'' or ``No'' and a set is converted to a comma separated
-list of its contents.
+a simple conversion based on the type of the contents. For instance a boolean value is converted to ``Yes'' or ``No'' and a \texttt{set} is converted to a comma separated
+list of its members.
 
 \subsection{Developing an Interactive Source Code Viewer}
 
@@ -3112,17 +3113,17 @@ simple constructor, taking no arguments and defining two tags, one for highlight
 \textbf{explore} command), and one for highlighting some selected node.
 
 The only other function defined on this class is \texttt{fill} which is used to fill the code box will the correct source code. This function is given a
-writer class and a node to generate the source code from, and two nodes to highlight using the tags we defined in the constructor. The difficulty we come to
-in this function is that we wish to apply tags to the exact region of code we wish to highlight.
+writer class and a node used to generate the source code, and two nodes that should be highlighted using the tags we defined in the constructor. The difficulty
+we come to in this function is that we need to apply tags to the exact region of code we wish to highlight.
 
 The design of the underlying \texttt{tkinter.Text} class requires that to highlight a section of the source text we use one of two methods. Either we will
-need to tag the entire section as we insert as a whole into the text box, or we will need to be able to mark the location at both ends of the highlighted
+need to tag the entire section of text as we insert it as a whole into the text box, or we will need to be able to mark the location at both ends of the highlighted
 section as we insert either end.
 
-We do not have any control over the writing of the source code, so this will be a difficult challenge to overcome for us. To solve this problem we will be
+We do not have any control over the writing of the source code, so this will be a difficult challenge to overcome. To solve the problem we will be
 using the \texttt{tagging\_writer} function to dynamically generate a subclass our writer class. This will overwrite the writer's \texttt{\_write} function
 to capture every node before and after it is written, generating the start and end tags. We will also generate a file-like object so that any time our writer
-writes to the object, it is converted to an insert into the text box.
+writes to the object, this write operation is converted to an insert into the text box.
 
 Now that we have created the \texttt{CodeBox} class we will create \texttt{ScrolledCodeBox} that adds scrolling functionality to the original component.
 A final class will now be created called \texttt{CodeDisplay}. This adds a radio selection to decide on the particular source writer, allowing the user
@@ -3134,13 +3135,13 @@ As we are not creating an entire graphical interface at once, it will be helpful
 line interface, OAT. As we said earlier this will allow us to incrementally create our graphical interface, building and testing each part individually
 and relying on the current interface for all other tasks.
 
-For the initial three components we have created we will introduce the command \textbf{visualise}. This will combine all three components into a single
+For the initial three components we have created, we will introduce the command \textbf{visualise}. This will combine all three components into a single
 window that allows a user to inspect the current state of their AST and its markings. While the user will be able to view a fixed state of the AST, they
 will not be able to change anything that could affect the command line program. This is to avoid complications that could arise from the command line
-being designed as the sole editor of its data. To continue using the program, the user will need to close the visualiser window.
+being designed as the sole editor of its own data. To continue using the program, the user will need to close the visualiser window.
 
-We can creating GOAT in this way, gradually building more and more components and incorporating them into OAT until we have a fully graphical interface.
-For an example user session and to see how the visualiser window looks, please refer to the appendix.
+We can continue creating GOAT in this way, gradually building more and more components and incorporating them into OAT until we have a entirely graphical interface.
+For an example user session and to see how the visualiser window looks, please refer to the Appendix.
 
 \section{Evaluation}
 
