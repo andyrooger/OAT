@@ -2310,7 +2310,7 @@ M_W(N) &= M_W(N_D) \cup \bigcup_i M_W(N_r^i) \cup \bigcup_j M_W(N_w^j) \\
 
 \subsubsection{Extending Possible Markings}
 
-Now if $N$'s execution involves executing $N_D$ followed by possibly executing each one of multiple $N_i$, our markings are
+Now if $N$'s execution involves executing $N_D$ followed by possibly executing each one of multiple $N_i$ then our markings are
 
 \begin{align*}
 M_R(N) &= M_R(N_D) \cup \bigcup_i M_R(N_i) \cup \bigcup_i M_W(N_i) \\
@@ -2318,8 +2318,9 @@ M_W(N) &= M_W(N_D) \cup \bigcup_i M_W(N_i)
 \end{align*}
 
 We can also think about another case where rather than either executing or not executing each $N_i$, we choose a single one of the
-$N_i$ to execute. To mark $N$ in this case, we convert the execution of $N_D$ followed by the execution of one $N_i$. Instead we the
-execution of $N_D$ followed by $N_R$ followed by one $N_i^\prime$ followed by $N_W$ where
+$N_i$ to execute. To mark $N$ in this case, we could use the previous equations as it is possible that each $N_i$ is executed, though this would not use
+all of our available information. Instead we the will represent the situation as the execution of $N_D$ followed by $N_R$ followed by one
+$N_i^\prime$ followed by $N_W$ where
 
 \begin{align*}
 M_R(N_W) &= M_W(N_R) = \emptyset \\
@@ -2353,7 +2354,7 @@ In other words, this means that to find the read markings for $N$, we look at al
 Now we add all of the names that $N_D$ reads and all writes in an $N_i$ that are not common to all $N_i$. The write markings for $N$ are then just all names
 written by $N_D$ or some $N_i$.
 
-Notice that if all but one $N_i$ has empty markings, we get the same equation as we had in the last section for a single possibly run node.
+Notice that if all but one $N_i$ have empty markings, then we will generate the same equation as we had in the last section for a single possibly run node.
 
 \subsection{Application of Read and Write Region Theory}
 
