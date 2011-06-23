@@ -4,7 +4,7 @@
 \usepackage[utf8x]{inputenc}
 \usepackage[breaklinks=true,unicode=true,pdfborder={0 0 0},colorlinks=false]{hyperref}
 \usepackage{listings}
-\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format,visualise,reorder,mark}}
+\lstdefinelanguage{obftool}{morekeywords={help,quit,status,parse,explore,format,visualise,reorder,mark,branch}}
 \lstset{language=Python, numbers=left, showstringspaces=false, frame=single}
 \usepackage{pst-gantt}
 \setlength{\parindent}{0pt}
@@ -3449,5 +3449,19 @@ transformation.
 
 \bibliographystyle{plain}
 \bibliography{final}
+
+\section{Appendix}
+\subsection{User Session}
+
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true]{../snippets/usersession.log.1}
+\centering
+\scalebox{0.33}
+{\includegraphics{../images/usersession.eps.2}}
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true,firstnumber=last]{../snippets/usersession.log.3}
+\pagebreak
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true,firstnumber=last]{../snippets/usersession.log.4}
+\scalebox{0.33}
+{\includegraphics{../images/usersession.eps.5}}
+\lstinputlisting[language=obftool,basicstyle=\small,breaklines=true,firstnumber=last]{../snippets/usersession.log.6}
 
 \end{document}

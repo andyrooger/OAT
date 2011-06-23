@@ -1,0 +1,42 @@
+--) mark --auto calc mark
+Markings for current node:
+  Writes - 
+   - a
+  Visible - Yes
+  Reads - 
+   - a
+   - arg1
+   - arg2
+   - arg3
+  Breaks - No
+
+--) reorder --current
+0: Expr - Completely marked
+
+1: Assign - Completely marked
+
+2: While - Completely marked
+
+3: Expr - Completely marked
+
+The statements can be reordered.
+
+--) reorder --best --valuer wrange
+1: Assign
+0: Expr
+2: While
+3: Expr
+
+This is the optimal chosen rearrangement. To write to the node see --edit.
+
+--) reorder --random --limit 1 --edit
+1: Assign
+0: Expr
+2: While
+3: Expr
+
+The node has been reordered.
+
+--) visualise
+OAT Visualisation is being displayed.
+To return to the command console, please quit the visualisation from its own window.
