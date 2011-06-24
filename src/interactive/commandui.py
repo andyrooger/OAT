@@ -17,8 +17,8 @@ class CommandUI(cmd.Cmd):
     def __init__(self):
         cmd.Cmd.__init__(self)
         self.prompt = "--) "
-        self.intro = ("Welcome to this little obfuscation tool.\n"
-                      "If you're confused, type help!")
+        self.intro = ("Welcome to OAT - Obfuscation and Analysis Tool!\n"
+                      "If you are confused, type help.")
 
         self._commands = {}
 
