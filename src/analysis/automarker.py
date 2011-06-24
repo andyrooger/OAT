@@ -115,14 +115,11 @@ class AutoMarker:
             elif n == "breaks":
                 marks["breaks"].update(addition["breaks"])
             elif n == "reads":
-                marks["reads"].update(addition["reads"])
+                if "writes" in needed: # we need the writes to calculate reads
+                    n_reads = addition.difference(marks["writes"])
+                    marks["reads"].update(n_reads)
             elif n == "writes":
                 marks["writes"].update(addition["writes"])
-            elif n == "indirectrw":
-                for ns in addition["indirectrw"]:
-                    nr, nw = marks["indirectrw"].get(ns, (False, False))
-                    r, w = addition["indirectrw"][ns]
-                    marks["indirectrw"][ns] = (nr or r, nw or w)
         return marks
 
 #########################################
