@@ -90,15 +90,6 @@ class AutoMarker:
 
         return result
 
-    def resolve_group(self, nodes, needed):
-        """Resolve each of the nodes in the set. Avoids pretending they are a new node."""
-
-        result = self._base_marks(needed)
-        for node in nodes:
-            n_marks = self.resolve_marks(node, needed)
-            self._combine_marks(result, n_marks, needed)
-        return result
-
     def _base_marks(self, needed):
         """Get a new dictionary containing the markings for an empty list of nodes."""
 
