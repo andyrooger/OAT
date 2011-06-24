@@ -157,7 +157,12 @@ class AutoMarker:
         elif isinstance(desc, set):
             return self._combine_all((self._run_task_description(d) for d in desc), needed)
         elif isinstance(desc, tuple):
-            return self._combine_any([self._run_task_description(d) for d in desc), needed)
+            if len(tuple) < 2:
+                return self._combine_any(
+                    [self._base_marks(needed)] + [self._run_task_description(d) for d in desc],
+                    needed)
+            else:
+                return self._combine_any((self._run_task_description(d) for d in desc), needed)
         else:
             return {} # Received an invalid task description
 
