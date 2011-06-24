@@ -386,18 +386,18 @@ def _unpack_dict(self, node, needed):
 ###################################
 
 MARK_CALCULATION = {
-    "Module": {"local": {"body"}},
-    "Interactive": {"local": {"body"}},
-    "Expression": {"local": {"body"}},
-    "Suite": {"local": {"body"}},
+    "Module": {"combine": ["body"]},
+    "Interactive": {"combine": ["body"]},
+    "Expression": {"combine": ["body"]},
+    "Suite": {"combine": ["body"]},
 
     # stmt
-    "FunctionDef": {"transform": _trans_func_decorators, "local": {"returns", "args"}},
-    "ClassDef": {"transform": _trans_class_decorators, "local": {"body", "starargs", "kwargs"}, "localg": {"bases", "keywords"}}, # Evaluates body as annotations
-    "Return": {"local": {"value"}, "add_break": {"return"}},
+    "FunctionDef": {"transform": _trans_func_decorators, "add_writes": {"name"}, "combine": ["args", "returns"]},
+    "ClassDef": {"transform": _trans_class_decorators, "add_writes": {"name"}, "combine": ["bases", "keywords", "starargs", "kwargs", "body"]},
+    "Return": {"combine": ["value"], "add_break": {"return"}},
 
-    "Delete": {"localg": {"targets"}}, # NameError covered in ctx
-    "Assign": {"localg": {"targets"}, "local": {"value"}},
+    "Delete": {"combine": ["targets"]}, # NameError covered in ctx
+    "Assign": {"combine": ["value", "targets"]},
     "AugAssign": {"transform": _trans_aug_assign},
 
     "For": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],
