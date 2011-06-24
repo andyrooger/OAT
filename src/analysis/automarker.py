@@ -241,14 +241,14 @@ class AutoMarker:
             if new_node != None:
                 return self.resolve_marks(new_node, needed)
 
-        if "known" in desc and "unknown" in desc:
-            if desc["known"].intersect(desc["unknown"]):
+        if "marks" in desc and "nomarks" in desc:
+            if desc["marks"].intersect(desc["nomarks"]):
                 return {} # Overlap invalid
 
-        if "known" in desc:
-            needed = needed.intersection(desc["known"])
-        if "unknown" in desc:
-            needed = needed.difference(desc["unknown"])
+        if "marks" in desc:
+            needed = needed.intersection(desc["marks"])
+        if "nomarks" in desc:
+            needed = needed.difference(desc["nomarks"])
 
         if "combine" in desc:
             c_marks = [node[f] for f in desc["combine"] if f in node]: # Keeps order
@@ -258,11 +258,19 @@ class AutoMarker:
             marks = self._base_marks(needed)
 
         # Marking type specific
-        if "breaks" in needed:
+        if "breaks" in needed and "breaks" in marks:
             if "rem_breaks" in desc:
                 marks["breaks"].difference_update(desc["rem_breaks"])
             if "add_breaks" in desc:
                 marks["breaks"].update(desc["add_breaks"])
+
+        if "reads" in needed and "reads" in marks:
+            if "add_reads" in desc:
+                marks["reads"].update(node[f] for f in desc["add_reads"])
+
+        if "writes" in needed and "writes" in marks:
+            if "add_writes" in desc:
+                marks["writes"].update(node[f] for f in desc["add_writes"])
 
         return marks
 
