@@ -100,21 +100,6 @@ class AutoMarker:
         except KeyError:
             raise ValueError("Unknown marking type")
 
-    def _combine_marks(self, marks, addition, needed):
-        """Modify marks to account for having also performed an execution resulting with the marks in addition."""
-
-        for n in needed:
-            if n == "visible":
-                marks["visible"] |= addition["visible"]
-            elif n == "breaks":
-                marks["breaks"].update(addition["breaks"])
-            elif n == "reads":
-                if "writes" in needed: # we need the writes to calculate reads
-                    n_reads = addition.difference(marks["writes"])
-                    marks["reads"].update(n_reads)
-            elif n == "writes":
-                marks["writes"].update(addition["writes"])
-        return marks
 
 #########################################
 # Resolution Methods                    #
@@ -158,6 +143,8 @@ class AutoMarker:
         else:
             return self._run_task_description(desc, node, needed)
 
+# Calculation / task description methods
+
     def _run_task_description(self, desc, node, needed):
         """Run the given task description on the node to generate a set of markings."""
 
@@ -170,25 +157,70 @@ class AutoMarker:
         elif isinstance(desc, set):
             return self._combine_all((self._run_task_description(d) for d in desc), needed)
         elif isinstance(desc, tuple):
-            return self._combine_any((self._run_task_description(d) for d in desc), needed)
+            return self._combine_any([self._run_task_description(d) for d in desc), needed)
         else:
             return {} # Received an invalid task description
 
     def _combine_any(self, marks, needed):
         """Combine each of the given marks assuming we could choose any one of them."""
 
-        # TODO: Correct this!
-        combined = self._base_marks(needed)
+        marks = list(marks)
+
+        # What can we calculate
+        calculates = {"visible", "breaks", "reads", "writes"}.intersection(needed)
         for m in marks:
-            self._combine_marks(combined, m, needed)
+            calculates.intersection_update(m.keys())
+        if "writes" not in calculates:
+            calculates.discard("reads")
+
+        combined = {}
+        if "visible" in calculates:
+            combined["visible"] = any(m["visible"] for m in marks)
+
+        if "breaks" in calculates:
+            combined["breaks"] = set.union(*[m["breaks"] for m in marks])
+
+        if "writes" in calculates:
+            combined["writes"] = set.union(*[m["writes"] for m in marks])
+
+        if "reads" in calulates:
+            combined["reads"] = set.union(*[m["reads"] for m in marks])
+            adding_writes = set.intersection(*[m["writes"] for m in marks])
+            adding_writes = combined["writes"].difference(adding_writes)
+            combined["reads"].update(adding_writes)
+
         return combined
 
     def _combine_sequence(self, marks, needed):
         """Combine each of the given marks in sequence."""
 
-        combined = self._base_marks(needed)
+        marks = list(marks)
+
+        # What can we calculate
+        calculates = {"visible", "breaks", "reads", "writes"}.intersection(needed)
         for m in marks:
-            self._combine_marks(combined, m, needed)
+            calculates.intersection_update(m.keys())
+        if "writes" not in calculates:
+            calculates.discard("reads")
+
+        combined = {}
+        if "visible" in calculates:
+            combined["visible"] = any(m["visible"] for m in marks)
+
+        if "breaks" in calculates:
+            combined["breaks"] = set.union(*[m["breaks"] for m in marks])
+
+        if "reads" in calculates:
+            combined["reads"] = set()
+            cumulative_writes = set()
+            for m in marks:
+                n_reads = m["reads"].difference(cumulative_writes)
+                cumulative_writes.update(m["writes"])
+                combined["reads"].update(n_reads)
+
+        if "writes" in calculates:
+            combined["writes"] = set.union(*[m["writes"] for m in marks])
+
         return combined
 
     def _combine_all(self, marks, needed):
@@ -218,12 +250,12 @@ class AutoMarker:
         if "unknown" in desc:
             needed = needed.difference(desc["unknown"])
 
-        marks = self._base_marks(needed)
-
         if "combine" in desc:
-            for field in [f for f in desc["combine"] if f in node]: # Keeps order
-                child = self.resolve_marks(node[field], needed)
-                self._combine_marks(marks, child)
+            c_marks = [node[f] for f in desc["combine"] if f in node]: # Keeps order
+            c_marks = [self.resolve_marks(c_marks[c], needed) for c in c_marks]
+            marks = self._combine_sequence(c_marks)
+        else:
+            marks = self._base_marks(needed)
 
         # Marking type specific
         if "breaks" in needed:
