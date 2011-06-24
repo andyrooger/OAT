@@ -9,7 +9,6 @@ import analysis.markers.breaks
 import analysis.markers.visible
 import analysis.markers.read
 import analysis.markers.write
-import analysis.markers.indirectrw
 
 class AutoMarker:
     """Tries to find correct markings for each node."""
@@ -42,8 +41,6 @@ class AutoMarker:
             self.defaults["reads"] = (lambda: analysis.markers.read.ReadMarker().duplicate())
         if "writes" not in self.defaults:
             self.defaults["writes"] = (lambda: analysis.markers.write.WriteMarker().duplicate())
-        if "indirectrw" not in self.defaults:
-            self.defaults["indirectrw"] = (lambda: analysis.markers.indirectrw.IndirectRWMarker().duplicate())
 
 ########################################################
 # Resolution functions                                 #
@@ -53,7 +50,7 @@ class AutoMarker:
 # - Should never alter return value from resolve_marks #
 ########################################################
 
-    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks", "reads", "writes", "indirectrw"}):
+    def resolve_marks(self, node, needed : "Set containing the markings we want." = {"visible", "breaks", "reads", "writes"}):
         """Resolve markings for a given node based on the given resolution order. Can throw UserStop"""
 
         result = {}
@@ -85,8 +82,6 @@ class AutoMarker:
                 analysis.markers.read.ReadMarker(node).set_mark(result["reads"])
             if "writes" in needed:
                 analysis.markers.write.WriteMarker(node).set_mark(result["writes"])
-            if "indirectrw" in needed:
-                analysis.markers.indirectrw.IndirectRWMarker(node).set_mark(result["indirectrw"])
 
         return result
 
@@ -98,7 +93,6 @@ class AutoMarker:
             "breaks": set(),
             "reads": set(),
             "writes": set(),
-            "indirectrw": {}
         }
 
         try:
@@ -136,7 +130,6 @@ class AutoMarker:
             "breaks": analysis.markers.breaks.BreakMarker,
             "reads": analysis.markers.read.ReadMarker,
             "writes": analysis.markers.write.WriteMarker,
-            "indirectrw": analysis.markers.indirectrw.IndirectRWMarker,
         }
 
         result = {}
@@ -157,11 +150,6 @@ class AutoMarker:
 
     def calculate_marks(self, node, needed):
         """Calculate markings for the given mark types on node."""
-
-        needed = needed.copy()
-        needed.discard("reads")
-        needed.discard("writes")
-        needed.discard("indirectrw")
 
         try:
             desc = MARK_CALCULATION[node.type()]
