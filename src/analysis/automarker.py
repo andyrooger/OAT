@@ -374,25 +374,29 @@ def _try_except_dict(node):
 
     return [d, ({"combine": ["handlers"]},), ({"combine":["orelse"]},)]
 
-def _unpack_dict(self, node, needed):
-    # Normal ctx stuff plus think about unpacking
-    d = {"localg": {"elts"}, "local": {"ctx"}}
-    if node["ctx"].type() == "Store":
-        d["add_break"] = {"except"}
-    return d
-
-def _trans_iter_only(self, node, needed):
+def _trans_iter_only(node):
     """Take node with iterator and give just the iterator call."""
     return CustomAST(ast.Call(ast.Name("iter", ast.Load()), [node["iter"]], [], None, None))
 
-def _trans_next_only(self, node, needed):
+def _trans_next_only(node):
     """Take a node with a target and an iterator supposedly written to '._.' and return the next call."""
     nxt_call = ast.Call(ast.Attribute(ast.Name("._.", ast.Load()), "next", ast.Load()), [], [], None, None)
     return CustomAST(ast.Assign([node["target"]], nxt_call))
 
-def _trans_dict_zipper(self, node, needed):
+def _trans_dict_zipper(node):
     """Transform dict keys, values to a list of all."""
     return CustomAST(n for t in zip(node["keys"], node["values"]) for n in t)
+
+def _context_sensitive(base, load={}, store={}):
+    """Returns a different dict depending on context of a node."""
+    def f(node):
+        d = {k:base[k] for k in base}
+        if node["ctx"].type() == "Load":
+            d.update(load)
+        if node["ctx"].type() == "Store":
+            d.update(store)
+        return d
+    return f
 
 ###################################
 # Actual mark calculation methods #
@@ -508,16 +512,16 @@ MARK_CALCULATION = {
     # Eval node.value
     # Now we treat like a search for a simple name in node.value
     # TODO - store and denied?
-    "Attribute": {"local": {"value", "ctx"}},
+    "Attribute": {"combine": ["value", "ctx"]},
 
     # Similar to above
     # TODO - store and denied?
-    "Subscript": {"local": {"value", "slice", "ctx"}},
+    "Subscript": {"combine": ["value", "slice", "ctx"]},
 
-    "Starred": {"local": {"value", "ctx"}},
-    "Name": {"local": {"ctx"}},
-    "List": _unpack_dict,
-    "Tuple": _unpack_dict,
+    "Starred": {"combine": ["value", "ctx"]},
+    "Name": _context_sensitive({"combine":["ctx"]}, load={"add_reads":{"id"}}, store={"add_writes":{"id"}}),
+    "List": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}), # Exception splitting
+    "Tuple": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}),
 
     # expr_context
     "Load": {"add_break": {"except"}}, # if not found
