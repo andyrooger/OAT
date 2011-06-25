@@ -65,7 +65,7 @@ class ProtectedCollection(metaclass = abc.ABCMeta):
 
 class PredicateCollection(ProtectedCollection):
     def add(self, pred, val):
-        if not issubclass(pred.type(asclass=True), ast.Expr):
+        if not issubclass(pred.type(asclass=True), ast.expr):
             raise TypeError("Predicate must be an expression.")
         # bool(pred) should evaluate to val when name inited properly
         # Won't check
@@ -73,7 +73,7 @@ class PredicateCollection(ProtectedCollection):
 
 class ExceptionCollection(ProtectedCollection):
     def add(self, expr, raises, *exc):
-        if not issubclass(expr.type(asclass=True), ast.Expr):
+        if not issubclass(expr.type(asclass=True), ast.expr):
             raise TypeError("Expr must be an expression.")
         # must raise/not raise (depending on raises) when name inited properly
         # Won't check
@@ -84,7 +84,7 @@ class ExceptionCollection(ProtectedCollection):
 
 class ExpressionCollection(ProtectedCollection):
     def add(self, expr):
-        if not issubclass(expr.type(asclass=True), ast.Expr):
+        if not issubclass(expr.type(asclass=True), ast.expr):
             raise TypeError("Expr must be an expression.")
         return self._insert(expr)
 
