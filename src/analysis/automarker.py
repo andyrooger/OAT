@@ -365,14 +365,14 @@ def _try_except_dict(node):
     # Will not catch anything unless the handler is straight except:
     # This is because it is hard to match type for a name
 
-    d = {"local": {"body"}}
+    d = {"combine": ["body"]}
 
     for h in node["handlers"]:
         if node["handlers"][h]["type"].is_empty():
             d["rem_break"] = {"except"}
             break
 
-    return [d, {"localg": {"handlers"}, "local": {"orelse"}}]
+    return [d, ({"combine": ["handlers"]},), ({"combine":["orelse"]},)]
 
 def _unpack_dict(self, node, needed):
     # Normal ctx stuff plus think about unpacking
@@ -402,7 +402,10 @@ MARK_CALCULATION = {
 
     # stmt
     "FunctionDef": {"transform": _trans_func_decorators, "add_writes": {"name"}, "combine": ["args", "returns"]},
-    "ClassDef": {"transform": _trans_class_decorators, "add_writes": {"name"}, "combine": ["bases", "keywords", "starargs", "kwargs", "body"]},
+    "ClassDef": [
+        {"transform": _trans_class_decorators, "add_writes": {"name"}, "combine": ["bases", "keywords", "starargs", "kwargs"]},
+        {"combine": ["body"], "nomarks": {"reads", "writes"}},
+    ]
     "Return": {"combine": ["value"], "add_break": {"return"}},
 
     "Delete": {"combine": ["targets"]}, # NameError covered in ctx
@@ -426,7 +429,7 @@ MARK_CALCULATION = {
         ([{"combine": ["body"], "rem_break": {"break", "continue"}}, {"combine": ["test"]}]),
         ({"combine": ["orelse"]},),
         ],
-    "If": [{"combine": {"test"}}, ({"combine":"body"}, {"combine":"orelse"})},
+    "If": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})},
 
     # TODO - think about calls made, should be:
     # Evaluate node.context_expr for now I call this e
@@ -440,9 +443,9 @@ MARK_CALCULATION = {
     #
     # We could assume same as evaluating ctx expression and executing body
     # but we will be safe
-    "With": {"known": {}},
+    "With": {"marks": {}},
 
-    "Raise": {"local": {"exc", "cause"}, "add_break": {"except"}}, # Same as evaluating the exceptions and raising
+    "Raise": {"combine": ["exc", "cause"], "add_break": {"except"}}, # Same as evaluating the exceptions and raising
     "TryExcept": _try_except_dict,
     "TryFinally": {"local": {"body", "finalbody"}}, # Same as running both try and finally body
     "Assert": {"local": {"test", "msg"}, "add_break": {"except"}}, # Eval test and msg, raise exception
