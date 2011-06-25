@@ -474,10 +474,10 @@ MARK_CALCULATION = {
     "Lambda": {"combine": ["args"]}, # Doesn't run it, just defines it. Eval args.
     "IfExp": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})],
     "Dict": {"transform": _trans_dict_zipper},
-    "Set": {"localg": {"elts"}},
-    "ListComp": {"local": {"elt"}, "localg": {"generators"}},
-    "SetComp": {"local": {"elt"}, "localg": {"generators"}},
-    "DictComp": {"local": {"key", "value"}, "localg": {"generators"}},
+    "Set": {"combine": ["elts"]},
+    "ListComp": [{"combine":["generators"]}, {"combine":["elt"]}],
+    "SetComp": [{"combine":["generators"]}, {"combine":["elt"]}],
+    "DictComp": {"combine":["generators", "value", "key"]},
 
     # Turns from: (node.elt, node.generators)
     #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
@@ -492,11 +492,11 @@ MARK_CALCULATION = {
     # del __gen
     # Too difficult, say we don't know
     # TODO - check we do not have similar problems for list/set/dict comp
-    "GeneratorExp": {"known": set()},
+    "GeneratorExp": {"marks": set()},
 
     # PEP 0342 describes yield expression.
     # Not mentioned to be accepted but experimentation tells me it probably was.
-    "Yield": {"local": {"value"}, "add_break": {"except", "yield"}},
+    "Yield": {"combine": ["value"], "add_break": {"except", "yield"}},
 
     "Compare": {"local": {"left"}, "localg": {"comparators"}, "add_break": {"except"}},
     "Call": {"known": set()}, # No idea what we'd be calling # TODO - think harder
