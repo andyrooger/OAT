@@ -381,6 +381,15 @@ def _unpack_dict(self, node, needed):
         d["add_break"] = {"except"}
     return d
 
+def _trans_iter_only(self, node, needed):
+    """Take node with iterator and give just the iterator call."""
+    return CustomAST(ast.Call(ast.Name("iter", ast.Load()), [node["iter"]], [], None, None))
+
+def _trans_next_only(self, node, needed):
+    """Take a node with a target and an iterator supposedly written to '._.' and return the next call."""
+    nxt_call = ast.Call(ast.Attribute(ast.Name("._.", ast.Load()), "next", ast.Load()), [], [], None, None)
+    return CustomAST(ast.Assign([node["target"]], nxt_call))
+
 ###################################
 # Actual mark calculation methods #
 ###################################
@@ -400,7 +409,18 @@ MARK_CALCULATION = {
     "Assign": {"combine": ["value", "targets"]},
     "AugAssign": {"transform": _trans_aug_assign},
 
-    "For": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"iter", "orelse"}, "add_break": {"except"}}],
+    # ._. = iter(iter)
+    # while notbreak:
+    #   try:
+    #     target = ._..next()
+    #   except StopIteration: do orelse
+    "For": [
+        {"transform": _trans_iter_only},
+        {"transform": _trans_next_only},
+        ([{"combine": ["body"], "rem_breaks":{"continue", "break"}}, {"transform": _trans_next_only}],),
+        ({"combine": ["orelse"]},)
+        ],
+
     "While": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],
     "If": {"local": {"test", "body", "orelse"}},
 
