@@ -390,6 +390,10 @@ def _trans_next_only(self, node, needed):
     nxt_call = ast.Call(ast.Attribute(ast.Name("._.", ast.Load()), "next", ast.Load()), [], [], None, None)
     return CustomAST(ast.Assign([node["target"]], nxt_call))
 
+def _trans_dict_zipper(self, node, needed):
+    """Transform dict keys, values to a list of all."""
+    return CustomAST(n for t in zip(node["keys"], node["values"]) for n in t)
+
 ###################################
 # Actual mark calculation methods #
 ###################################
@@ -464,12 +468,12 @@ MARK_CALCULATION = {
     "Continue": {"add_break": {"continue"}},
 
     # expr
-    "BoolOp": {"localg": {"values"}}, # Don't see that boolop can throw exceptions, it doesn't care about type etc
-    "BinOp": {"local": {"left", "right"}, "add_break": {"except"}}, # As above with extra exception
-    "UnaryOp": {"local": {"operand"}, "add_break": {"except"}},
-    "Lambda": {"local": {"args"}}, # Doesn't run it, just defines it. Eval args.
-    "IfExp": {"local": {"test", "body", "orelse"}},
-    "Dict": {"localg": {"keys", "values"}},
+    "BoolOp": ({"combine": ["values"]},), # Don't see that boolop can throw exceptions, it doesn't care about type etc
+    "BinOp": {"combine": ["left", "right"], "add_break": {"except"}}, # As above with extra exception
+    "UnaryOp": {"combine": ["operand"], "add_break": {"except"}},
+    "Lambda": {"combine": ["args"]}, # Doesn't run it, just defines it. Eval args.
+    "IfExp": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})],
+    "Dict": {"transform": _trans_dict_zipper},
     "Set": {"localg": {"elts"}},
     "ListComp": {"local": {"elt"}, "localg": {"generators"}},
     "SetComp": {"local": {"elt"}, "localg": {"generators"}},
