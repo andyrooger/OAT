@@ -374,7 +374,7 @@ def _try_except_dict(node):
             d["rem_break"] = {"except"}
             break
 
-    return [d, ({"combine": ["handlers"]},), ({"combine":["orelse"]},)]
+    return [d, ("handlers",), ("orelse",)]
 
 def _trans_iter_only(node):
     """Take node with iterator and give just the iterator call."""
@@ -405,10 +405,10 @@ def _context_sensitive(base, load={}, store={}):
 ###################################
 
 MARK_CALCULATION = {
-    "Module": {"combine": ["body"]},
-    "Interactive": {"combine": ["body"]},
-    "Expression": {"combine": ["body"]},
-    "Suite": {"combine": ["body"]},
+    "Module": "body",
+    "Interactive": "body",
+    "Expression": "body",
+    "Suite": "body",
 
     # stmt
     "FunctionDef": {"transform": _trans_func_decorators, "add_writes": {"name"}, "combine": ["args", "returns"]},
@@ -418,8 +418,8 @@ MARK_CALCULATION = {
     ]
     "Return": {"combine": ["value"], "add_break": {"return"}},
 
-    "Delete": {"combine": ["targets"]}, # NameError covered in ctx
-    "Assign": {"combine": ["value", "targets"]},
+    "Delete": "targets", # NameError covered in ctx
+    "Assign": ["value", "targets"],
     "AugAssign": {"transform": _trans_aug_assign},
 
     # ._. = iter(iter)
@@ -431,15 +431,15 @@ MARK_CALCULATION = {
         {"transform": _trans_iter_only},
         {"transform": _trans_next_only},
         ([{"combine": ["body"], "rem_breaks":{"continue", "break"}}, {"transform": _trans_next_only}],),
-        ({"combine": ["orelse"]},)
+        ("orelse",)
         ],
 
     "While": [
-        {"combine": ["test"]},
-        ([{"combine": ["body"], "rem_breaks": {"break", "continue"}}, {"combine": ["test"]}]),
-        ({"combine": ["orelse"]},),
+        "test",
+        ([{"combine": ["body"], "rem_breaks": {"break", "continue"}}, "test"]),
+        ("orelse",),
         ],
-    "If": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})},
+    "If": ["test", ("body", "orelse")],
 
     # TODO - think about calls made, should be:
     # Evaluate node.context_expr for now I call this e
@@ -457,9 +457,9 @@ MARK_CALCULATION = {
 
     "Raise": {"combine": ["exc", "cause"], "add_breaks": {"except"}}, # Same as evaluating the exceptions and raising
     "TryExcept": _try_except_dict,
-    "TryFinally": {"combine": ["body", "finalbody"]}, # Same as running both try and finally body
+    "TryFinally": ["body", "finalbody"], # Same as running both try and finally body
     "Assert": [
-        {"combine": ["test"]},
+        "test",
         ({"combine": ["msg"], "add_breaks": {"except"}},)
         ], # Eval test and msg, raise exception
 
@@ -468,22 +468,22 @@ MARK_CALCULATION = {
 
     "Global": (), # Any exceptions are thrown at parsing. Not runtime.
     "Nonlocal": (), # Any exceptions are thrown at parsing. Not runtime.
-    "Expr": {"combine": ["value"]},
+    "Expr": "value",
     "Pass": (),
     "Break": {"add_breaks": {"break"}},
     "Continue": {"add_breaks": {"continue"}},
 
     # expr
-    "BoolOp": ({"combine": ["values"]},), # Don't see that boolop can throw exceptions, it doesn't care about type etc
+    "BoolOp": ("values",), # Don't see that boolop can throw exceptions, it doesn't care about type etc
     "BinOp": {"combine": ["left", "right"], "add_breaks": {"except"}}, # As above with extra exception
     "UnaryOp": {"combine": ["operand"], "add_breaks": {"except"}},
-    "Lambda": {"combine": ["args"]}, # Doesn't run it, just defines it. Eval args.
-    "IfExp": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})],
+    "Lambda": "args", # Doesn't run it, just defines it. Eval args.
+    "IfExp": ["test", ("body", "orelse")],
     "Dict": {"transform": _trans_dict_zipper},
-    "Set": {"combine": ["elts"]},
-    "ListComp": [{"combine":["generators"]}, {"combine":["elt"]}],
-    "SetComp": [{"combine":["generators"]}, {"combine":["elt"]}],
-    "DictComp": {"combine":["generators", "value", "key"]},
+    "Set": "elts",
+    "ListComp": ["generators", "elt"],
+    "SetComp": ["generators", "elt"],
+    "DictComp": ["generators", "value", "key"],
 
     # Turns from: (node.elt, node.generators)
     #              where generators are for x1 in g1 if b1 for x2 in g2 if b2 ...
@@ -504,7 +504,7 @@ MARK_CALCULATION = {
     # Not mentioned to be accepted but experimentation tells me it probably was.
     "Yield": {"combine": ["value"], "add_breaks": {"except", "yield"}},
 
-    "Compare": [{"combine": ["left"], "add_breaks": {"except"}}, ({"combine": ["comparators"]},)],
+    "Compare": [{"combine": ["left"], "add_breaks": {"except"}}, ("comparators",)],
     "Call": {"marks": set()}, # No idea what we'd be calling # TODO - think harder
     "Num": {},
     "Str": {},
@@ -514,29 +514,29 @@ MARK_CALCULATION = {
     # Eval node.value
     # Now we treat like a search for a simple name in node.value
     # TODO - store and denied?
-    "Attribute": {"combine": ["value", "ctx"]},
+    "Attribute": ["value", "ctx"],
 
     # Similar to above
     # TODO - store and denied?
-    "Subscript": {"combine": ["value", "slice", "ctx"]},
+    "Subscript": ["value", "slice", "ctx"],
 
-    "Starred": {"combine": ["value", "ctx"]},
+    "Starred": ["value", "ctx"],
     "Name": _context_sensitive({"combine":["ctx"]}, load={"add_reads":{"id"}}, store={"add_writes":{"id"}}),
     "List": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}), # Exception splitting
     "Tuple": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}),
 
     # expr_context
     "Load": {"add_breaks": {"except"}}, # if not found
-    "Store": {}, # TODO - think about storing to a class and being denied
+    "Store": (), # TODO - think about storing to a class and being denied
     "Del": {"add_breaks": {"except"}}, # if not found
-    "AugLoad": {"known": set()}, # Don't appear to be used, so don't know
-    "AugStore": {"known": set()}, # Don't appear to be used, so don't know
-    "Param": {"known": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
+    "AugLoad": {"marks": set()}, # Don't appear to be used, so don't know
+    "AugStore": {"marks": set()}, # Don't appear to be used, so don't know
+    "Param": {"marks": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
 
     # slice
-    "Slice": {"local": {"lower", "upper", "step"}},
-    "ExtSlice": {"local": {"dims"}},
-    "Index": {"local": {"value"}},
+    "Slice": ["lower", "upper", "step"],
+    "ExtSlice": "dims",
+    "Index": "value",
 
 # These binary operators are not currently used by me
 #  - the boolop or binop nodes already covered it
@@ -581,7 +581,7 @@ MARK_CALCULATION = {
     "NotIn": None,
 
     # comprehension
-    "comprehension": {"local": {"target", "iter"}, "localg": {"ifs"}, "add_break": {"except"}}, # for non-iterable iter 
+    "comprehension": {"combine": ["target", "iter", "ifs"], "add_break": {"except"}}, # for non-iterable iter
 
     # excepthandler
     "ExceptHandler": {"local": {"type", "body"}},
