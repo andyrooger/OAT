@@ -163,6 +163,8 @@ class AutoMarker:
                     needed)
             else:
                 return self._combine_any((self._run_task_description(d) for d in desc), needed)
+        elif isinstance(desc, str) and desc in node:
+            return self.resolve_marks(node[desc])
         else:
             return {} # Received an invalid task description
 
