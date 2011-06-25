@@ -17,7 +17,7 @@ class BranchCommand(commandui.Command):
     def __init__(self, parsecmd, explorecmd):
         commandui.Command.__init__(self, "branch")
 
-        self._opts.add_argument("name", default=None, nargs="?",
+        self._opts.add_argument("name", default=None, nargs="?", type=str,
                                 help="Name of a brancher collection.")
 #        self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
 #                                help="How to display statements, either by index, type or the full code.")
@@ -43,8 +43,23 @@ class BranchCommand(commandui.Command):
         self._related_parsecmd = parsecmd
         self._related_explorecmd = explorecmd
 
+        self._branchers = {}
+
     def run(self, args):
         """Extract part of the current block of statements into a separate branch."""
+
+        if args.name == None:
+            if not self._branchers:
+                print("There are no branchers available yet. You must create some.")
+                return
+            else:
+                print("Available branchers are:")
+                for brancher in self._branchers:
+                    print("  " + brancher)
+                return
+
+        if args.name not in self._branchers:
+            print("The brancher requested does not exist: " + args.name)
 
 #        if args.predicate != None:
 #        if args.exception != None:
