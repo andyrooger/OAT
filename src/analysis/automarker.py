@@ -447,16 +447,19 @@ MARK_CALCULATION = {
 
     "Raise": {"combine": ["exc", "cause"], "add_break": {"except"}}, # Same as evaluating the exceptions and raising
     "TryExcept": _try_except_dict,
-    "TryFinally": {"local": {"body", "finalbody"}}, # Same as running both try and finally body
-    "Assert": {"local": {"test", "msg"}, "add_break": {"except"}}, # Eval test and msg, raise exception
+    "TryFinally": {"combine": ["body", "finalbody"]}, # Same as running both try and finally body
+    "Assert": [
+        {"combine": ["test"]},
+        ({"combine": ["msg"], "add_break": {"except"}},)
+        ], # Eval test and msg, raise exception
 
-    "Import": {"known": set()}, # Can do anything we could import! # TODO - Check imported module?
-    "ImportFrom": {"known": set()}, # Again we have no idea! # TODO - Check imported module?
+    "Import": {"marks": set()}, # Can do anything we could import! # TODO - Check imported module?
+    "ImportFrom": {"marks": set()}, # Again we have no idea! # TODO - Check imported module?
 
-    "Global": {}, # Any exceptions are thrown at parsing. Not runtime.
-    "Nonlocal": {}, # Any exceptions are thrown at parsing. Not runtime.
-    "Expr": {"local": {"value"}},
-    "Pass": {},
+    "Global": (), # Any exceptions are thrown at parsing. Not runtime.
+    "Nonlocal": (), # Any exceptions are thrown at parsing. Not runtime.
+    "Expr": {"combine": ["value"]},
+    "Pass": (),
     "Break": {"add_break": {"break"}},
     "Continue": {"add_break": {"continue"}},
 
