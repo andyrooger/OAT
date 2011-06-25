@@ -32,6 +32,17 @@ class Brancher:
     def while_branch(self, statements, start, end):
         pass
 
+    def __str__(self):
+        desc = "== Brancher for " + self._name + " =="
+        for n in ["predicates", "exceptions", "initial",
+                  "preserving", "destroying", "randomising"]:
+            desc += "\n-- " + n.title() + " --\n"
+            col = getattr(self, n)
+            if not len(col):
+                desc += "  Empty\n"
+            for item in col:
+                desc += "  " + item + ": " + str(col[item]) + "\n"
+        return desc
 
 class ProtectedCollection(metaclass = abc.ABCMeta):
     """Base for most of the collections in Brancher."""
