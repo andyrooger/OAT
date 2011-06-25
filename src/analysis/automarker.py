@@ -434,7 +434,7 @@ MARK_CALCULATION = {
 
     "While": [
         {"combine": ["test"]},
-        ([{"combine": ["body"], "rem_break": {"break", "continue"}}, {"combine": ["test"]}]),
+        ([{"combine": ["body"], "rem_breaks": {"break", "continue"}}, {"combine": ["test"]}]),
         ({"combine": ["orelse"]},),
         ],
     "If": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})},
@@ -453,12 +453,12 @@ MARK_CALCULATION = {
     # but we will be safe
     "With": {"marks": {}},
 
-    "Raise": {"combine": ["exc", "cause"], "add_break": {"except"}}, # Same as evaluating the exceptions and raising
+    "Raise": {"combine": ["exc", "cause"], "add_breaks": {"except"}}, # Same as evaluating the exceptions and raising
     "TryExcept": _try_except_dict,
     "TryFinally": {"combine": ["body", "finalbody"]}, # Same as running both try and finally body
     "Assert": [
         {"combine": ["test"]},
-        ({"combine": ["msg"], "add_break": {"except"}},)
+        ({"combine": ["msg"], "add_breaks": {"except"}},)
         ], # Eval test and msg, raise exception
 
     "Import": {"marks": set()}, # Can do anything we could import! # TODO - Check imported module?
@@ -468,13 +468,13 @@ MARK_CALCULATION = {
     "Nonlocal": (), # Any exceptions are thrown at parsing. Not runtime.
     "Expr": {"combine": ["value"]},
     "Pass": (),
-    "Break": {"add_break": {"break"}},
-    "Continue": {"add_break": {"continue"}},
+    "Break": {"add_breaks": {"break"}},
+    "Continue": {"add_breaks": {"continue"}},
 
     # expr
     "BoolOp": ({"combine": ["values"]},), # Don't see that boolop can throw exceptions, it doesn't care about type etc
-    "BinOp": {"combine": ["left", "right"], "add_break": {"except"}}, # As above with extra exception
-    "UnaryOp": {"combine": ["operand"], "add_break": {"except"}},
+    "BinOp": {"combine": ["left", "right"], "add_breaks": {"except"}}, # As above with extra exception
+    "UnaryOp": {"combine": ["operand"], "add_breaks": {"except"}},
     "Lambda": {"combine": ["args"]}, # Doesn't run it, just defines it. Eval args.
     "IfExp": [{"combine": ["test"]}, ({"combine":["body"]}, {"combine":["orelse"]})],
     "Dict": {"transform": _trans_dict_zipper},
@@ -500,9 +500,9 @@ MARK_CALCULATION = {
 
     # PEP 0342 describes yield expression.
     # Not mentioned to be accepted but experimentation tells me it probably was.
-    "Yield": {"combine": ["value"], "add_break": {"except", "yield"}},
+    "Yield": {"combine": ["value"], "add_breaks": {"except", "yield"}},
 
-    "Compare": [{"combine": ["left"], "add_break": {"except"}}, ({"combine": ["comparators"]},)],
+    "Compare": [{"combine": ["left"], "add_breaks": {"except"}}, ({"combine": ["comparators"]},)],
     "Call": {"marks": set()}, # No idea what we'd be calling # TODO - think harder
     "Num": {},
     "Str": {},
@@ -524,9 +524,9 @@ MARK_CALCULATION = {
     "Tuple": _context_sensitive({"combine":["ctx"]}, store={"add_breaks":{"except"}}),
 
     # expr_context
-    "Load": {"add_break": {"except"}}, # if not found
+    "Load": {"add_breaks": {"except"}}, # if not found
     "Store": {}, # TODO - think about storing to a class and being denied
-    "Del": {"add_break": {"except"}}, # if not found
+    "Del": {"add_breaks": {"except"}}, # if not found
     "AugLoad": {"known": set()}, # Don't appear to be used, so don't know
     "AugStore": {"known": set()}, # Don't appear to be used, so don't know
     "Param": {"known": set()}, # Apparently used by a in 'def f(a): pass', seems to not be though
