@@ -415,7 +415,7 @@ MARK_CALCULATION = {
     "ClassDef": [
         {"transform": _trans_class_decorators, "add_writes": {"name"}, "combine": ["bases", "keywords", "starargs", "kwargs"]},
         {"combine": ["body"], "nomarks": {"reads", "writes"}},
-    ]
+    ],
     "Return": {"combine": ["value"], "add_break": {"return"}},
 
     "Delete": "targets", # NameError covered in ctx
