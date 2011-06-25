@@ -3,6 +3,10 @@ Tools to allow branching sections of the source code.
 
 """
 
+import abc
+
+from .customast import CustomAST
+
 class Brancher:
     """Holds information used to perform a particular type of branching."""
 
@@ -27,3 +31,33 @@ class Brancher:
     def while_branch(self, statements, start, end):
         pass
 
+
+class ProtectedCollection(metaclass = abc.ABCMeta):
+    """Base for most of the collections in Brancher."""
+
+    def __init__(self):
+        self._collection = {}
+
+    @abc.abstractmethod
+    def add(self): pass
+
+    def _insert(self, item):
+        key = 0
+        if self._collection:
+            key = max(self._collection.keys())+1
+        self._collection[key] = item
+        return key
+
+    def __getitem__(self, key):
+        return self._collection[key]
+
+    def __delitem__(self, key):
+        del self._collection[key]
+
+    # No __setitem__, we use add for that
+
+    def __iter__(self):
+        return iter(self._collection)
+
+    def __len__(self):
+        return len(self._collection)
