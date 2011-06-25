@@ -23,17 +23,17 @@ class BranchCommand(commandui.Command):
 #        self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
 #                                help="How to display statements, either by index, type or the full code.")
         actions = self._opts.add_mutually_exclusive_group()
-        actions.add_argument("-p", "--predicate", action="store", type=int, default=None,
+        actions.add_argument("-p", "--predicate", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate in this brancher.")
-        actions.add_argument("-e", "--exception", action="store", type=int, default=None,
+        actions.add_argument("-e", "--exception", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter an exception causing expression in this brancher.")
-        actions.add_argument("-i", "--initial", action="store", type=int, default=None,
+        actions.add_argument("-i", "--initial", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter an initial statement for this brancher.")
-        actions.add_argument("--preserves", action="store", type=int, default=None,
+        actions.add_argument("--preserves", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate preserving statement for this brancher.")
-        actions.add_argument("-d", "--destroys", action="store", type=int, default=None,
+        actions.add_argument("-d", "--destroys", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate unstabilising statement for this brancher.")
-        actions.add_argument("-r", "--randomises", action="store", type=int, default=None,
+        actions.add_argument("-r", "--randomises", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate randomising statement for this brancher.")
         actions.add_argument("-s", "--save", action="store_true", default=False,
                              help="Save a brancher object.")
@@ -62,16 +62,28 @@ class BranchCommand(commandui.Command):
         if args.name not in self._branchers:
             if args.create:
                 self._branchers[args.name] = Brancher(args.name)
+                print("Brancher created: " + args.name)
             else:
                 print("The brancher requested does not exist: " + args.name)
                 return
 
-#        if args.predicate != None:
-#        if args.exception != None:
-#        if args.initial != None:
-#        if args.preserves != None:
-#        if args.destroys != None:
-#        if args.randomises != None:
+        brancher = self._branchers[args.name]
+
+        # Are we editing the brancher?
+        for arg in {"predicate", "exception", "initial", "preserves", "destroys", "randomises"}:
+            val = getattr(args, arg)
+            if val != None:
+                self._brancher_edit(brancher, arg, val, args)
+                return # updating the branch
+
+        for arg in {"load", "save"}:
+            if getattr(args, arg):
+                return # Loading or saving
+
+        # Must be asking about the brancher
+
+        print(brancher)
+        return
 
 #        # Get action
 #        do = "best" if args.do == None else args.do
@@ -148,6 +160,28 @@ class BranchCommand(commandui.Command):
 #                    print()
 #
 #        self._related_parsecmd.ast.augmented = True
+
+    def _brancher_edit(self, brancher, category, info, args):
+        """Deal with a request for part of a specific brancher."""
+
+        if info is True: # because 1 == True
+            # Particular creation function
+            return
+        else:
+            attrib = {
+                "predicate": "predicates",
+                "exception": "exceptions",
+                "initial": "initial",
+                "preserves": "preserving",
+                "destroys": "destroying",
+                "randomises": "randomising"
+            }[category]
+            try:
+                item = getattr(brancher, attrib)[info]
+                print(attrib.title() + " " + str(info) + ":")
+                print("  " + str(item))
+            except KeyError:
+                print("Could not find ID: " + str(info))
 
     def _code_input(self, prompt, expr):
         try:
