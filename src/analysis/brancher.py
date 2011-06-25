@@ -4,6 +4,7 @@ Tools to allow branching sections of the source code.
 """
 
 import abc
+import ast
 
 from .customast import CustomAST
 
@@ -12,7 +13,7 @@ class Brancher:
 
     def __init__(self, name):
         self._name = name
-        self.predicates = None
+        self.predicates = PredicateCollection()
         self.exceptions = None
         self.initial = None
         self.preserving = None
@@ -61,3 +62,11 @@ class ProtectedCollection(metaclass = abc.ABCMeta):
 
     def __len__(self):
         return len(self._collection)
+
+class PredicateCollection(ProtectedCollection):
+    def add(self, pred, val):
+        if not issubclass(pred.type(asclass=True), ast.Expr):
+            raise TypeError("Predicate must be an expression.")
+        # bool(pred) should evaluate to val when name inited properly
+        # Won't check
+        return self._insert((pred, bool(val)))
