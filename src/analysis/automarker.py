@@ -4,6 +4,7 @@ Contains code for auto-marking AST nodes.
 """
 
 import ast
+from .customast import CustomAST
 
 import analysis.markers.breaks
 import analysis.markers.visible
@@ -153,16 +154,16 @@ class AutoMarker:
         elif hasattr(desc, "__call__"):
             return self._run_task_description(desc(node), node, needed)
         elif isinstance(desc, list):
-            return self._combine_sequence((self._run_task_description(d) for d in desc), needed)
+            return self._combine_sequence((self._run_task_description(d, node, needed) for d in desc), needed)
         elif isinstance(desc, set):
-            return self._combine_all((self._run_task_description(d) for d in desc), needed)
+            return self._combine_all((self._run_task_description(d, node, needed) for d in desc), needed)
         elif isinstance(desc, tuple):
-            if len(tuple) < 2:
+            if len(desc) < 2:
                 return self._combine_any(
-                    [self._base_marks(needed)] + [self._run_task_description(d) for d in desc],
+                    [self._base_marks(needed)] + [self._run_task_description(d, node, needed) for d in desc],
                     needed)
             else:
-                return self._combine_any((self._run_task_description(d) for d in desc), needed)
+                return self._combine_any((self._run_task_description(d, node, needed) for d in desc), needed)
         elif isinstance(desc, str) and desc in node:
             return self.resolve_marks(node[desc])
         else:
@@ -190,7 +191,7 @@ class AutoMarker:
         if "writes" in calculates:
             combined["writes"] = set.union(*[m["writes"] for m in marks])
 
-        if "reads" in calulates:
+        if "reads" in calculates:
             combined["reads"] = set.union(*[m["reads"] for m in marks])
             adding_writes = set.intersection(*[m["writes"] for m in marks])
             adding_writes = combined["writes"].difference(adding_writes)
@@ -259,8 +260,11 @@ class AutoMarker:
 
         if "combine" in desc:
             c_marks = [node[f] for f in desc["combine"] if f in node and not node[f].is_empty()] # Keeps order
-            c_marks = [self.resolve_marks(c_marks[c], needed) for c in c_marks]
-            marks = self._combine_sequence(c_marks)
+            c_marks = [self.resolve_marks(c, needed) for c in c_marks]
+            if c_marks:
+                marks = self._combine_sequence(c_marks, needed)
+            else:
+                marks = self._base_marks(needed)
         else:
             marks = self._base_marks(needed)
 
@@ -273,11 +277,11 @@ class AutoMarker:
 
         if "reads" in needed and "reads" in marks:
             if "add_reads" in desc:
-                marks["reads"].update(node[f] for f in desc["add_reads"])
+                marks["reads"].update(node[f].node() for f in desc["add_reads"])
 
         if "writes" in needed and "writes" in marks:
             if "add_writes" in desc:
-                marks["writes"].update(node[f] for f in desc["add_writes"])
+                marks["writes"].update(node[f].node() for f in desc["add_writes"])
 
         return marks
 
@@ -313,7 +317,7 @@ def _trans_func_decorators(node):
     assname = CustomAST(ast.Name(node["name"], ast.Store()))
     calls = CustomAST(ast.Name(node["name"], ast.Load()))
     dlist = node["decorator_list"]
-    for dec in reversed(dlist):
+    for dec in reversed(list(dlist.ordered_children())):
         calls = ast.Call(dlist[dec], [calls], [], None, None)
         calls = CustomAST(calls)
     return CustomAST([func, ast.Assign([assname], calls)])
@@ -387,7 +391,7 @@ def _trans_next_only(node):
 
 def _trans_dict_zipper(node):
     """Transform dict keys, values to a list of all."""
-    return CustomAST(n for t in zip(node["keys"], node["values"]) for n in t)
+    return CustomAST([n for t in zip(node["keys"], node["values"]) for n in t])
 
 def _context_sensitive(base, load={}, store={}):
     """Returns a different dict depending on context of a node."""
@@ -402,7 +406,7 @@ def _context_sensitive(base, load={}, store={}):
 
 def _list_dict(node):
     """Returns a task desc holding the list's children."""
-    return list(node.ordered_children())
+    return list(node.ordered_children()) if len(node) else ()
 
 ###################################
 # Actual mark calculation methods #
