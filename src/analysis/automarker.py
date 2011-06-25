@@ -426,7 +426,7 @@ MARK_CALCULATION = {
         ([{"combine": ["body"], "rem_break": {"break", "continue"}}, {"combine": ["test"]}]),
         ({"combine": ["orelse"]},),
         ],
-    "If": {"local": {"test", "body", "orelse"}},
+    "If": [{"combine": {"test"}}, ({"combine":"body"}, {"combine":"orelse"})},
 
     # TODO - think about calls made, should be:
     # Evaluate node.context_expr for now I call this e
