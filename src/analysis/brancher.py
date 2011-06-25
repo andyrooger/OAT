@@ -16,9 +16,9 @@ class Brancher:
         self.predicates = PredicateCollection()
         self.exceptions = ExceptionCollection()
         self.initial = ExpressionCollection()
-        self.preserving = None
-        self.destroying = None
-        self.randomising = None
+        self.preserving = StatementCollection()
+        self.destroying = StatementCollection()
+        self.randomising = StatementCollection()
 
     def if_branch(self, statements, start, end):
         pass
@@ -87,3 +87,9 @@ class ExpressionCollection(ProtectedCollection):
         if not issubclass(expr.type(asclass=True), ast.Expr):
             raise TypeError("Expr must be an expression.")
         return self._insert(expr)
+
+class StatementCollection(ProtectedCollection):
+    def add(self, stmt):
+        if not issubclass(expr.type(asclass=True), ast.stmt):
+            raise TypeError("Stmt must be a statement.")
+        return self._insert(stmt)
