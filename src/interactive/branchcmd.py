@@ -46,6 +46,13 @@ class BranchCommand(commandui.Command):
     def run(self, args):
         """Extract part of the current block of statements into a separate branch."""
 
+#        if args.predicate != None:
+#        if args.exception != None:
+#        if args.initial != None:
+#        if args.preserves != None:
+#        if args.destroys != None:
+#        if args.randomises != None:
+
 #        # Get action
 #        do = "best" if args.do == None else args.do
 #
@@ -121,3 +128,28 @@ class BranchCommand(commandui.Command):
 #                    print()
 #
 #        self._related_parsecmd.ast.augmented = True
+
+    def _code_input(self, prompt, expr):
+        try:
+            source = input(prompt)
+        except EOFError:
+            print()
+            return None
+
+        if expr:
+            try:
+                parsed = ast.parse(source, mode="eval")
+            except SyntaxError as exc:
+                print("Expression could not be parsed: " + str(exc))
+                return None
+            return exc.body
+        else: # we want a statement
+            try:
+                parsed = ast.parse(source, mode="exec")
+            except SyntaxError as exc:
+                print("Statement could not be parsed: " + str(exc))
+                return None
+            if len(parsed.body) != 1:
+                print("Source does not represent a single statement.")
+                return None
+            return parsed.body[0]
