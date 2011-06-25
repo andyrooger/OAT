@@ -11,6 +11,7 @@ from . import explorecmd
 from . import reordercmd
 from . import markcmd
 from . import visualisecmd
+from . import branchcmd
 
 class SolidConsole(commandui.CommandUI):
     """Solid command class."""
@@ -24,9 +25,11 @@ class SolidConsole(commandui.CommandUI):
         reorder = reordercmd.ReorderCommand(parse, explore)
         mark = markcmd.MarkCommand(parse, explore)
         visualise = visualisecmd.VisualiseCommand(parse, explore)
+        branch = branchcmd.BranchCommand(parse, explore)
         self.add_command(parse)
         self.add_command(format)
         self.add_command(explore)
         self.add_command(reorder)
         self.add_command(mark)
         self.add_command(visualise)
+        self.add_command(branch)
