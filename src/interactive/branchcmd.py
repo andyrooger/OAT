@@ -7,8 +7,7 @@ import ast
 
 from . import commandui
 
-from analysis import brancher
-
+from analysis.brancher import Brancher
 from analysis.customast import CustomAST
 
 class BranchCommand(commandui.Command):
@@ -19,6 +18,8 @@ class BranchCommand(commandui.Command):
 
         self._opts.add_argument("name", default=None, nargs="?", type=str,
                                 help="Name of a brancher collection.")
+        self._opts.add_argument("-c", "--create", action="store_true", default=False,
+                                help="Create brancher if it does not exist.")
 #        self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
 #                                help="How to display statements, either by index, type or the full code.")
         actions = self._opts.add_mutually_exclusive_group()
@@ -59,7 +60,11 @@ class BranchCommand(commandui.Command):
                 return
 
         if args.name not in self._branchers:
-            print("The brancher requested does not exist: " + args.name)
+            if args.create:
+                self._branchers[args.name] = Brancher(args.name)
+            else:
+                print("The brancher requested does not exist: " + args.name)
+                return
 
 #        if args.predicate != None:
 #        if args.exception != None:
