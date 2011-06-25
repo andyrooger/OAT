@@ -584,19 +584,19 @@ MARK_CALCULATION = {
     "comprehension": {"combine": ["target", "iter", "ifs"], "add_break": {"except"}}, # for non-iterable iter
 
     # excepthandler
-    "ExceptHandler": {"local": {"type", "body"}},
+    "ExceptHandler": ["type", ("body",)],
 
     # arguments
-    "arguments": {"localg": {"args", "kwonlyargs", "defaults", "kw_defaults"}, "local": {"varargannotation", "kwargannotation"}},
+    "arguments": ["kw_defaults", "defaults", "args", "kwonlyargs", "varargannotation", "kwargannotation"],
 
     # arg
-    "arg": {"local": {"annotation"}},
+    "arg": "annotation",
 
     # keyword
-    "keyword": {"local": {"value"}},
+    "keyword": "value",
 
     # alias
-    "alias": {},
+    "alias": {"marks": set()},
 }
 
 class UserStop(Exception): pass
