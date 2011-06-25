@@ -15,7 +15,7 @@ class Brancher:
         self._name = name
         self.predicates = PredicateCollection()
         self.exceptions = ExceptionCollection()
-        self.initial = None
+        self.initial = ExpressionCollection()
         self.preserving = None
         self.destroying = None
         self.randomising = None
@@ -81,3 +81,9 @@ class ExceptionCollection(ProtectedCollection):
             if not isinstance(e, str):
                 raise TypeError("Exception names must be strings.")
         return self._insert((expr, bool(raises), list(exc)))
+
+class ExpressionCollection(ProtectedCollection):
+    def add(self, expr):
+        if not issubclass(expr.type(asclass=True), ast.Expr):
+            raise TypeError("Expr must be an expression.")
+        return self._insert(expr)
