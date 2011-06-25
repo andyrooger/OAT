@@ -258,7 +258,7 @@ class AutoMarker:
             needed = needed.difference(desc["nomarks"])
 
         if "combine" in desc:
-            c_marks = [node[f] for f in desc["combine"] if f in node and not node[f].is_empty()]: # Keeps order
+            c_marks = [node[f] for f in desc["combine"] if f in node and not node[f].is_empty()] # Keeps order
             c_marks = [self.resolve_marks(c_marks[c], needed) for c in c_marks]
             marks = self._combine_sequence(c_marks)
         else:
