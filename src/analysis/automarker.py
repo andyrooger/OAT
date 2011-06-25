@@ -400,6 +400,10 @@ def _context_sensitive(base, load={}, store={}):
         return d
     return f
 
+def _list_dict(node):
+    """Returns a task desc holding the list's children."""
+    return list(node.ordered_children())
+
 ###################################
 # Actual mark calculation methods #
 ###################################
@@ -597,6 +601,9 @@ MARK_CALCULATION = {
 
     # alias
     "alias": {"marks": set()},
+
+    # LISTS!
+    "list": _list_dict,
 }
 
 class UserStop(Exception): pass
