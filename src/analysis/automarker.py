@@ -421,7 +421,11 @@ MARK_CALCULATION = {
         ({"combine": ["orelse"]},)
         ],
 
-    "While": [{"local": {"body"}, "rem_break": {"break", "continue"}}, {"local": {"test", "orelse"}}],
+    "While": [
+        {"combine": ["test"]},
+        ([{"combine": ["body"], "rem_break": {"break", "continue"}}, {"combine": ["test"]}]),
+        ({"combine": ["orelse"]},),
+        ],
     "If": {"local": {"test", "body", "orelse"}},
 
     # TODO - think about calls made, should be:
