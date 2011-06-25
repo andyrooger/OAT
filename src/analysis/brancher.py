@@ -69,7 +69,11 @@ class PredicateCollection(ProtectedCollection):
             raise TypeError("Predicate must be an expression.")
         # bool(pred) should evaluate to val when name inited properly
         # Won't check
-        return self._insert((pred, bool(val)))
+        return self._insert(PrintablePredicate(pred, bool(val)))
+
+class PrintablePredicate(tuple):
+    def __str__(self):
+        return str(self[0]) + " (Value: " + str(self[1]) + ")"
 
 class ExceptionCollection(ProtectedCollection):
     def add(self, expr, raises, *exc):
@@ -80,7 +84,11 @@ class ExceptionCollection(ProtectedCollection):
         for e in exc:
             if not isinstance(e, str):
                 raise TypeError("Exception names must be strings.")
-        return self._insert((expr, bool(raises), list(exc)))
+        return self._insert(PrintableExpression(expr, bool(raises), list(exc)))
+
+class PrintableExpression(tuple):
+    def __str__(self):
+        return str(self[0]) + (" Raises " if self[1] else " Avoids Raising ") + ", ".join(self[3])
 
 class ExpressionCollection(ProtectedCollection):
     def add(self, expr):
