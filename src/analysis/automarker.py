@@ -498,8 +498,8 @@ MARK_CALCULATION = {
     # Not mentioned to be accepted but experimentation tells me it probably was.
     "Yield": {"combine": ["value"], "add_break": {"except", "yield"}},
 
-    "Compare": {"local": {"left"}, "localg": {"comparators"}, "add_break": {"except"}},
-    "Call": {"known": set()}, # No idea what we'd be calling # TODO - think harder
+    "Compare": [{"combine": ["left"], "add_break": {"except"}}, ({"combine": ["comparators"]},)],
+    "Call": {"marks": set()}, # No idea what we'd be calling # TODO - think harder
     "Num": {},
     "Str": {},
     "Bytes": {},
