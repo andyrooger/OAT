@@ -5,6 +5,7 @@ Tools to allow branching sections of the source code.
 
 import abc
 import ast
+import random
 
 from .customast import CustomAST
 from writer.sourcewriter import srcToStr
@@ -25,26 +26,64 @@ class Brancher:
         self.randomising = StatementCollection()
 
     def if_branch(self, statements=None, start=None, end=None):
+        if not all([self.initial, self.predicates]):
+            return None
         if statements == None:
-            if not all([self.initial, self.predicates]):
-                return None
             return bool(self.preserving)
+
+        before, during, after = self._split_list(statements, start, end)
 
     def ifelse_branch(self, statements=None, start=None, end=None):
+        if not all([self.initial, self.predicates, self.randomising]):
+            return None
         if statements == None:
-            return True if all([self.initial, self.predicates, self.randomising]) else None
+            return True
+
+        before, during, after = self._split_list(statements, start, end)
 
     def except_branch(self, statements=None, start=None, end=None):
+        if not all([self.initial, self.exceptions]):
+            return None
         if statements == None:
-            if not all([self.initial, self.exceptions]):
-                return None
             return bool(self.preserving)
 
+        before, during, after = self._split_list(statements, start, end)
+
     def while_branch(self, statements=None, start=None, end=None):
+        if not all([self.initial, self.predicates, self.destroying]):
+            return None
         if statements == None:
-            if not all([self.initial, self.predicates, self.destroying]):
-                return None
             return bool(self.preserving)
+
+        before, during, after = self._split_list(statements, start, end)
+
+    def _split_list(self, statements, start, end):
+        """Split a CustomAST list of statements into 3 real lists, before, during and after the given range."""
+
+        start, end = self._choose_range(start, end, len(statements))
+
+        children = list(statements.ordered_children())
+        before = [statements[c] for c in children[:start]]
+        during = [statements[c] for c in children[start:end]]
+        after = [statements[c] for c in children[end:]]
+
+        return (before, during, after)
+
+    def _choose_range(self, start, end, total):
+        """Choose a correct range from the start and end indices given."""
+
+        if start != None and end != None:
+            return (start, end)
+
+        containing = start if start != None else random.randint(0, total-1)
+        if containing >= total:
+            containing = total - 1
+        if containing < 0:
+            containing = 0
+
+        start = random.randint(0, containing)
+        end = random.randint(containing+1, total)
+        return (start, end)
 
     def __str__(self):
         desc = "== Brancher for " + self._name + " =="
