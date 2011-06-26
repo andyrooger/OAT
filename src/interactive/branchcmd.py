@@ -165,7 +165,7 @@ class BranchCommand(commandui.Command):
         """Deal with a request for part of a specific brancher."""
 
         if info is True: # because 1 == True
-            # Particular creation function
+            self._brancher_add(brancher, category)
             return
         else:
             attrib = {
@@ -182,6 +182,22 @@ class BranchCommand(commandui.Command):
                 print("  " + str(item))
             except KeyError:
                 print("Could not find ID: " + str(info))
+            return
+
+    def _brancher_add(self, brancher, category):
+        """Add a new item to the brancher of the given category."""
+
+        if category == "predicate":
+            print("Please input a predicate along with its expected value.")
+            node = self._code_input("Predicate: ", True)
+            if node == None:
+                return
+            expected = self._choice("Value (True or False): ", ["True", "False"])
+            brancher.predicates.add(CustomAST(node), expected)
+        else:
+            raise ValueError("Cannot create a new item in category: " + category)
+            
+        
 
     def _code_input(self, prompt, expr):
         try:
@@ -196,7 +212,7 @@ class BranchCommand(commandui.Command):
             except SyntaxError as exc:
                 print("Expression could not be parsed: " + str(exc))
                 return None
-            return exc.body
+            return parsed.body
         else: # we want a statement
             try:
                 parsed = ast.parse(source, mode="exec")
@@ -207,3 +223,20 @@ class BranchCommand(commandui.Command):
                 print("Source does not represent a single statement.")
                 return None
             return parsed.body[0]
+
+    def _choice(self, prompt, choices):
+        """Ask the user to make a choice."""
+
+        answer = None
+
+        while answer == None:
+            try:
+                answer = input(prompt)
+            except EOFError:
+                print()
+                answer = None
+            if answer not in choices:
+                print("You must choose one of " + ", ".join(choices) + ".")
+                answer = None
+
+        return answer

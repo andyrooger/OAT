@@ -41,7 +41,7 @@ class Brancher:
             if not len(col):
                 desc += "  Empty\n"
             for item in col:
-                desc += "  " + item + ": " + str(col[item]) + "\n"
+                desc += "  " + str(item) + ": " + str(col[item]) + "\n"
         return desc
 
 class ProtectedCollection(metaclass = abc.ABCMeta):
@@ -80,7 +80,7 @@ class PredicateCollection(ProtectedCollection):
             raise TypeError("Predicate must be an expression.")
         # bool(pred) should evaluate to val when name inited properly
         # Won't check
-        return self._insert(PrintablePredicate(pred, bool(val)))
+        return self._insert(PrintablePredicate([pred, bool(val)]))
 
 class PrintablePredicate(tuple):
     def __str__(self):
@@ -95,7 +95,7 @@ class ExceptionCollection(ProtectedCollection):
         for e in exc:
             if not isinstance(e, str):
                 raise TypeError("Exception names must be strings.")
-        return self._insert(PrintableExpression(expr, bool(raises), list(exc)))
+        return self._insert(PrintableExpression([expr, bool(raises), list(exc)]))
 
 class PrintableExpression(tuple):
     def __str__(self):
