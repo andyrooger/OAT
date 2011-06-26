@@ -45,6 +45,14 @@ class BranchCommand(commandui.Command):
                              help="Save a brancher object.")
         actions.add_argument("-l", "--load", action="store_true", default=False,
                              help="Load a brancher object.")
+        actions.add_argument("--if-branch", action="store", nargs="?", default=None, const=True,
+                             help="Create an if branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+        actions.add_argument("--ifelse-branch", action="store", nargs="?", default=None, const=True,
+                             help="Create an if-else branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+        actions.add_argument("--except-branch", action="store", nargs="?", default=None, const=True,
+                             help="Create an try-except branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+        actions.add_argument("--while-branch", action="store", nargs="?", default=None, const=True,
+                             help="Create an while branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
 
 
         self._related_parsecmd = parsecmd
@@ -128,9 +136,13 @@ class BranchCommand(commandui.Command):
                 self._brancher_edit(brancher, arg, val, args)
                 return # updating the branch
 
+        for arg in {"if_branch", "ifelse_branch", "except_branch", "while_branch"}:
+            val = getattr(args, arg)
+            if val != None:
+                self._create_branch(brancher, arg, val, args)
+                return # updating the branch
 
         # Must be asking about the brancher
-
         print(brancher)
 
         if args.remove:
@@ -303,6 +315,30 @@ class BranchCommand(commandui.Command):
             brancher.randomising.add(CustomAST(node))
         else:
             raise ValueError("Cannot create a new item in category: " + category)
+
+
+    def _create_branch(self, brancher, category, info, args):
+        """Deal with a request for a branch type."""
+
+        method = getattr(brancher, category) #{
+#            "if-branch": brancher.if_branch,
+#            "ifelse-branch": brancher.ifelse_branch,
+#            "except-branch": brancher.except_branch,
+#            "while-branch": brancher.while_branch,
+#        }[category]
+
+        status = method()
+        if status == None:
+            print("Cannot create this type of branch, not enough information in the brancher.")
+            return
+        elif status == False:
+            print("There is not enough information in the brancher to create a thorough branch, but we can create the basic type.")
+            if not self._confirm("continue"):
+                print("Branching cancelled.")
+                return
+
+        print("TODO: make stuff happen here")
+        return
 
 
     def _code_input(self, prompt, expr):
