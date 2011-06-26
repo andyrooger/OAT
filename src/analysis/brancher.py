@@ -7,6 +7,8 @@ import abc
 import ast
 
 from .customast import CustomAST
+from writer.sourcewriter import srcToStr
+from writer.prettywriter import PrettyWriter
 
 class Brancher:
     """Holds information used to perform a particular type of branching."""
@@ -41,7 +43,7 @@ class Brancher:
             if not len(col):
                 desc += "  Empty\n"
             for item in col:
-                desc += "  " + str(item) + ": " + str(col[item]) + "\n"
+                desc += "  " + str(item) + ": " + col.stringify(item) + "\n"
         return desc
 
 class ProtectedCollection(metaclass = abc.ABCMeta):
@@ -52,6 +54,9 @@ class ProtectedCollection(metaclass = abc.ABCMeta):
 
     @abc.abstractmethod
     def add(self): pass
+
+    @abc.abstractmethod
+    def stringify(self): pass
 
     def _insert(self, item):
         key = 0
@@ -80,11 +85,11 @@ class PredicateCollection(ProtectedCollection):
             raise TypeError("Predicate must be an expression.")
         # bool(pred) should evaluate to val when name inited properly
         # Won't check
-        return self._insert(PrintablePredicate([pred, bool(val)]))
+        return self._insert((pred, bool(val)))
 
-class PrintablePredicate(tuple):
-    def __str__(self):
-        return str(self[0]) + " (Value: " + str(self[1]) + ")"
+    def stringify(self, id):
+        (p, v) = self[id]
+        return srcToStr(p, PrettyWriter) + " (Value: " + str(v) + ")"
 
 class ExceptionCollection(ProtectedCollection):
     def add(self, expr, raises, *exc):
@@ -97,9 +102,9 @@ class ExceptionCollection(ProtectedCollection):
                 raise TypeError("Exception names must be strings.")
         return self._insert(PrintableExpression([expr, bool(raises), list(exc)]))
 
-class PrintableExpression(tuple):
-    def __str__(self):
-        return str(self[0]) + (" Raises " if self[1] else " Avoids Raising ") + ", ".join(self[3])
+    def stringify(self, id):
+        (expr, raises, exc) = self[id]
+        return srcToStr(expr, PrettyWriter) + (" Raises " if raises else " Avoids Raising ") + ", ".join(exc)
 
 class ExpressionCollection(ProtectedCollection):
     def add(self, expr):
@@ -107,8 +112,14 @@ class ExpressionCollection(ProtectedCollection):
             raise TypeError("Expr must be an expression.")
         return self._insert(expr)
 
+    def stringify(self, id):
+        return srcToStr(self[id], PrettyWriter)
+
 class StatementCollection(ProtectedCollection):
     def add(self, stmt):
         if not issubclass(expr.type(asclass=True), ast.stmt):
             raise TypeError("Stmt must be a statement.")
         return self._insert(stmt)
+
+    def stringify(self, id):
+        return srcToStr(self[id], PrettyWriter)

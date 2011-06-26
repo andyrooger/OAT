@@ -177,9 +177,9 @@ class BranchCommand(commandui.Command):
                 "randomises": "randomising"
             }[category]
             try:
-                item = getattr(brancher, attrib)[info]
+                item = getattr(brancher, attrib).stringify(info)
                 print(attrib.title() + " " + str(info) + ":")
-                print("  " + str(item))
+                print("  " + item)
             except KeyError:
                 print("Could not find ID: " + str(info))
             return
