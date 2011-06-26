@@ -40,23 +40,20 @@ class Brancher:
         basic_if = CustomAST(ast.If(predicate, during, []))
 
         # Add initialiser
-        init_val = self.initial.any()
-        init = CustomAST(ast.Assign([ast.Name(self._name, ast.Store())], init_val))
-        init_loc = random.randint(0, len(before)//2) # first half of the before section
-        before.insert(init_loc, init)
+        tracker = self._insert_initialiser(before)
 
         # All together
         together = CustomAST(before + [basic_if] + after)
-        tracker = {init_loc, len(before)}
+        tracker = self._inserted_statement(len(before))
 
         return (together, tracker)
         
 
     def ifelse_branch(self, statements=None, start=None, end=None):
-        if not all([self.initial, self.predicates, self.randomising]):
+        if not all([self.initial, self.predicates]):
             return None
         if statements == None:
-            return True
+            return bool(self.randomising)
 
         before, during, after = self._split_list(statements, start, end)
 
@@ -106,6 +103,14 @@ class Brancher:
         #end = random.randint(containing+1, total)
         end = random.choice(list(range(containing+1, total+1)) + list(range(containing+1, (containing+total+1)//2 + 1)))
         return (start, end)
+
+    def _insert_initialiser(self, before, tracker=None):
+        # Add initialiser
+        init_val = self.initial.any()
+        init = CustomAST(ast.Assign([ast.Name(self._name, ast.Store())], init_val))
+        init_loc = random.randint(0, len(before)//2) # first half of the before section
+        before.insert(init_loc, init)
+        return self._inserted_statement(init_loc, tracker)
 
     def _inserted_statement(self, location, tracker=None):
         """Allows us to keep track of inserted statement locations."""
