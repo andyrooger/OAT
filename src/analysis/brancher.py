@@ -24,17 +24,27 @@ class Brancher:
         self.destroying = StatementCollection()
         self.randomising = StatementCollection()
 
-    def if_branch(self, statements, start, end):
-        pass
+    def if_branch(self, statements=None, start=None, end=None):
+        if statements == None:
+            if not all([self.initial, self.predicates]):
+                return None
+            return bool(self.preserving)
 
-    def ifelse_branch(self, statements, start, end):
-        pass
+    def ifelse_branch(self, statements=None, start=None, end=None):
+        if statements == None:
+            return True if all([self.initial, self.predicates, self.randomising]) else None
 
-    def except_branch(self, statements, start, end):
-        pass
+    def except_branch(self, statements=None, start=None, end=None):
+        if statements == None:
+            if not all([self.initial, self.exceptions]):
+                return None
+            return bool(self.preserving)
 
-    def while_branch(self, statements, start, end):
-        pass
+    def while_branch(self, statements=None, start=None, end=None):
+        if statements == None:
+            if not all([self.initial, self.predicates, self.destroying]):
+                return None
+            return bool(self.preserving)
 
     def __str__(self):
         desc = "== Brancher for " + self._name + " =="
