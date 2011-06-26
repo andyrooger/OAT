@@ -14,6 +14,8 @@ class Brancher:
     """Holds information used to perform a particular type of branching."""
 
     def __init__(self, name):
+        if not name.isidentifier():
+            raise ValueError("Name must be a valid identifier.")
         self._name = name
         self.predicates = PredicateCollection()
         self.exceptions = ExceptionCollection()

@@ -65,6 +65,12 @@ class BranchCommand(commandui.Command):
                     print("  " + brancher)
                 return
 
+        if not args.name.isalnum() or not args.name.isidentifier():
+            print("The given name is not valid.")
+            if args.name.isidentifier():
+                print("Although this is a valid identifier, it must also be alphanumeric to allow saving of the brancher.")
+            return
+
         if args.name not in self._branchers:
             if args.create:
                 self._branchers[args.name] = Brancher(args.name)
