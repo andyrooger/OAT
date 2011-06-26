@@ -78,6 +78,32 @@ class Brancher:
 
         before, during, after = self._split_list(statements, start, end)
 
+        # Create exception
+        exc, raises, names = self.exceptions.any()
+        handles, orelse = (during, []) if raises else ([], during)
+
+        # Create handler
+        if not names:
+            handler = None
+        else:
+            name_objs = [ast.Name(n, ast.Load()) for n in names]
+            if len(name_objs) == 1:
+                handler = name_objs[0]
+            else:
+                handler = ast.Tuple(name_objs, ast.Load())
+        exc_handler = ast.ExceptHandler(handler, None, handles)
+        basic_exc = CustomAST(ast.TryExcept([exc], [exc_handler], orelse))
+
+        # Add initialiser
+        tracker = self._insert_initialiser(before)
+
+        # All together
+        together = CustomAST(before + [basic_exc] + after)
+        tracker = self._inserted_statement(len(before))
+
+        return (together, tracker)
+
+
     def while_branch(self, statements=None, start=None, end=None):
         if not all([self.initial, self.predicates, self.destroying]):
             return None
