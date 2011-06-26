@@ -12,6 +12,9 @@ from analysis.brancher import Brancher
 from analysis.customast import CustomAST
 import os.path
 
+from writer.sourcewriter import srcToStr
+from writer.prettywriter import PrettyWriter
+
 class BranchCommand(commandui.Command):
     """Branch statement blocks from the console."""
 
@@ -356,7 +359,9 @@ class BranchCommand(commandui.Command):
 
         # We have a result!
 
-        print("TODO: make stuff happen here")
+        newnode, changed = result
+        print(srcToStr(newnode, PrettyWriter))
+        print(changed)
         return
 
 
