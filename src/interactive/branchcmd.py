@@ -213,7 +213,19 @@ class BranchCommand(commandui.Command):
             if node == None:
                 return
             expected = self._choice("Value (True or False): ", ["True", "False"])
-            brancher.predicates.add(CustomAST(node), expected)
+            brancher.predicates.add(CustomAST(node), expected == "True")
+
+        elif category == "exception":
+            print("Please input an exception-causing statement along with its expected behaviour.")
+            node = self._code_input("Statement: ", False)
+            if node == None:
+                return
+            try:
+                exc_type = input("Exception Type: ")
+            except EOFError:
+                return
+            raises = self._choice("Expected to raise (True or False): ", ["True", "False"])
+            brancher.exceptions.add(CustomAST(node), raises == "True", exc_type)
         else:
             raise ValueError("Cannot create a new item in category: " + category)
 

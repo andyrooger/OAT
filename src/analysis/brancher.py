@@ -93,14 +93,14 @@ class PredicateCollection(ProtectedCollection):
 
 class ExceptionCollection(ProtectedCollection):
     def add(self, expr, raises, *exc):
-        if not issubclass(expr.type(asclass=True), ast.expr):
-            raise TypeError("Expr must be an expression.")
+        if not issubclass(expr.type(asclass=True), ast.stmt):
+            raise TypeError("Expr must be an statement.")
         # must raise/not raise (depending on raises) when name inited properly
         # Won't check
         for e in exc:
             if not isinstance(e, str):
                 raise TypeError("Exception names must be strings.")
-        return self._insert(PrintableExpression([expr, bool(raises), list(exc)]))
+        return self._insert((expr, bool(raises), list(exc)))
 
     def stringify(self, id):
         (expr, raises, exc) = self[id]
