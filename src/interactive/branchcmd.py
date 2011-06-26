@@ -157,18 +157,6 @@ class BranchCommand(commandui.Command):
 #        # Get action
 #        do = "best" if args.do == None else args.do
 #
-#        self._related_explorecmd._ensure_node_sync()
-#
-#        if self._related_explorecmd.ast_current == None:
-#            print("There is no AST to reorder. Have you create one with the parse command?")
-#            return False
-#
-#        block = self._get_block()
-#
-#        if block == None:
-#            print("This node is not reorderable.")
-#            return False
-#
 #        try:
 #            orderer = (reorder.RandomReorderer(block, safe=args.safe, limit=args.limit) if args.random
 #                      else reorder.Reorderer(block, safe=args.safe, limit=args.limit))
@@ -183,14 +171,6 @@ class BranchCommand(commandui.Command):
 #                raise
 #            print("Safety check failed.")
 #
-#    def _get_block(self):
-#        cur = self._related_explorecmd.ast_current
-#        if not cur.is_list():
-#            return None
-#        for stmt in cur:
-#            if not issubclass(cur[stmt].type(asclass=True), ast.stmt):
-#                return None
-#        return cur
 #
 #    def _set_block(self, block):
 #        cur = self._related_explorecmd.ast_current
@@ -331,11 +311,32 @@ class BranchCommand(commandui.Command):
         if status == None:
             print("Cannot create this type of branch, not enough information in the brancher.")
             return
-        elif status == False:
-            print("There is not enough information in the brancher to create a thorough branch, but we can create the basic type.")
+
+        if status == False:
+            print("There is not enough information in the brancher to create a thorough transformation, but we can create the basic branch.")
+            # Confirm if not all info
+            if info == "check":
+                return
             if not self._confirm("continue"):
                 print("Branching cancelled.")
                 return
+
+        if info == "check":
+            # Warnings done
+            print("The brancher has enough information to perform the requested type of branch.")
+            return
+
+        self._related_explorecmd._ensure_node_sync()
+
+        if self._related_explorecmd.ast_current == None:
+            print("There is no AST to transform. Have you create one with the parse command?")
+            return
+
+        block = self._get_block()
+
+        if block == None:
+            print("This node does not represent a list of statements so we cannot perform any transformations.")
+            return
 
         print("TODO: make stuff happen here")
         return
@@ -402,3 +403,12 @@ class BranchCommand(commandui.Command):
         if not arg.startswith("-"):
             return [f for f in self._branchers if f.startswith(arg)]
         return []
+
+    def _get_block(self):
+        cur = self._related_explorecmd.ast_current
+        if not cur.is_list():
+            return None
+        for stmt in cur:
+            if not issubclass(cur[stmt].type(asclass=True), ast.stmt):
+                return None
+        return cur
