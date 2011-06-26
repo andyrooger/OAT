@@ -33,6 +33,25 @@ class Brancher:
 
         before, during, after = self._split_list(statements, start, end)
 
+        # Create if
+        predicate, value = self.predicates.any()
+        if not value:
+            predicate = CustomAST(ast.UnaryOp(ast.Not(), predicate))
+        basic_if = CustomAST(ast.If(predicate, during, []))
+
+        # Add initialiser
+        init_val = self.initial.any()
+        init = CustomAST(ast.Assign([ast.Name(self._name, ast.Store())], init_val))
+        init_loc = random.randint(0, len(before)//2) # first half of the before section
+        before.insert(init_loc, init)
+
+        # All together
+        together = CustomAST(before + [basic_if] + after)
+        tracker = {init_loc, len(before)}
+
+        return (together, tracker)
+        
+
     def ifelse_branch(self, statements=None, start=None, end=None):
         if not all([self.initial, self.predicates, self.randomising]):
             return None
@@ -81,9 +100,22 @@ class Brancher:
         if containing < 0:
             containing = 0
 
-        start = random.randint(0, containing)
-        end = random.randint(containing+1, total)
+        # Double probability for closer choices
+        #start = random.randint(0, containing)
+        start = random.choice(list(range(containing+1)) + list(range(containing//2, containing+1)))
+        #end = random.randint(containing+1, total)
+        end = random.choice(list(range(containing+1, total+1)) + list(range(containing+1, (containing+total+1)//2 + 1)))
         return (start, end)
+
+    def _inserted_statement(self, location, tracker=None):
+        """Allows us to keep track of inserted statement locations."""
+
+        if tracker == None:
+            tracker = set()
+
+        tracker = {(s if s < loc else s+1) for s in tracker}
+        tracker.add(loc)
+        return tracker
 
     def __str__(self):
         desc = "== Brancher for " + self._name + " =="
@@ -108,6 +140,14 @@ class ProtectedCollection(metaclass = abc.ABCMeta):
 
     @abc.abstractmethod
     def stringify(self): pass
+
+    def any(self):
+        """Return any item in the collection."""
+
+        try:
+            return random.choice([self._collection[k] for k in self._collection])
+        except IndexError:
+            return None
 
     def _insert(self, item):
         key = 0
