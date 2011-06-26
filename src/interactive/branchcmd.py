@@ -4,11 +4,13 @@ Branch statement lists from the console.
 """
 
 import ast
+import pickle
 
 from . import commandui
 
 from analysis.brancher import Brancher
 from analysis.customast import CustomAST
+import os.path
 
 class BranchCommand(commandui.Command):
     """Branch statement blocks from the console."""
@@ -22,6 +24,8 @@ class BranchCommand(commandui.Command):
                                 help="Create brancher if it does not exist.")
         self._opts.add_argument("--remove", action="store_true", default=False,
                                 help="Remove a given brancher or item.")
+        self._opts.add_argument("-f", "--force", action="store_true", default=False,
+                                help="Force an action.")
 #        self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
 #                                help="How to display statements, either by index, type or the full code.")
         actions = self._opts.add_mutually_exclusive_group()
@@ -65,11 +69,51 @@ class BranchCommand(commandui.Command):
             if args.create:
                 self._branchers[args.name] = Brancher(args.name)
                 print("Brancher created: " + args.name)
-            else:
+            elif not args.load:
                 print("The brancher requested does not exist: " + args.name)
                 return
 
+        if args.load:
+            if args.name in self._branchers and not args.force:
+                print("This brancher is already loaded.")
+                print("Use --force to replace this with a saved version.")
+                return
+
+            try:
+                with open(args.name + ".bch", "rb") as file:
+                    brch = pickle.load(file)
+            except IOError:
+                print("File could not be loaded.")
+                return
+            except pickle.UnpicklingError:
+                print("File is not a valid branch file.")
+                return
+            if not isinstance(brch, Brancher):
+                print("File is not a valid branch file.")
+                return
+            self._branchers[args.name] = brch
+            print("Brancher loaded: " + args.name)
+            return
+
         brancher = self._branchers[args.name]
+
+        if args.save:
+            if os.path.exists(args.name + ".bch") and not args.force:
+                print("A saved version of this brancher already exists.")
+                print("Use --force to overwrite.")
+                return
+
+            try:
+                with open(args.name + ".bch", "wb") as file:
+                    pickle.dump(brancher, file, 3)
+            except IOError:
+                print("File could not be saved.")
+            except pickle.PicklingError:
+                print("Brancher could not be pickled.")
+            else:
+                print("Brancher saved: " + args.name)
+            return
+
 
         # Are we editing the brancher?
         for arg in {"predicate", "exception", "initial", "preserves", "destroys", "randomises"}:
@@ -78,9 +122,6 @@ class BranchCommand(commandui.Command):
                 self._brancher_edit(brancher, arg, val, args)
                 return # updating the branch
 
-        for arg in {"load", "save"}:
-            if getattr(args, arg):
-                return # Loading or saving
 
         # Must be asking about the brancher
 
