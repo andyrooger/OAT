@@ -117,7 +117,7 @@ class ExpressionCollection(ProtectedCollection):
 
 class StatementCollection(ProtectedCollection):
     def add(self, stmt):
-        if not issubclass(expr.type(asclass=True), ast.stmt):
+        if not issubclass(stmt.type(asclass=True), ast.stmt):
             raise TypeError("Stmt must be a statement.")
         return self._insert(stmt)
 

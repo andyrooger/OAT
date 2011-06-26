@@ -226,6 +226,34 @@ class BranchCommand(commandui.Command):
                 return
             raises = self._choice("Expected to raise (True or False): ", ["True", "False"])
             brancher.exceptions.add(CustomAST(node), raises == "True", exc_type)
+
+        elif category == "initial":
+            print("Please input a suitable starting value for " + brancher._name + ".")
+            node = self._code_input("Expression: ", True)
+            if node == None:
+                return
+            brancher.initial.add(CustomAST(node))
+
+        elif category == "preserves":
+            print("Please input a condition-preserving statement for " + brancher._name + ".")
+            node = self._code_input("Statement: ", False)
+            if node == None:
+                return
+            brancher.preserving.add(CustomAST(node))
+
+        elif category == "destroys":
+            print("Please input a condition-destroying statement for " + brancher._name + ".")
+            node = self._code_input("Statement: ", False)
+            if node == None:
+                return
+            brancher.destroying.add(CustomAST(node))
+
+        elif category == "randomises":
+            print("Please input a condition-randomising statement for " + brancher._name + ".")
+            node = self._code_input("Statement: ", False)
+            if node == None:
+                return
+            brancher.randomising.add(CustomAST(node))
         else:
             raise ValueError("Cannot create a new item in category: " + category)
 
