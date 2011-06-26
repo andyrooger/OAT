@@ -46,13 +46,13 @@ class BranchCommand(commandui.Command):
         actions.add_argument("-l", "--load", action="store_true", default=False,
                              help="Load a brancher object.")
         actions.add_argument("--if-branch", action="store", nargs="?", default=None, const=True,
-                             help="Create an if branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+                             help="Create an if branch using this brancher. The argument can be 'check', start-end indices, centered on index, or nothing to indicate a random branch.")
         actions.add_argument("--ifelse-branch", action="store", nargs="?", default=None, const=True,
-                             help="Create an if-else branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+                             help="Create an if-else branch using this brancher. The argument can be 'check', start-end indices, centered on index, or nothing to indicate a random branch.")
         actions.add_argument("--except-branch", action="store", nargs="?", default=None, const=True,
-                             help="Create an try-except branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+                             help="Create an try-except branch using this brancher. The argument can be 'check', start-end indices, centered on index, or nothing to indicate a random branch.")
         actions.add_argument("--while-branch", action="store", nargs="?", default=None, const=True,
-                             help="Create an while branch using this brancher. The argument can be 'check', start and end indices or nothing to indicate a random branch.")
+                             help="Create an while branch using this brancher. The argument can be 'check', start-end indices, centered on index, or nothing to indicate a random branch.")
 
 
         self._related_parsecmd = parsecmd
@@ -337,6 +337,24 @@ class BranchCommand(commandui.Command):
         if block == None:
             print("This node does not represent a list of statements so we cannot perform any transformations.")
             return
+
+        if info == True:
+            result = method(block)
+        else:
+            try:
+                start, end = info.split("-")
+            except ValueError:
+                try:
+                    containing = int(info)
+                except ValueError:
+                    print("Invalid index for branching.")
+                    return
+                else:
+                    result = method(block, containing)
+            else:
+                result = method(block, start, end)
+
+        # We have a result!
 
         print("TODO: make stuff happen here")
         return
