@@ -274,3 +274,8 @@ class BranchCommand(commandui.Command):
                 answer = None
 
         return answer
+
+    def autocomplete(self, before, arg, after):
+        if not arg.startswith("-"):
+            return [f for f in self._branchers if f.startswith(arg)]
+        return []
