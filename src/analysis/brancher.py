@@ -57,6 +57,19 @@ class Brancher:
 
         before, during, after = self._split_list(statements, start, end)
 
+        # Create if
+        predicate, value = self.predicates.any()
+        basic_if = CustomAST(ast.If(predicate, during, during))
+
+        # Add initialiser
+        tracker = self._insert_initialiser(before)
+
+        # All together
+        together = CustomAST(before + [basic_if] + after)
+        tracker = self._inserted_statement(len(before))
+
+        return (together, tracker)
+
     def except_branch(self, statements=None, start=None, end=None):
         if not all([self.initial, self.exceptions]):
             return None
@@ -118,8 +131,8 @@ class Brancher:
         if tracker == None:
             tracker = set()
 
-        tracker = {(s if s < loc else s+1) for s in tracker}
-        tracker.add(loc)
+        tracker = {(s if s < location else s+1) for s in tracker}
+        tracker.add(location)
         return tracker
 
     def __str__(self):
