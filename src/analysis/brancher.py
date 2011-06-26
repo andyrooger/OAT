@@ -119,6 +119,8 @@ class StatementCollection(ProtectedCollection):
     def add(self, stmt):
         if not issubclass(stmt.type(asclass=True), ast.stmt):
             raise TypeError("Stmt must be a statement.")
+        if "body" in stmt:
+            raise ValueError("Stmt must be a simple statement.")
         return self._insert(stmt)
 
     def stringify(self, id):

@@ -272,14 +272,14 @@ class BranchCommand(commandui.Command):
                 print("Expression could not be parsed: " + str(exc))
                 return None
             return parsed.body
-        else: # we want a statement
+        else: # we want a simple statement
             try:
                 parsed = ast.parse(source, mode="exec")
             except SyntaxError as exc:
                 print("Statement could not be parsed: " + str(exc))
                 return None
-            if len(parsed.body) != 1:
-                print("Source does not represent a single statement.")
+            if len(parsed.body) != 1 or "body" in parsed.body[0]._fields:
+                print("Source does not represent a single simple statement.")
                 return None
             return parsed.body[0]
 
