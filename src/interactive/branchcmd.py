@@ -20,6 +20,8 @@ class BranchCommand(commandui.Command):
                                 help="Name of a brancher collection.")
         self._opts.add_argument("-c", "--create", action="store_true", default=False,
                                 help="Create brancher if it does not exist.")
+        self._opts.add_argument("--remove", action="store_true", default=False,
+                                help="Remove a given brancher or item.")
 #        self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
 #                                help="How to display statements, either by index, type or the full code.")
         actions = self._opts.add_mutually_exclusive_group()
@@ -29,7 +31,7 @@ class BranchCommand(commandui.Command):
                              help="Display, add or alter an exception causing expression in this brancher.")
         actions.add_argument("-i", "--initial", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter an initial statement for this brancher.")
-        actions.add_argument("--preserves", action="store", type=int, nargs="?", default=None, const=True,
+        actions.add_argument("-v", "--preserves", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate preserving statement for this brancher.")
         actions.add_argument("-d", "--destroys", action="store", type=int, nargs="?", default=None, const=True,
                              help="Display, add or alter a predicate unstabilising statement for this brancher.")
@@ -83,6 +85,14 @@ class BranchCommand(commandui.Command):
         # Must be asking about the brancher
 
         print(brancher)
+
+        if args.remove:
+            if self._confirm("remove this brancher", False):
+                del self._branchers[args.name]
+                print("Brancher deleted: " + args.name)
+            else:
+                print("Deletion cancelled.")
+
         return
 
 #        # Get action
@@ -176,12 +186,22 @@ class BranchCommand(commandui.Command):
                 "destroys": "destroying",
                 "randomises": "randomising"
             }[category]
+            col = getattr(brancher, attrib)
             try:
-                item = getattr(brancher, attrib).stringify(info)
+                item = col.stringify(info)
                 print(attrib.title() + " " + str(info) + ":")
                 print("  " + item)
             except KeyError:
                 print("Could not find ID: " + str(info))
+                return
+
+            if args.remove:
+                if self._confirm("remove this item", False):
+                    del col[info]
+                    print("Item deleted: " + attrib.title() + " " + str(info))
+                else:
+                    print("Deletion cancelled.")
+
             return
 
     def _brancher_add(self, brancher, category):
@@ -196,8 +216,7 @@ class BranchCommand(commandui.Command):
             brancher.predicates.add(CustomAST(node), expected)
         else:
             raise ValueError("Cannot create a new item in category: " + category)
-            
-        
+
 
     def _code_input(self, prompt, expr):
         try:
@@ -223,6 +242,21 @@ class BranchCommand(commandui.Command):
                 print("Source does not represent a single statement.")
                 return None
             return parsed.body[0]
+
+    def _confirm(self, prompt, default=False):
+        """Confirm a request."""
+
+        try:
+            r = input("Are you sure you wish to " + prompt + " (y/n)? ")
+        except EOFError:
+            return default
+
+        if r == "y":
+            return True
+        if r == "n":
+            return False
+        return default
+        
 
     def _choice(self, prompt, choices):
         """Ask the user to make a choice."""
