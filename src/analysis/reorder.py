@@ -5,6 +5,7 @@ Contains code ready for reordering statements.
 
 import ast
 import random
+import math
 
 from .markers import visible
 from .markers import breaks
@@ -80,6 +81,39 @@ def WriteUseValuer(statements):
     # Now all left in variables are furthest reads
     for (w, r) in variables.values():
         total += r - w
+    return -total # Flip so smaller distance is better
+
+def WriteUseLogValuer(statements):
+    """Encourages smaller distance between the write of a variable and the furthest read of that write."""
+
+    total = 0
+    variables = {} # Where written
+    # Collect ranges for all variables
+    for i, s in enumerate(statements):
+        stat = statements[s]
+        reads = read.ReadMarker(stat).get_mark()
+        written = write.WriteMarker(stat).get_mark()
+        for var in reads:
+            try:
+                (w, r) = variables[var]
+            except KeyError:
+                variables[var] = (-1, i) # Assume written before statements begin
+            else:
+                variables[var] = (w, i)
+        for var in written:
+            try:
+                (w, r) = variables[var] # Try getting written and furthest read
+            except KeyError:
+                pass
+            else:
+                if r-w > 0:
+                    total += math.log(r - w) # Add range to sum and replace write location
+            # Now replace write location
+            variables[var] = (i, i) # Really no reads but i is safe as adds value 0
+    # Now all left in variables are furthest reads
+    for (w, r) in variables.values():
+        if r-w > 0:
+            total += math.log(r - w)
     return -total # Flip so smaller distance is better
 
 def _generate_providing_statements(statements):
