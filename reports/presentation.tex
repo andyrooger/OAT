@@ -172,27 +172,43 @@ Explain purpose of code and how its harder to understand. Reiterate that reverse
 
 \subsection{Previous Work}
 
-\begin{frame}{Make Titles Informative.}
+\begin{frame}{Current Solutions}
+\begin{itemize}
+\item Bytecode distribution - mention pirates and come back
+\item Implementing sensitive parts in C
+\item pyobfuscate - other one too (layout obfuscation and non-3000 support). Possible example.
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Make Titles Informative.}
+\begin{frame}{Other Types of Obfuscation}
+\begin{itemize}
+\item Talk about layout referring to pyobfuscate etc
+\item Talk about data
+\item Talk about control flow (examples)
+\end{itemize}
 \end{frame}
 
+\section{Creating an Obfuscator}
 
+\subsection{OAT - Obfuscation and Analysis Tool}
 
-\section{Our Results/Contribution}
-
-\subsection{Main Results}
-
-\begin{frame}{Make Titles Informative.}
+\begin{frame}{Presenting OAT - Obfuscation and Analysis Tool}
+\begin{itemize}
+\item Present OAT
+\item Explain what type of obfuscation we intend to do (control flow - reordering, inserting branches)
+\item Explain user interaction - non-automatic and command-line
+\item Works on source code and produces source code (compare to bytecode obfuscators)
+\end{itemize}
 \end{frame}
 
-\begin{frame}{Make Titles Informative.}
+\begin{frame}{OAT Workflow}
+\begin{itemize}
+\item Parse files - Easy (1)
+\item Analyse and mark AST - Hard (3)
+\item Program transformations - Depends on the transformation (4)
+\item Print files - Easy but more work (2) (explain because python does not need this to run, it does not do it)
+\end{itemize}
 \end{frame}
-
-\begin{frame}{Make Titles Informative.}
-\end{frame}
-
 
 \subsection{Basic Ideas for Proofs/Implementation}
 
