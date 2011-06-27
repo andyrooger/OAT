@@ -14,6 +14,14 @@ from .markers import indirectrw
 
 from .customast import CustomAST
 
+def InvertValuer(valuer):
+    """Return an inverted version of another valuer."""
+
+    def inv(*varargs, **kwargs):
+        return -valuer(*varargs, **kwargs)
+
+    return inv
+
 def RandomValuer(statements):
     """Give a random value, no matter the permutation."""
 

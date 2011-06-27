@@ -30,6 +30,8 @@ class ReorderCommand(commandui.Command):
                                 help="How to display statements, either by index, type or the full code.")
         self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange"], default="random",
                                 help="Choose the valuer function.")
+        self._opts.add_argument("-i", "--invert", action="store_true", default=False,
+                                help="Invert the output of the given valuer function.")
         self._opts.add_argument("-e", "--edit", action="store_true", default=False,
                                 help="Allow editing of the tree. This is disallowed by default.")
         self._opts.add_argument("-t", "--safetytests", dest="safe", action="store_true", default=False,
@@ -141,6 +143,8 @@ class ReorderCommand(commandui.Command):
                 "wrange" : reorder.WriteRangeValuer,
                 "rwrange" : reorder.WriteUseValuer,
             }[args.valuer]
+            if args.invert:
+                valuer = reorder.InvertValuer(valuer)
             perm = orderer.best_permutation(valuer)
 
             self._print_block(block, perm, args.display)
