@@ -157,62 +157,6 @@ class BranchCommand(commandui.Command):
 
         return
 
-#        # Get action
-#        do = "best" if args.do == None else args.do
-#
-#        try:
-#            orderer = (reorder.RandomReorderer(block, safe=args.safe, limit=args.limit) if args.random
-#                      else reorder.Reorderer(block, safe=args.safe, limit=args.limit))
-#        except TypeError:
-#            print("The node's body was of unexpected type, I don't know what do do with this.")
-#            return False
-#
-#        try:
-#            self._perform_action(do, block, orderer, args)
-#        except AssertionError:
-#            if not args.safe: # Then we shouldn't have got this
-#                raise
-#            print("Safety check failed.")
-#
-#
-#    def _set_block(self, block):
-#        cur = self._related_explorecmd.ast_current
-#        if cur.is_list():
-#            cur.become(block) # Throws TypeError if not a list, but could change in future
-#            self._related_parsecmd.ast.modified = True
-#        else:
-#            raise TypeError
-#
-#    def _print_block(self, statements, perm, disp, markings=False):
-#        """Print a block of statements in a particular permutation."""
-#
-#        if disp == "index":
-#            for i in perm:
-#                print(str(i) + " - ", end="")
-#            print()
-#
-#        else:
-#            ord_stat = list(statements.ordered_children())
-#            for i in perm:
-#                child = statements[ord_stat[i]]
-#                if disp == "type":
-#                     print(str(i) + ": " + child.type(), end="")
-#                elif disp == "code":
-#                     print()
-#                     sourcewriter.printSource(child, prettywriter.PrettyWriter)
-#
-#                if markings:
-#                    complete_markings = reorder.Reorderer(CustomAST([child])).check_markings()
-#
-#                    if complete_markings:
-#                        print(" - Completely marked")
-#                    else:
-#                        print(" - Not marked")
-#                if disp == "type" or markings:
-#                    print()
-#
-#        self._related_parsecmd.ast.augmented = True
-
     def _brancher_edit(self, brancher, category, info, args):
         """Deal with a request for part of a specific brancher."""
 
@@ -360,12 +304,18 @@ class BranchCommand(commandui.Command):
         # We have a result!
 
         newnode, changed = result
+        print()
         for i,node in enumerate(newnode):
             if i in changed:
                 print("(+++++++++")
             printSource(newnode[node], PrettyWriter)
             if i in changed:
                print("+++++++++)")
+
+        print()
+        if self._confirm("Would you like to commit this change to the AST", wishto=False):
+            self._set_block(newnode)
+
         return
 
 
@@ -394,11 +344,14 @@ class BranchCommand(commandui.Command):
                 return None
             return parsed.body[0]
 
-    def _confirm(self, prompt, default=False):
+    def _confirm(self, prompt, default=False, wishto=True):
         """Confirm a request."""
 
         try:
-            r = input("Are you sure you wish to " + prompt + " (y/n)? ")
+            if wishto:
+                r = input("Are you sure you wish to " + prompt + " (y/n)? ")
+            else:
+                r = input(prompt + " (y/n)? ")
         except EOFError:
             return default
 
@@ -439,3 +392,11 @@ class BranchCommand(commandui.Command):
             if not issubclass(cur[stmt].type(asclass=True), ast.stmt):
                 return None
         return cur
+
+    def _set_block(self, block):
+        cur = self._related_explorecmd.ast_current
+        if cur.is_list():
+            cur.become(block) # Throws TypeError if not a list, but could change in future
+            self._related_parsecmd.ast.modified = True
+        else:
+            raise TypeError
