@@ -130,20 +130,55 @@
 % - If you omit details that are vital to the proof/implementation,
 %   just say so once. Everybody will be happy with that.
 
+Hello my name's Andy Gurden and I'm here to present my project - Obfuscating Python 3000. Before I even explain what this means,
+I will describe to you the problem.
+
 \section{Motivation}
 
 \subsection{Why Obfuscate?}
 
-\begin{frame}{Protecting Ideas}
-\begin{itemize}
-\item Distribution: normal programs and interpreted - why it's harder to keep hold of ideas
-\item Protection: legal - suing, technical - make really difficult to reverse engineer
-\item technical: expose service (separate parts?), encryption with decryption and execution in hardware, send only native code after compiling java?
-\item Obfuscation!
-\end{itemize}
+\begin{frame}{Protecting Intellectual Property}
+\begin{columns}[t]
+\column{.5\textwidth}
+  \begin{block}{Legal}
+  \begin{itemize}
+  \item Expensive
+  \item Slow
+  \item Difficult
+  \item Not viable for smaller businesses
+  \end{itemize}
+  \end{block}
+
+\pause
+
+\column{.5\textwidth}
+  \begin{block}{Technical}
+  \begin{itemize}
+  \item Often Cheap
+  \item Can:
+  \begin{itemize}
+  \item Provide service only
+  \item Encrypt code
+  \item Distribute native code only
+  \item<3> Obfuscate!
+  \end{itemize}
+  \end{itemize}
+  \end{block}
+\end{columns}
 \end{frame}
 
-Speaking notes!
+If an individual or business puts hard work and time into creating software, they often have many techniques or algorithms that they worked hard to
+develop. The last thing they want is for a reverse engineer to extract the juicy parts from their software, rebrand them and sell them for 2p cheaper.
+
+There are a few ways it is possible to do this. We could use legal means, suing anyone we think has stolen our ideas, but this is expensive, slow, difficult
+to prove and difficult to enforce, so is not really an option for general cases.
+
+Alternatively we could use technical means which are often cheaper. The only sure-fire way to ensure parts of your software aren't stolen is to not give it out,
+instead providing access as a service where all computation is performed server-side. Alternatively we could encrypt code, but this needs to be decrypted and run
+in hardware to avoid a reverse engineer simply recording the code after a software decryption.
+
+For languages such as Java or Python which are interpreted, we can compile to native machine code. This is much harder to reverse-engineer than the distributed formats
+which are very simple to transform back to the original source code. Finally, and this is the reason we are all here, we could obfuscate the code.
 
 \begin{frame}{What is Obfuscation?}
 \begin{itemize}
