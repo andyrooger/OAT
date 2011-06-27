@@ -8,6 +8,7 @@ import ast
 from . import commandui
 
 from analysis import reorder
+from analysis import valuers
 
 from writer import sourcewriter
 from writer import prettywriter
@@ -28,8 +29,10 @@ class ReorderCommand(commandui.Command):
 
         self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
                                 help="How to display statements, either by index, type or the full code.")
-        self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange"], default="random",
+        self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange", "rwlogrange", "knots"], default="random",
                                 help="Choose the valuer function.")
+        self._opts.add_argument("-i", "--invert", action="store_true", default=False,
+                                help="Invert the output of the given valuer function.")
         self._opts.add_argument("-e", "--edit", action="store_true", default=False,
                                 help="Allow editing of the tree. This is disallowed by default.")
         self._opts.add_argument("-t", "--safetytests", dest="safe", action="store_true", default=False,
@@ -136,11 +139,15 @@ class ReorderCommand(commandui.Command):
 
         if do == "best":
             valuer = {
-                "random" : reorder.RandomValuer,
-                "first" : reorder.FirstValuer,
-                "wrange" : reorder.WriteRangeValuer,
-                "rwrange" : reorder.WriteUseValuer,
+                "random" : valuers.RandomValuer,
+                "first" : valuers.FirstValuer,
+                "wrange" : valuers.WriteRangeValuer,
+                "rwrange" : valuers.WriteUseValuer,
+                "rwlogrange" : valuers.WriteUseLogValuer,
+                "knots" : valuers.WriteUseLogValuer,
             }[args.valuer]
+            if args.invert:
+                valuer = valuers.InvertValuer(valuer)
             perm = orderer.best_permutation(valuer)
 
             self._print_block(block, perm, args.display)
