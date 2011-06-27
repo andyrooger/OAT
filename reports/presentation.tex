@@ -1,3 +1,6 @@
+\usepackage{listings}
+\lstset{language=Python, showstringspaces=false}
+
 % $Header: /cvsroot/latex-beamer/latex-beamer/solutions/conference-talks/conference-ornate-20min.en.tex,v 1.7 2007/01/28 20:48:23 tantau Exp $
 
 % This file is a solution template for:
@@ -182,28 +185,47 @@ which are very simple to transform back to the original source code. Finally, an
 
 \begin{frame}{What is Obfuscation?}
 \begin{itemize}
-\item Use obfuscator to convert existing application into functionally identical one that is harder for bob to understand.
+\item ``Obfuscation is the concealment of intended meaning in communication, making communication confusing, intentionally ambiguous, and more difficult
+      to interpret.'' \\ - Wikipedia
+\end{itemize}
+\begin{block}{Source Code Obfuscation}
+Converting an existing program into a functionally identical equivalent that is harder to understand or reverse-engineer.
+\end{block}
+\begin{itemize}
 \item Not completely safe
-\item Deobfuscator + reverse engineer
+\item Automatic deobfuscators
 \end{itemize}
 \end{frame}
 
-Talk about general obfuscation: making things unclear or unintelligable. Then with code talk about doing this but keeping functionality.
+One of the first questions I usually get asked when talking about this project is, ''What the hell is obfuscation?``. Well we have the wikipedia version on the screen,
+but in terms of software we want to modify our source program in such a way that it does the same things as it used to, just with very confusing source code.
 
-\begin{frame}{Example of Obfuscated Code}
+This is not completely safe as we will still be handing our source over to the user, whom we do not entirely trust. Eventually with enough effort, someone will crack
+the obfuscation, or 'deobfuscate' the program. The aim our obfuscation is then to make this task difficult enough for either a human or an automatic deobfuscator to
+give up.
+
+In Python, which we have taken as our target language, we distribute source code rather than bytecode or native code. So unless we create a service, obfuscating 
+is really the only way to maintain portability and is a cheap and easy route to take.
+
+\begin{frame}[fragile]{Example of Obfuscated Code}
 \begin{columns}[t]
 \column{.5\textwidth}
-\begin{block}{Unobfuscated Code}
-Unobfuscated code
+\begin{block}{Plain Code}
+\lstinputlisting[basicstyle=\scriptsize]{../snippets/beer.py.plain}
 \end{block}
+- PythonInfo Wiki
+
+\pause
+
 \column{.5\textwidth}
 \begin{block}{Obfuscated Code}
-Obfuscated code
+\lstinputlisting[basicstyle=\scriptsize]{../snippets/beer.py.obf}
 \end{block}
 \end{columns}
 \end{frame}
 
-Explain purpose of code and how its harder to understand. Reiterate that reverse engineering is hard.
+This is an example of some older Python code. After it has been run through an automatic obfuscator it is much harder to understand. Imagine a more complex example
+and we can quickly see that a reverse engineer will have trouble following the code.
 
 \subsection{Previous Work}
 

@@ -1,0 +1,15 @@
+oo000 = '''
+%d bottles of beer on the wall,
+%d bottles of beer,
+take one down, pass it around,
+%d bottles of beer on the wall!
+'''
+if 9 - 9:
+    Ii . o0o00Oo0O - iI11I1II1I1I
+oooo = 99
+while oooo > 1 :
+ print oo000 % (
+ oooo ,
+ oooo ,
+ oooo - 1 )
+ oooo -= 1
