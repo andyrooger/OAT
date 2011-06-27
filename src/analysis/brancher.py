@@ -44,7 +44,7 @@ class Brancher:
 
         # All together
         together = CustomAST(before + [basic_if] + after)
-        tracker = self._inserted_statement(len(before))
+        tracker = self._inserted_statement(len(before), tracker)
 
         return (together, tracker)
         
@@ -66,7 +66,7 @@ class Brancher:
 
         # All together
         together = CustomAST(before + [basic_if] + after)
-        tracker = self._inserted_statement(len(before))
+        tracker = self._inserted_statement(len(before), tracker)
 
         return (together, tracker)
 
@@ -99,7 +99,7 @@ class Brancher:
 
         # All together
         together = CustomAST(before + [basic_exc] + after)
-        tracker = self._inserted_statement(len(before))
+        tracker = self._inserted_statement(len(before), tracker)
 
         return (together, tracker)
 
@@ -123,7 +123,7 @@ class Brancher:
 
         # All together
         together = CustomAST(before + [basic_while] + after)
-        tracker = self._inserted_statement(len(before))
+        tracker = self._inserted_statement(len(before), tracker)
 
         return (together, tracker)
 

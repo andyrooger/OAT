@@ -12,7 +12,7 @@ from analysis.brancher import Brancher
 from analysis.customast import CustomAST
 import os.path
 
-from writer.sourcewriter import srcToStr
+from writer.sourcewriter import printSource
 from writer.prettywriter import PrettyWriter
 
 class BranchCommand(commandui.Command):
@@ -360,8 +360,12 @@ class BranchCommand(commandui.Command):
         # We have a result!
 
         newnode, changed = result
-        print(srcToStr(newnode, PrettyWriter))
-        print(changed)
+        for i,node in enumerate(newnode):
+            if i in changed:
+                print("(+++++++++")
+            printSource(newnode[node], PrettyWriter)
+            if i in changed:
+               print("+++++++++)")
         return
 
 
