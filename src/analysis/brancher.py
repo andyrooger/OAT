@@ -103,7 +103,6 @@ class Brancher:
 
         return (together, tracker)
 
-
     def while_branch(self, statements=None, start=None, end=None):
         if not all([self.initial, self.predicates, self.destroying]):
             return None
@@ -111,6 +110,22 @@ class Brancher:
             return bool(self.preserving)
 
         before, during, after = self._split_list(statements, start, end)
+
+        # Create while
+        predicate, value = self.predicates.any()
+        if not value:
+            predicate = CustomAST(ast.UnaryOp(ast.Not(), predicate))
+        destroyer = self.destroying.any()
+        basic_while = CustomAST(ast.While(predicate, during + [destroyer], []))
+
+        # Add initialiser
+        tracker = self._insert_initialiser(before)
+
+        # All together
+        together = CustomAST(before + [basic_while] + after)
+        tracker = self._inserted_statement(len(before))
+
+        return (together, tracker)
 
     def _split_list(self, statements, start, end):
         """Split a CustomAST list of statements into 3 real lists, before, during and after the given range."""
