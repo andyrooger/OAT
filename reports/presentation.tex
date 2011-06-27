@@ -1,6 +1,9 @@
 \usepackage{listings}
 \lstset{language=Python, showstringspaces=false}
 \usepackage{graphicx}
+\usepackage{tikz}
+%\usepackage[a4paper,margin=1cm,landscape]{geometry}
+\usetikzlibrary{positioning,shadows,arrows}
 
 % $Header: /cvsroot/latex-beamer/latex-beamer/solutions/conference-talks/conference-ornate-20min.en.tex,v 1.7 2007/01/28 20:48:23 tantau Exp $
 
@@ -266,7 +269,7 @@ even try to run it on an interpreter newer than 2.6 (released in 2008).
 In addition these tools tend to focus on layout obfuscation, rather than anything else, removing comments and scrambling identifier names. This is hard to read
 but can be fixed easily a lot of the time by using an automatic deobfuscator.
 
-\begin{frame}[plain]{Disney's Pirates of the Carribean Online}
+\begin{frame}[plain]{Disney's Pirates of the Caribbean Online}
 \resizebox{\textwidth}{!}{
 \includegraphics{../images/POTC.eps}}
 \end{frame}
@@ -311,14 +314,134 @@ keeping any results of the program the same.
 
 Blah blah, 3000 so works on newer source code.
 
-\begin{frame}{OAT Workflow}
+\begin{frame}<1>[label=workflow]{OAT Workflow}
 \begin{itemize}
-\item Parse files - Easy (1)
-\item Analyse and mark AST - Hard (3)
+\item Parse a Python source file \visible<2->{ - \alert<2>{Easy}}
+\item Analyse and mark the AST - Hard (3)
 \item Program transformations - Depends on the transformation (4)
-\item Print files - Easy but more work (2) (explain because python does not need this to run, it does not do it)
+\item Output resulting source file - Easy but more work (2) (explain because python does not need this to run, it does not do it)
 \end{itemize}
 \end{frame}
+
+From a user's perspective, the OAT workflow is very simple. We parse a file to receive an AST. Then analyse the tree for any information the program
+transformations need. This is stored on the AST by 'marking' the nodes and avoids recalculating the same information again later.
+
+The transformations can then be performed on the AST to create our new program. They will use our previous markings for all information that they will need.
+Finally we will translate the AST back to a source file and print to screen or file.
+
+\begin{frame}[fragile]{Parsing Source Files}
+\begin{lstlisting}
+import ast
+
+with open("filename", "r") as file:
+    ast.parse(file.read())
+\end{lstlisting}
+
+\vfill
+This is Python. Python likes developers!
+\end{frame}
+
+Parsing can be done easily, this is Python after all.
+
+\begin{frame}{Parsing Example}
+Example from earlier, now written for Python 3.
+\lstinputlisting[basicstyle=\small]{../snippets/beer.py.3}
+\end{frame}
+
+Now we can take a file, for example the code from earlier (now in Python 3) - notice print statement. By passing it though the code we get an AST.
+
+\begin{frame}{Abstract Syntax Tree}
+\begin{centering}
+\scalebox{0.5}{
+\begin{tikzpicture}[
+    ast/.style={circle, draw=none, fill=orange, circular drop shadow,
+        text centered, anchor=north, text=white},
+    field/.style={rectangle, draw=none, rounded corners=1mm, fill=blue, drop shadow,
+        text centered, anchor=north, text=white},
+    value/.style={circle, draw=none, fill=red, circular drop shadow,
+        text centered, anchor=north, text=white},
+    level distance=0.5cm, growth parent anchor=south
+]
+\node (Module) [ast] {Module} 
+    child{ [sibling distance=9cm]
+        node (ModuleBody) [field] {body}
+        child{ [sibling distance=3cm]
+            node (Assign) [ast] {Assign}
+            child{
+                node (assigntargets) [field] {targets}
+                child{
+                    node (name) [ast] {Name}
+                    child{
+                        node (id) [field] {id}
+                        child{
+                            node (nm) [value] {REFRAIN}
+                        }
+                    }
+                    child{
+                        node (ctx) [field] {ctx}
+                        child{
+                            node (ctxl) [ast] {Load}
+                        }
+                    }
+                }
+            }
+            child{
+                node (assignvalue) [field] {value}
+                child{
+                    node (Str) [ast] {Str}
+                    child{
+                       node (strs) [field] {s}
+                       child{
+                            node (strval) [value] {\ldots}
+                        }
+                    }
+                }
+            }
+        }
+        child{ [sibling distance=3cm]
+            node (Assign) [ast] {Assign}
+            child{
+                node (asstarg) [field] {targets}
+                child{
+                    node (tname) [ast] {Name}
+                    child{
+                        node (tnameid) [field] {id}
+                        child{
+                            node (tnameidb) [value] {bottles\_of\_beer}
+                        }
+                    }
+                    child{
+                        node (tnamectx) [field] {ctx}
+                        child{
+                            node (tnamectxs) [ast] {Store}
+                        }
+                    }
+                }
+            }
+            child{ [sibling distance=3cm]
+                node (asgtiji) [field] {value}
+                child{
+                    node (asf) [ast] {\ldots}
+                }
+            }
+        }
+        child{
+            node (While) [ast] {While}
+            child{
+                node (gte) [field] {\ldots}
+            }
+        }
+    }
+;
+\end{tikzpicture}}
+\end{centering}
+\end{frame}
+
+We receive an AST, something like this unfinished specimen.
+
+\againframe<2>{workflow}
+
+We will look next at printing a source file.
 
 \subsection{Basic Ideas for Proofs/Implementation}
 
