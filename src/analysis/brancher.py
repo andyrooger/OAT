@@ -68,11 +68,16 @@ class Brancher:
 
         # Add initialiser
         tracker = self._insert_initialiser(before)
+        init_loc = list(tracker)[0]
 
         # All together
-        together = CustomAST(before + [basic_if] + after)
+        together = before + [basic_if] + after
         tracker = self._inserted_statement(len(before), tracker)
 
+        # Scatter other statements
+        tracker = self._scatter_nodes(together, init_loc+1, self.randomising, tracker=tracker)
+
+        together = CustomAST(together)
         return (together, tracker)
 
     def except_branch(self, statements=None, start=None, end=None):
@@ -101,11 +106,16 @@ class Brancher:
 
         # Add initialiser
         tracker = self._insert_initialiser(before)
+        init_loc = list(tracker)[0]
 
         # All together
-        together = CustomAST(before + [basic_exc] + after)
+        together = before + [basic_exc] + after
         tracker = self._inserted_statement(len(before), tracker)
 
+        # Scatter other statements
+        tracker = self._scatter_nodes(together, init_loc+1, self.preserving, tracker=tracker)
+
+        together = CustomAST(together)
         return (together, tracker)
 
     def while_branch(self, statements=None, start=None, end=None):
@@ -125,11 +135,16 @@ class Brancher:
 
         # Add initialiser
         tracker = self._insert_initialiser(before)
+        init_loc = list(tracker)[0]
 
         # All together
-        together = CustomAST(before + [basic_while] + after)
+        together = before + [basic_while] + after
         tracker = self._inserted_statement(len(before), tracker)
 
+        # Scatter other statements
+        tracker = self._scatter_nodes(together, init_loc+1, self.preserving, tracker=tracker)
+
+        together = CustomAST(together)
         return (together, tracker)
 
     def _split_list(self, statements, start, end):
