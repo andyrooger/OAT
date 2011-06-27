@@ -37,9 +37,8 @@ def WriteRangeValuer(statements):
 
     variables = {}
     # Collect ranges for all variables
-    ord_stats = list(statements.ordered_children())
-    for i in range(len(ord_stats)):
-        stat = statements[ord_stats[i]]
+    for i, s in enumerate(statements):
+        stat = statements[s]
         written = write.WriteMarker(stat).get_mark()
         for w in written:
             try:
@@ -58,9 +57,8 @@ def WriteUseValuer(statements):
     total = 0
     variables = {} # Where written
     # Collect ranges for all variables
-    ord_stats = list(statements.ordered_children())
-    for i in range(len(ord_stats)):
-        stat = statements[ord_stats[i]]
+    for i, s in enumerate(statements):
+        stat = statements[s]
         reads = read.ReadMarker(stat).get_mark()
         written = write.WriteMarker(stat).get_mark()
         for var in reads:
@@ -83,6 +81,24 @@ def WriteUseValuer(statements):
     for (w, r) in variables.values():
         total += r - w
     return -total # Flip so smaller distance is better
+
+def _generate_providing_statements(statements):
+    """Generate a dictionary for each statement containing providing statements."""
+
+    variables = {} # Where written
+    providers = []
+    for i, s in enumerate(statements):
+        stat = statements[s]
+        provided = set()
+        reads = read.ReadMarker(stat).get_mark()
+        written = write.WriteMarker(stat).get_mark()
+        for var in reads:
+            provided.add(variables.get(var, None))
+        for var in written:
+            variables[var] = i
+        providers.append(provided)
+    return providers
+    
 
 # Try all write-based valuers with read
 # Dist to only nearest write?
