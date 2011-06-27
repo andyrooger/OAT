@@ -41,11 +41,16 @@ class Brancher:
 
         # Add initialiser
         tracker = self._insert_initialiser(before)
+        init_loc = list(tracker)[0]
 
         # All together
-        together = CustomAST(before + [basic_if] + after)
+        together = before + [basic_if] + after
         tracker = self._inserted_statement(len(before), tracker)
 
+        # Scatter other statements
+        tracker = self._scatter_nodes(together, init_loc+1, self.preserving, tracker=tracker)
+
+        together = CustomAST(together)
         return (together, tracker)
         
 
@@ -175,6 +180,34 @@ class Brancher:
         tracker = {(s if s < location else s+1) for s in tracker}
         tracker.add(location)
         return tracker
+
+    def _scatter_nodes(self, statements, start, *types, ratio=4, tracker=None):
+        """Scatter statements from types throughout the list."""
+
+        scatter_total = sum(len(t) for t in types)
+
+        if scatter_total == 0:
+            return tracker
+
+        possible_inserts = len(statements)+1 - start
+        inserts = random.sample(range(possible_inserts), int(possible_inserts/ratio))
+        inserts.sort(reverse=False)
+
+        # Move backwards so lower indices are not affected by insert
+        for i in inserts:
+            bag = self._weighted_choice([(t, len(t)/scatter_total) for t in types])
+            statements.insert(start+i, bag.any())
+            tracker = self._inserted_statement(i, tracker)
+
+        return tracker
+
+    def _weighted_choice(self, items):
+        n = random.uniform(0, 1)
+        for item, weight in items:
+            if n < weight:
+                break
+            n -= weight
+        return item
 
     def __str__(self):
         desc = "== Brancher for " + self._name + " =="
