@@ -316,10 +316,10 @@ Blah blah, 3000 so works on newer source code.
 
 \begin{frame}<1>[label=workflow]{OAT Workflow}
 \begin{itemize}
-\item Parse a Python source file \visible<2->{ - \alert<2>{Easy}}
+\item Parse a Python source file \visible<2->{- \alert<2>{Easy.}}
 \item Analyse and mark the AST - Hard (3)
 \item Program transformations - Depends on the transformation (4)
-\item Output resulting source file - Easy but more work (2) (explain because python does not need this to run, it does not do it)
+\item Output resulting source file \visible<3->{- \alert<3>{Simple idea. Takes time to cover entire language.}}
 \end{itemize}
 \end{frame}
 
@@ -443,6 +443,54 @@ We receive an AST, something like this unfinished specimen.
 
 We will look next at printing a source file.
 
+\begin{frame}[fragile]{Design of a Source Writer}
+\begin{itemize}
+\item In-order traversal of the AST
+\item Separate method to print each possible node type
+\item Slow to implement initially
+\item Quick and easy to extend for different coding styles
+\end{itemize}
+
+\begin{lstlisting}
+if 1 < 2:
+    print("Hello World")
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}<-14>[fragile]{Source Writer Example}
+\begin{columns}[b]
+\column{.5\textwidth}
+{\small
+\begin{semiverbatim}
+\alert<2-13>{Module}
+\alert<2-13>{  - body: If}
+\alert<3-5>{    - test: Compare}
+\alert<3>{      - left: Num}
+\alert<3>{        - n: 1}
+\alert<4>{      - ops: Lt}
+\alert<5>{      - comparators: Num}
+\alert<5>{        - n: 2}
+\alert<7-13>{    - body: Expr}
+\alert<7-13>{      - value: Call}
+\alert<7-8>{        - func: Name}
+\alert<7>{          - id: 'print'}
+\alert<8>{          - ctx: Load}
+\alert<10-12>{        - args: Str}
+\alert<11>{          - s: 'Hello World'}
+\end{semiverbatim}}
+\column{.5\textwidth}
+\begin{semiverbatim}
+\textbf{
+\uncover<2->{if }\uncover<3->{1} \uncover<4->{<} \uncover<5->{2}\uncover<6->{:}
+\quad\quad\uncover<7->{print}\uncover<9->{(}\uncover<10->{"}\uncover<11->{Hello World}\uncover<12->{"}\uncover<13->{)}
+}
+\end{semiverbatim}
+\end{columns}
+\end{frame}
+
+\againframe<3>{workflow}
+
+(explain because python does not need this to run, it does not do it)
 \subsection{Basic Ideas for Proofs/Implementation}
 
 \begin{frame}{Make Titles Informative.}
