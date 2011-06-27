@@ -110,6 +110,29 @@ def WriteUseLogValuer(statements):
             total += math.log(r - w)
     return -total # Flip so smaller distance is better
 
+
+def KnotValuer(statements):
+    """Encourages concentration on one variable at a time."""
+
+    providers = self._generate_providing_statements(statements)
+
+    knots = 0
+    links = []
+
+    # Move back through statements recording links as we go
+    for i, s in reversed(enumerate(statements)):
+        stat = statements[s]
+        # Tick off current links
+        while i in links:
+            knots += links.index(i)
+            links.remove(i)
+        ps = [p for p in providers[i]]
+        ps.sort() # ascending
+        for p in ps:
+            links.insert(0, p) # inserted at beginning decending
+
+    return -knots
+
 def _generate_providing_statements(statements):
     """Generate a dictionary for each statement containing providing statements."""
 
