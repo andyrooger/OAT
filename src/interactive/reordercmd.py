@@ -29,7 +29,7 @@ class ReorderCommand(commandui.Command):
 
         self._opts.add_argument("-d", "--display", choices=["index", "type", "code"], default="type",
                                 help="How to display statements, either by index, type or the full code.")
-        self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange"], default="random",
+        self._opts.add_argument("-v", "--valuer", choices=["random", "first", "wrange", "rwrange", "rwlogrange", "knots"], default="random",
                                 help="Choose the valuer function.")
         self._opts.add_argument("-i", "--invert", action="store_true", default=False,
                                 help="Invert the output of the given valuer function.")
@@ -143,6 +143,8 @@ class ReorderCommand(commandui.Command):
                 "first" : valuers.FirstValuer,
                 "wrange" : valuers.WriteRangeValuer,
                 "rwrange" : valuers.WriteUseValuer,
+                "rwlogrange" : valuers.WriteUseLogValuer,
+                "knots" : valuers.WriteUseLogValuer,
             }[args.valuer]
             if args.invert:
                 valuer = valuers.InvertValuer(valuer)
