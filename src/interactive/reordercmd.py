@@ -8,6 +8,7 @@ import ast
 from . import commandui
 
 from analysis import reorder
+from analysis import valuers
 
 from writer import sourcewriter
 from writer import prettywriter
@@ -138,13 +139,13 @@ class ReorderCommand(commandui.Command):
 
         if do == "best":
             valuer = {
-                "random" : reorder.RandomValuer,
-                "first" : reorder.FirstValuer,
-                "wrange" : reorder.WriteRangeValuer,
-                "rwrange" : reorder.WriteUseValuer,
+                "random" : valuers.RandomValuer,
+                "first" : valuers.FirstValuer,
+                "wrange" : valuers.WriteRangeValuer,
+                "rwrange" : valuers.WriteUseValuer,
             }[args.valuer]
             if args.invert:
-                valuer = reorder.InvertValuer(valuer)
+                valuer = valuers.InvertValuer(valuer)
             perm = orderer.best_permutation(valuer)
 
             self._print_block(block, perm, args.display)
