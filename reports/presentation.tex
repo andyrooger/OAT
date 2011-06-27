@@ -291,13 +291,25 @@ but can be fixed easily a lot of the time by using an automatic deobfuscator.
 \subsection{OAT - Obfuscation and Analysis Tool}
 
 \begin{frame}{Presenting OAT - Obfuscation and Analysis Tool}
+\begin{columns}
+\column{0.5\textwidth}
 \begin{itemize}
-\item Present OAT
-\item Explain what type of obfuscation we intend to do (control flow - reordering, inserting branches)
-\item Explain user interaction - non-automatic and command-line
-\item Works on source code and produces source code (compare to bytecode obfuscators)
+\item Interactive command line Python obfuscator
+\item Performs control flow obfuscation on a program source, directed by the user.
+\item Works on legal source code and produces legal source code.
+\item Built for Python 3000.
 \end{itemize}
+\column{0.5\textwidth}
+\resizebox{\textwidth}{!}{
+\includegraphics{../images/oat.eps}}
+\end{columns}
 \end{frame}
+
+So we present our software, OAT - Obfuscation and Analysis Tool. This is a new interactive obfuscator that concentrates on control flow obfuscation.
+This means that rather than altering layout of the source code, we try to change how the program actually runs, creating a confusing control flow while
+keeping any results of the program the same.
+
+Blah blah, 3000 so works on newer source code.
 
 \begin{frame}{OAT Workflow}
 \begin{itemize}
