@@ -4,6 +4,7 @@
 \usepackage{tikz}
 %\usepackage[a4paper,margin=1cm,landscape]{geometry}
 \usetikzlibrary{positioning,shadows,arrows}
+%\usepackage{verbatim}
 
 % $Header: /cvsroot/latex-beamer/latex-beamer/solutions/conference-talks/conference-ornate-20min.en.tex,v 1.7 2007/01/28 20:48:23 tantau Exp $
 
@@ -315,12 +316,12 @@ keeping any results of the program the same.
 Blah blah, 3000 so works on newer source code.
 
 \begin{frame}<1>[label=workflow]{OAT Workflow}
-\begin{itemize}
+\begin{enumerate}
 \item Parse a Python source file \visible<2->{- \alert<2>{Easy.}}
-\item Analyse and mark the AST - Hard (3)
-\item Program transformations - Depends on the transformation (4)
+\item Analyse and mark the AST \visible<4->{- \alert<4>{Hard.}}
+\item Program transformations
 \item Output resulting source file \visible<3->{- \alert<3>{Simple idea. Takes time to cover entire language.}}
-\end{itemize}
+\end{enumerate}
 \end{frame}
 
 From a user's perspective, the OAT workflow is very simple. We parse a file to receive an AST. Then analyse the tree for any information the program
@@ -445,7 +446,7 @@ We will look next at printing a source file.
 
 \begin{frame}[fragile]{Design of a Source Writer}
 \begin{itemize}
-\item In-order traversal of the AST
+\item Depth-first(ish) traversal of the AST
 \item Separate method to print each possible node type
 \item Slow to implement initially
 \item Quick and easy to extend for different coding styles
@@ -456,6 +457,9 @@ if 1 < 2:
     print("Hello World")
 \end{lstlisting}
 \end{frame}
+
+explain because python does not need this to run, it does not do it
+
 
 \begin{frame}<-14>[fragile]{Source Writer Example}
 \begin{columns}[b]
@@ -481,8 +485,8 @@ if 1 < 2:
 \column{.5\textwidth}
 \begin{semiverbatim}
 \textbf{
-\uncover<2->{if }\uncover<3->{1} \uncover<4->{<} \uncover<5->{2}\uncover<6->{:}
-\quad\quad\uncover<7->{print}\uncover<9->{(}\uncover<10->{"}\uncover<11->{Hello World}\uncover<12->{"}\uncover<13->{)}
+\uncover<2->{\alert<2>{if }}\uncover<3->{\alert<3>{1}} \uncover<4->{\alert<4>{<}} \uncover<5->{\alert<5>{2}}\uncover<6->{\alert<6>{:}}
+\quad\quad\uncover<7->{\alert<7>{print}}\uncover<9->{\alert<9>{(}}\uncover<10->{\alert<10>{"}}\uncover<11->{\alert<11>{Hello World}}\uncover<12->{\alert<12>{"}}\uncover<13->{\alert<13>{)}}
 }
 \end{semiverbatim}
 \end{columns}
@@ -490,7 +494,122 @@ if 1 < 2:
 
 \againframe<3>{workflow}
 
-(explain because python does not need this to run, it does not do it)
+\begin{frame}{Marking AST Nodes}
+\vskip-.1\textheight
+\begin{columns}[t]
+\column{.5\textwidth}
+\begin{block}{Pre-Marked}
+\begin{itemize}
+\item Markings are taken from currently recorded markings.
+\end{itemize}
+\end{block}
+
+\pause
+
+\begin{block}{Constants}
+\begin{itemize}
+\item Default for each marking type
+\item Defaults constant for each node type.
+\end{itemize}
+\end{block}
+
+\pause
+
+\begin{block}{User-Defined}
+\begin{itemize}
+\item Ask for every node
+\end{itemize}
+\end{block}
+\column{.5\textwidth}
+
+\pause
+
+\begin{block}{Calculation}
+\begin{itemize}
+\item Treat each node as a separate tree
+\item No explicit control flow graph
+\item AST traversal similar to source writer
+\item Rather than a separate function for each node type we use a `task description'
+\end{itemize}
+\end{block}
+
+\pause
+
+\begin{block}{Hybrid}
+\begin{itemize}
+\item Ordered application of others
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+Explain that we imagine an implied control flow graph. Explicit CFG would require translation to and from and may turn out to be very difficult for certain cases.
+
+Explain that we mark each node as a separate AST so we have no context information from the rest of the nodes. Unhelpful for constant propagation etc, but means
+so long as this subtree is not modified, we have identical 
+
+\begin{frame}<-19>[fragile]{Example Calculation}
+\begin{columns}[t]
+\column{.5\textwidth}
+{\small
+\begin{semiverbatim}
+\alert<2-18>{Module} {\tiny \only<18->{?, b, \{print,?\}, \{?\}}}
+\alert<3-17>{  - body: If} {\tiny \only<17->{?, b, \{print,?\}, \{?\}}}
+\alert<4-11>{    - test: Compare} {\tiny \only<11->{nv, b, \{\}, \{\}}}
+\alert<5-7>{      - left: Num} {\tiny \only<7->{nv, nb, \{\}, \{\}}}
+\alert<6>{        - n: 1} {\tiny \only<6->{nv, nb, \{\}, \{\}}}
+\alert<8>{      - ops: Lt} {\tiny \only<8->{nv, b, \{\}, \{\}}}
+\alert<9-10>{      - comparators: Num} {\tiny \only<10->{nv, nb, \{\}, \{\}}}
+\alert<9>{        - n: 2} {\tiny \only<9->{nv, nb, \{\}, \{\}}}
+\alert<12-16>{    - body: Expr} {\tiny \only<16->{?, b, \{print,?\}, \{?\}}}
+\alert<12-15>{      - value: Call} {\tiny \only<15->{?, b, \{print,?\}, \{?\}}}
+\alert<12>{        - func: Name} {\tiny \only<12->{nv, b, \{print\}, \{\}}}
+\alert<12>{          - id: 'print'}
+\alert<12>{          - ctx: Load}
+\alert<13-14>{        - args: Str} {\tiny \only<14->{nv, nb, \{\}, \{\}}}
+\alert<13>{          - s: 'Hello World'} {\tiny \only<13->{nv, nb, \{\}, \{\}}}
+\end{semiverbatim}}
+\column{.5\textwidth}
+\only<2-18>{
+\begin{block}{Code}
+\begin{semiverbatim}
+\only<2-3,17-18>{
+if 1 < 2:
+    print("Hello World")
+}
+\only<4,11>{1 < 2}
+\only<5-7>{1}
+\only<8>{<}
+\only<9-10>{2}
+\only<12>{print}
+\only<13>{Hello World}
+\only<14>{"Hello World"}
+\only<15-16>{print("Hello World")}
+\end{semiverbatim}
+
+\end{block}
+\begin{block}{Markings}
+\begin{itemize}
+\only<2-5>{\item ?}
+\only<6-7, 9-10, 13-14>{\item Not visible by user \item Non-breaking \item Does not read or write}
+\only<8,11>{\item Not visible by user \item Possibly breaking \item Does not read or write}
+\only<12>{\item Not visible by user \item Possibly Breaking \item Reads 'print'}
+\only<15-18>{\item Do not know about visibility \item Possibly breaking \item Reads at least 'print'. Do not know about writes.}
+\end{itemize}
+\end{block}}
+\end{columns}
+\end{frame}
+
+\begin{frame}{Problems?}
+\begin{itemize}
+\item Resolving function calls
+\item Unknown control flow (if, while etc)
+\item Lack of more in depth analysis
+\end{itemize}
+\end{frame}
+
+\againframe<4>{workflow}
+
 \subsection{Basic Ideas for Proofs/Implementation}
 
 \begin{frame}{Make Titles Informative.}
