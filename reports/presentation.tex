@@ -1,5 +1,6 @@
 \usepackage{listings}
 \lstset{language=Python, showstringspaces=false}
+\usepackage{graphicx}
 
 % $Header: /cvsroot/latex-beamer/latex-beamer/solutions/conference-talks/conference-ornate-20min.en.tex,v 1.7 2007/01/28 20:48:23 tantau Exp $
 
@@ -207,7 +208,7 @@ give up.
 In Python, which we have taken as our target language, we distribute source code rather than bytecode or native code. So unless we create a service, obfuscating 
 is really the only way to maintain portability and is a cheap and easy route to take.
 
-\begin{frame}[fragile]{Example of Obfuscated Code}
+\begin{frame}[fragile, label=pyobf_example]{Example of Obfuscated Code}
 \begin{columns}[t]
 \column{.5\textwidth}
 \begin{block}{Plain Code}
@@ -229,21 +230,61 @@ and we can quickly see that a reverse engineer will have trouble following the c
 
 \subsection{Previous Work}
 
-\begin{frame}{Current Solutions}
+\begin{frame}<1>[label=current_solutions]{Current Solutions}
 \begin{itemize}
-\item Bytecode distribution - mention pirates and come back
-\item Implementing sensitive parts in C
-\item pyobfuscate - other one too (layout obfuscation and non-3000 support). Possible example.
+\item Bytecode distribution
+      \only<2->{
+      \begin{itemize}
+      \item Not secure
+      \item Not portable
+      \end{itemize}}
+\item Implementing sensitive sections of code in C
+      \only<3->{
+      \begin{itemize}
+      \item Much more secure
+      \item Still not portable
+      \end{itemize}}
+\item pyobfuscate or other tools
+      \only<4->{
+      \begin{itemize}
+      \item Moderate security
+      \item Focus on layout obfuscation
+      \item Outdated
+      \end{itemize}}
 \end{itemize}
 \end{frame}
 
-\begin{frame}{Other Types of Obfuscation}
-\begin{itemize}
-\item Talk about layout referring to pyobfuscate etc
-\item Talk about data
-\item Talk about control flow (examples)
-\end{itemize}
+Currently solutions are to distribute bytecode, implement sections in C or use an automatic obfuscator. The example shows a flying pirate in disney's pirates of
+the carribean online game. This is what happens when you distribute bytecode as it can be easily modified and turned back into source code. 
+
+Implementing in C works, but just like bytecode it is not portable, relying on the user having CPython runtime and some architecture that you have compiled for.
+
+We are left with pyofbuscate which was used to create the earlier example (show), and other tools online that do a similar job. These are few and far between, and have
+not usually been updated recently meaning, their compatibility with newer versions of Python, in particular 3000 is not good. In fact pyobfuscate crashes if you
+even try to run it on an interpreter newer than 2.6 (released in 2008).
+
+In addition these tools tend to focus on layout obfuscation, rather than anything else, removing comments and scrambling identifier names. This is hard to read
+but can be fixed easily a lot of the time by using an automatic deobfuscator.
+
+\begin{frame}[plain]{Disney's Pirates of the Carribean Online}
+\resizebox{\textwidth}{!}{
+\includegraphics{../images/POTC.eps}}
 \end{frame}
+
+\againframe<2-3>{current_solutions}
+
+\againframe<2>{pyobf_example}
+
+\againframe<4>{current_solutions}
+
+% Talk about this when we create oat
+%\begin{frame}{Other Types of Obfuscation}
+%\begin{itemize}
+%\item Talk about layout referring to pyobfuscate etc
+%\item Talk about data
+%\item Talk about control flow (examples)
+%\end{itemize}
+%\end{frame}
 
 \section{Creating an Obfuscator}
 
