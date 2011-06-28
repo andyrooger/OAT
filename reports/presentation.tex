@@ -610,6 +610,51 @@ if 1 < 2:
 
 \againframe<4>{workflow}
 
+\subsection{Reordering Statements}
+
+\begin{frame}{Reordering Statements}
+\begin{itemize}
+\item Statements usually written in a logical order
+\item Help to mask other transformations
+\item Ensure program remains correct
+\item Use earlier analysis
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Program Correctness}
+\begin{block}{Reordering is Correct If}
+\begin{enumerate}
+\item Any changes to the outside world appear in the same order.
+\item For any intial internal state, both statement sequences terminate with the same final internal state.
+\end{enumerate}
+\end{block}
+
+\pause
+
+Three rules to follow when reordering:
+\begin{enumerate}
+\item All statements that read or write data outside of the program must remain in order relative to each other.
+\item All statements that read a variable must read the value written by the same statement, before and after reordering.
+\item If any statement can break the program flow, statements before or after it must remain before or after it.
+\end{enumerate}
+\end{frame}
+
+\begin{frame}[fragile]{Algorithm for Reordering Statements}
+
+\small\begin{verbatim}
+func reorder(list of statements):
+    if flow-breaking statement in list:
+        partition list between each such statement
+        yield every reorder(p1) + reorder(p2) + ...
+    else:
+        extract ordered statements with external IO
+        try inserting remaining statements one by one,
+        checking if rule (2) is broken
+        yield all possible correct ways to insert all
+        statements
+\end{verbatim}
+\end{frame}
+
 \subsection{Basic Ideas for Proofs/Implementation}
 
 \begin{frame}{Make Titles Informative.}
