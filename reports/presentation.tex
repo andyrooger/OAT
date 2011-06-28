@@ -669,10 +669,43 @@ Examples later
 
 \subsection{Irrelevant Branching}
 
-\begin{frame}{Make Titles Informative.}
+\begin{frame}{Irrelevant Branching}
+\begin{block}{What is Irrelevant Branching?}
+Insertion of new branches into the original program that do not affect the functionality of the original program.
+\end{block}
+\begin{itemize}
+\item Confuses the reader
+\item Complicates analysis
+\item Can be very difficult to remove, if done properly
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Types of Branch}
+\begin{itemize}
+\item Place a section of the program inside an if statement with a predicate that always evaluates to true
+\item Place a section of the program inside both branches of an if-else statement
+\item Place a section of the program inside a while loop that will only be executed once
+\item Place a section of the program inside the exception handler of a try-catch statement that always throws
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Opaque Predicates}
+\begin{block}{What is an Opaque Predicate}
+Predicate that we as the obfuscator know that value of at a given point in the program, but that it would be hard for an analyser to calculate.
+\end{block}
+\begin{itemize}
+\item Resilience dependent on difficulty of calculation
+\item Very simple opaque predicates thwart current Python analysers
+\item OAT allows the user to define the creation of these
+\end{itemize}
 \end{frame}
 
 \section*{Summary}
+
+\begin{frame}{Demo}
+\resizebox{\textwidth}{!}{
+\includegraphics{../images/pctechsupportcat.eps}}
+\end{frame}
 
 \begin{frame}{Summary}
 
@@ -698,38 +731,6 @@ Examples later
       Something else you haven't solved.
     \end{itemize}
   \end{itemize}
-\end{frame}
-
-
-
-% All of the following is optional and typically not needed. 
-\appendix
-\section<presentation>*{\appendixname}
-\subsection<presentation>*{For Further Reading}
-
-\begin{frame}[allowframebreaks]
-  \frametitle<presentation>{For Further Reading}
-    
-  \begin{thebibliography}{10}
-    
-  \beamertemplatebookbibitems
-  % Start with overview books.
-
-  \bibitem{Author1990}
-    A.~Author.
-    \newblock {\em Handbook of Everything}.
-    \newblock Some Press, 1990.
- 
-    
-  \beamertemplatearticlebibitems
-  % Followed by interesting articles. Keep the list short. 
-
-  \bibitem{Someone2000}
-    S.~Someone.
-    \newblock On this and that.
-    \newblock {\em Journal of This and That}, 2(1):50--100,
-    2000.
-  \end{thebibliography}
 \end{frame}
 
 \end{document}
