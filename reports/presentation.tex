@@ -298,7 +298,7 @@ but can be fixed easily a lot of the time by using an automatic deobfuscator.
 \begin{columns}
 \column{0.5\textwidth}
 \begin{itemize}
-\item Interactive command line Python obfuscator
+\item Interactive command line Python obfuscator.
 \item Performs control flow obfuscation on a program source, directed by the user.
 \item Works on legal source code and produces legal source code.
 \item Built for Python 3000.
@@ -446,10 +446,10 @@ We will look next at printing a source file.
 
 \begin{frame}[fragile]{Design of a Source Writer}
 \begin{itemize}
-\item Depth-first(ish) traversal of the AST
-\item Separate method to print each possible node type
-\item Slow to implement initially
-\item Quick and easy to extend for different coding styles
+\item Depth-first(ish) traversal of the AST.
+\item Separate method to print each possible node type.
+\item Slow to implement initially.
+\item Quick and easy to extend for different coding styles.
 \end{itemize}
 
 \begin{lstlisting}
@@ -508,7 +508,7 @@ explain because python does not need this to run, it does not do it
 
 \begin{block}{Constants}
 \begin{itemize}
-\item Default for each marking type
+\item Default for each marking type.
 \item Defaults constant for each node type.
 \end{itemize}
 \end{block}
@@ -517,7 +517,7 @@ explain because python does not need this to run, it does not do it
 
 \begin{block}{User-Defined}
 \begin{itemize}
-\item Ask for every node
+\item Ask for every node.
 \end{itemize}
 \end{block}
 \column{.5\textwidth}
@@ -526,10 +526,10 @@ explain because python does not need this to run, it does not do it
 
 \begin{block}{Calculation}
 \begin{itemize}
-\item Treat each node as a separate tree
-\item No explicit control flow graph
-\item AST traversal similar to source writer
-\item Rather than a separate function for each node type we use a `task description'
+\item Treat each node as a separate tree.
+\item No explicit control flow graph.
+\item AST traversal similar to source writer.
+\item Rather than a separate function for each node type we use a `task description'.
 \end{itemize}
 \end{block}
 
@@ -537,7 +537,7 @@ explain because python does not need this to run, it does not do it
 
 \begin{block}{Hybrid}
 \begin{itemize}
-\item Ordered application of others
+\item Ordered application of others.
 \end{itemize}
 \end{block}
 \end{columns}
@@ -591,9 +591,9 @@ if 1 < 2:
 \begin{block}{Markings}
 \begin{itemize}
 \only<2-5>{\item ?}
-\only<6-7, 9-10, 13-14>{\item Not visible by user \item Non-breaking \item Does not read or write}
-\only<8,11>{\item Not visible by user \item Possibly breaking \item Does not read or write}
-\only<12>{\item Not visible by user \item Possibly Breaking \item Reads 'print'}
+\only<6-7, 9-10, 13-14>{\item Not visible to user \item Non-breaking \item Does not read or write}
+\only<8,11>{\item Not visible to user \item Possibly breaking \item Does not read or write}
+\only<12>{\item Not visible to user \item Possibly Breaking \item Reads 'print'}
 \only<15-18>{\item Do not know about visibility \item Possibly breaking \item Reads at least 'print'. Do not know about writes.}
 \end{itemize}
 \end{block}}
@@ -602,9 +602,9 @@ if 1 < 2:
 
 \begin{frame}{Problems?}
 \begin{itemize}
-\item Resolving function calls
-\item Unknown control flow (if, while etc)
-\item Lack of more in depth analysis
+\item Resolving function calls.
+\item Unknown control flow (if, while etc).
+\item Lack of more in depth analysis.
 \end{itemize}
 \end{frame}
 
@@ -614,10 +614,10 @@ if 1 < 2:
 
 \begin{frame}{Reordering Statements}
 \begin{itemize}
-\item Statements usually written in a logical order
-\item Help to mask other transformations
-\item Ensure program remains correct
-\item Use earlier analysis
+\item Statements usually written in a logical order.
+\item Help to mask other transformations.
+\item Ensure program remains correct.
+\item Use earlier analysis.
 \end{itemize}
 \end{frame}
 
@@ -674,18 +674,18 @@ Examples later
 Insertion of new branches into the original program that do not affect the functionality of the original program.
 \end{block}
 \begin{itemize}
-\item Confuses the reader
-\item Complicates analysis
-\item Can be very difficult to remove, if done properly
+\item Confuses the reader.
+\item Complicates analysis.
+\item Can be very difficult to remove, if done properly.
 \end{itemize}
 \end{frame}
 
 \begin{frame}{Types of Branch}
 \begin{itemize}
-\item Place a section of the program inside an if statement with a predicate that always evaluates to true
-\item Place a section of the program inside both branches of an if-else statement
-\item Place a section of the program inside a while loop that will only be executed once
-\item Place a section of the program inside the exception handler of a try-catch statement that always throws
+\item Place a section of the program inside an if statement with a predicate that always evaluates to true.
+\item Place a section of the program inside both branches of an if-else statement.
+\item Place a section of the program inside a while loop that will only be executed once.
+\item Place a section of the program inside the exception handler of a try-catch statement that always throws.
 \end{itemize}
 \end{frame}
 
@@ -694,9 +694,9 @@ Insertion of new branches into the original program that do not affect the funct
 Predicate that we as the obfuscator know that value of at a given point in the program, but that it would be hard for an analyser to calculate.
 \end{block}
 \begin{itemize}
-\item Resilience dependent on difficulty of calculation
-\item Very simple opaque predicates thwart current Python analysers
-\item OAT allows the user to define the creation of these
+\item Resilience dependent on difficulty of calculation.
+\item Very simple opaque predicates thwart current Python analysers.
+\item OAT allows the user to define the creation of these.
 \end{itemize}
 \end{frame}
 
@@ -721,7 +721,7 @@ Predicate that we as the obfuscator know that value of at a given point in the p
 \item In the future
 \begin{itemize}
 \item The entire source for this project will be opened up on github for public contribution.
-\item Pressing issues are the creation of a more natural interface and the ability to resolve function calls
+\item Pressing issues are the creation of a more natural interface and the ability to resolve function calls.
 \end{itemize}
 \end{itemize}
 \end{frame}
